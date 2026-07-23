@@ -1,6 +1,6 @@
 # Planning de développement - CapitAll
 
-Plan arrêté le 23/07/2026, en remplacement du plan du 21/07. **Échéance : dimanche 23 août 2026, dernier délai**, avec une semaine entière réservée aux livrables d'examen. Le développement s'étend du jeudi 24 juillet au dimanche 16 août, date du gel du code.
+Plan arrêté le 23/07/2026, en remplacement du plan du 21/07. **Échéance : dimanche 23 août 2026, dernier délai**, avec une semaine entière réservée aux livrables d'examen. Le développement s'étend du vendredi 24 juillet au dimanche 16 août, date du gel du code.
 
 ## Principes retenus
 
@@ -8,9 +8,9 @@ Plan arrêté le 23/07/2026, en remplacement du plan du 21/07. **Échéance : di
 2. **Le socle avant les extensions.** Les fonctionnalités décidées mais non essentielles (actions, annonces, RSS) sont placées après le socle démontrable, et sont explicitement abandonnables si le calendrier glisse.
 3. **Une marge réelle en fin de parcours.** La remise est visée le vendredi 21 août : le week-end du 22-23 n'absorbe que les imprévus, il n'est jamais planifié.
 
-## Semaine 1 - du jeudi 24 au dimanche 27 juillet
+## Semaine 1 - du vendredi 24 au dimanche 26 juillet
 
-Initialisation et fondations back-end (semaine courte, 4 jours).
+Initialisation et fondations back-end (semaine courte, 3 jours).
 
 - initialisation du monorepo : squelettes `/backend` et `/frontend`, `.env.example`, scripts de développement
 - board GitHub Projects et backlog d'issues
@@ -23,7 +23,7 @@ Initialisation et fondations back-end (semaine courte, 4 jours).
 CP visées : CP1, CP2, CP5, CP6 (partiel).
 Captures : structure du dépôt et premiers commits, schéma dans pgAdmin, appels Insomnia d'inscription et de connexion.
 
-## Semaine 2 - du lundi 28 juillet au dimanche 3 août
+## Semaine 2 - du lundi 27 juillet au dimanche 2 août
 
 Logique métier et intégration des fournisseurs de cours.
 
@@ -36,7 +36,7 @@ Logique métier et intégration des fournisseurs de cours.
 CP visées : CP6, CP7.
 Captures : clé Redis en CLI (`GET` et `TTL`), tests unitaires au vert, appel Insomnia du portefeuille.
 
-## Semaine 3 - du lundi 4 au dimanche 10 août
+## Semaine 3 - du lundi 3 au dimanche 9 août
 
 Front-end dynamique et accessibilité.
 
@@ -49,7 +49,7 @@ Front-end dynamique et accessibilité.
 CP visées : CP3, CP4.
 Captures : tableau de bord en desktop et en mobile, contrôle d'accessibilité.
 
-## Semaine 4 - du lundi 11 au dimanche 16 août
+## Semaine 4 - du lundi 10 au dimanche 16 août
 
 Extensions décidées, sécurité, déploiement.
 
@@ -78,6 +78,6 @@ Livrables d'examen. **Aucun développement de fonctionnalité.**
 
 ## Points de vigilance
 
-- Les maquettes Figma conditionnent CP2 : terminées au plus tard le dimanche 27 juillet, en parallèle du back-end, sans attendre.
+- Les maquettes Figma conditionnent CP2 : terminées au plus tard le dimanche 26 juillet, en parallèle du back-end, sans attendre.
 - Le quota Alpha Vantage (25 requêtes par jour) impose de ne jamais l'utiliser en première ligne pendant les phases de développement intensif.
 - L'échéance du 23 août est traitée ici comme la date limite de remise de l'ensemble (code et documents) ; la remise effective est visée le vendredi 21 pour conserver une marge réelle.

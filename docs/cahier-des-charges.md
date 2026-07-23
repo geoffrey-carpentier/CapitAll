@@ -1,6 +1,6 @@
 # Cahier des charges - CapitAll
 
-Version de travail, non définitive. Structure adaptée d'un template de cahier des charges d'entreprise : les rubriques orientées contexte d'entreprise (RBAC multi-rôles, benchmarks de charge) ont été réduites ou reformulées, CapitAll étant un projet individuel réalisé en formation, sans commanditaire externe et avec un unique rôle utilisateur (décision D7). Les rubriques ainsi adaptées sont signalées explicitement.
+Version de travail, non définitive. Structure adaptée d'un template de cahier des charges d'entreprise : les rubriques orientées contexte d'entreprise (RBAC multi-rôles, benchmarks de charge) ont été réduites ou reformulées, CapitAll étant un projet individuel réalisé en formation, sans commanditaire externe et avec un modèle de rôles volontairement minimal (utilisateur et administrateur à moindre privilège, D23). Les rubriques ainsi adaptées sont signalées explicitement.
 
 ## 1. Synopsis
 
@@ -56,7 +56,7 @@ Contexte de réalisation : projet individuel réalisé pendant la formation au T
 
 ### Cahier des charges fonctionnel
 
-**Besoin.** *Rubrique adaptée* : le template envisage un dimensionnement multi-utilisateurs avec charge simultanée à évaluer. CapitAll est un projet individuel destiné à une démonstration devant un jury, pas à une mise en production à grande échelle : le nombre d'utilisateurs simultanés réels sera de un (le candidat lui-même, en démonstration), avec un jeu de données de démonstration représentatif plutôt qu'un volume réaliste de production. Le back-end reste néanmoins conçu sans dette technique bloquante pour une montée en charge ultérieure raisonnable : requêtes indexées, pas de calcul en O(n²) dans les services métier.
+**Besoin.** *Rubrique adaptée* : le template envisage un dimensionnement multi-utilisateurs avec charge simultanée à évaluer. CapitAll est un projet individuel réalisé en formation, destiné à une démonstration et non à une mise en production à grande échelle : le nombre d'utilisateurs simultanés réels sera de un, avec un jeu de données de démonstration représentatif plutôt qu'un volume réaliste de production. Le back-end reste néanmoins conçu sans dette technique bloquante pour une montée en charge ultérieure raisonnable : requêtes indexées, pas de calcul en O(n²) dans les services métier.
 
 ### Cahier des charges non fonctionnel
 
@@ -102,7 +102,7 @@ Chaque endpoint documentera son DTO d'entrée et de sortie au fil du développem
 
 **Logging.** Niveaux INFO (démarrage, requêtes réussies significatives) et ERROR (échecs d'authentification, erreurs d'appel aux fournisseurs de cours, erreurs Redis) sur la sortie standard, sans DEBUG activé en production. Pas de bibliothèque de logging structurée dédiée prévue pour le MVP (console suffisante à cette échelle) ; à revoir si le volume de code le justifie.
 
-**Performance.** *Rubrique volontairement allégée* : le template appelle des preuves de benchmark de charge (k6, Locust, Apache Benchmark) pertinentes pour un service en production à fort trafic. CapitAll est démontré devant un jury sur un jeu de données de démonstration, sans exigence de charge concurrente. Le seul engagement de performance retenu est fonctionnel : le cache Redis des cours (D14) garantit qu'un rafraîchissement du tableau de bord ne déclenche pas systématiquement trois appels HTTP sortants, et les snapshots de valorisation (D16) évitent de reconstituer l'historique en rappelant les fournisseurs pour chaque point de la courbe. Un test de charge formel est noté comme piste d'amélioration hors MVP, à mentionner à l'oral si la question est posée.
+**Performance.** *Rubrique volontairement allégée* : le template appelle des preuves de benchmark de charge (k6, Locust, Apache Benchmark) pertinentes pour un service en production à fort trafic. CapitAll est démontré sur un jeu de données de démonstration, sans exigence de charge concurrente. Le seul engagement de performance retenu est fonctionnel : le cache Redis des cours (D14) garantit qu'un rafraîchissement du tableau de bord ne déclenche pas systématiquement trois appels HTTP sortants, et les snapshots de valorisation (D16) évitent de reconstituer l'historique en rappelant les fournisseurs pour chaque point de la courbe. Un test de charge formel est noté comme piste d'amélioration hors MVP, à mentionner à l'oral si la question est posée.
 
 ## 4. Annexe des diagrammes
 

@@ -42,6 +42,6 @@ Optionnel mais recommandé dans un monorepo, pour situer immédiatement le commi
 ## Discipline de commit
 
 - un commit correspond à une fonctionnalité ou une correction cohérente et complète, jamais un commit fourre-tout de fin de session
-- commits réguliers au fil du travail, pas un seul gros commit par phase : le jury lit l'historique, un historique qui ne contient que 4 commits sur 4 semaines serait suspect
+- commits réguliers au fil du travail, pas un seul gros commit par phase : un historique granulaire documente la progression, facilite la relecture et permet un retour arrière ciblé en cas de régression
 - pas de commit directement sur `main` : le travail passe par `dev` (ou une branche `feature/` pour une tâche non triviale isolable), fusion vers `main` en fin de phase validée
 - un commit qui casse le build ou les tests existants n'est pas acceptable, y compris en cours de journée

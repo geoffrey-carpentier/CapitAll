@@ -15,29 +15,32 @@ Particulier gérant un patrimoine diversifié sur plusieurs classes d'actifs, qu
 Fonctionnalités couvertes :
 
 - inscription et connexion sécurisées, chaque utilisateur ne consulte et ne modifie que son propre patrimoine
-- création, modification et suppression d'actifs suivis (cryptomonnaie, devise, métal précieux)
+- création, modification et suppression d'actifs suivis (cryptomonnaie, devise, métal précieux, et une liste blanche d'actions américaines)
 - enregistrement de transactions d'achat et de vente sur un actif
-- calcul automatique du prix de revient moyen pondéré par actif
-- calcul de la plus-value latente par actif et sur l'ensemble du portefeuille, à partir des cours récupérés en temps réel
+- calcul automatique du prix de revient moyen pondéré par actif et de la plus-value latente, à partir des cours récupérés en temps réel
 - tableau de bord de répartition du patrimoine et d'évolution de sa valeur
+- alertes de seuil (sur un actif ou sur le capital total)
+- historique de valorisation journalière du portefeuille
+- fil d'annonces internes publiées par un administrateur
+- fiche d'actif enrichie (capitalisation, fourchette 52 semaines, moyennes mobiles)
 
 Hors périmètre du MVP, pistes d'évolution à mentionner à l'oral :
 
-- suivi des actions et produits boursiers (nécessite un compte sur un fournisseur de données financières, voir section suivante)
-- alertes de seuil de prix
+- recherche libre de symboles boursiers et ETF
 - export fiscal
-- affichage multi-devise de référence
-
-Le choix d'écarter la bourse du MVP est délibéré : les fournisseurs de données boursières libres nécessitent tous une inscription et une clé d'API, ce qui introduit une dépendance externe non maîtrisée à ce stade. La crypto, les devises et les métaux couvrent déjà les trois classes d'actifs dont les API sont accessibles sans inscription, ce qui suffit à démontrer la logique métier (même moteur de calcul, trois fournisseurs de cours interchangeables) sans complexifier le MVP.
+- multi-devise de référence
+- notifications par email
+- partage social, paiement, règles automatiques de trading
+- publications par les utilisateurs, widget Coin360
 
 ## Rôles utilisateurs
 
-Un seul rôle : utilisateur inscrit. Le cloisonnement des données repose sur une vérification de propriété systématique côté serveur (l'identifiant de l'utilisateur authentifié doit correspondre au propriétaire de la ressource demandée), plutôt que sur une hiérarchie de rôles artificielle.
+Deux rôles : utilisateur inscrit (défaut) et administrateur à moindre privilège. Le cloisonnement des données patrimoniales repose sur une vérification de propriété systématique côté serveur. Le rôle administrateur permet la publication d'annonces, la liste et la désactivation de comptes, sans jamais accéder aux portefeuilles d'autrui.
 
 ## Choix technique et justification
 
 - front-end : React avec Vite, react-router pour le routing
-- back-end : Node.js avec Express, architecture routes/controllers/models
+- back-end : Node.js avec Express, architecture en couches (routes, middlewares, contrôleurs, services, modèles)
 - base de données : PostgreSQL, pour son typage NUMERIC qui évite les approximations de calcul flottant sur des montants financiers
 - authentification : JWT, hachage des mots de passe avec bcrypt
 
@@ -45,14 +48,14 @@ Ce choix est cohérent avec la nature du projet : un tableau de bord interactif 
 
 ## Sources de données externes retenues
 
-| Classe d'actif | Fournisseur | Clé requise | Vérification |
+| Classe d'actif | Fournisseur(s) | Clé requise | Commentaires |
 |---|---|---|---|
-| Devises | Frankfurter (taux BCE) | non | testée le 09/07/2026, réponse JSON conforme |
-| Métaux précieux | gold-api.com | non | testée le 09/07/2026, réponse JSON conforme |
-| Cryptomonnaies | Coinbase (exchange-rates) | non | testée le 09/07/2026, réponse JSON conforme |
-| Bourse (extension) | Finnhub ou Alpha Vantage | oui, gratuite sans CB | non testée depuis l'environnement de développement actuel, à confirmer lors de l'inscription |
+| Devises | Frankfurter (taux BCE) | non | Testée le 09/07/2026, réponse JSON conforme. |
+| Métaux précieux | gold-api.com | non | Testée le 09/07/2026, réponse JSON conforme. |
+| Cryptomonnaies | Coinbase (principal), CoinGecko Demo (repli) | non (Coinbase), oui (CoinGecko Demo) | Coinbase testé le 09/07/2026. CoinGecko Demo avec clé (D25). |
+| Actions | FMP (principal), Finnhub (secours 1), Alpha Vantage (secours 2 + historique) | oui | Testés, FMP fournit le plus de données en un appel (D26). Liste blanche d'environ 85 valeurs américaines (D27). |
 
-Chaque fournisseur sera encapsulé derrière une interface commune côté serveur, pour ne pas coupler la logique métier (calcul du prix de revient, calcul de la plus-value) à un fournisseur en particulier.
+Chaque fournisseur est encapsulé derrière une interface commune côté serveur, pour ne pas coupler la logique métier (calcul du prix de revient, calcul de la plus-value) à un fournisseur en particulier.
 
 ## Sécurité
 
