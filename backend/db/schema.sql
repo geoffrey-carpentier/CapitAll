@@ -1,5 +1,5 @@
 -- Script de création de la base CapitAll
--- Dérivé du MLD décrit dans docs/conception/modele-de-donnees.md
+-- MLD décrit dans docs/conception/modele-de-donnees.md
 -- A exécuter sur une base PostgreSQL vide (psql -f schema.sql, ou via le service db du docker-compose)
 
 -- Nettoyage pour ré-exécution en environnement de développement
@@ -81,8 +81,8 @@ CREATE INDEX idx_alerte_utilisateur ON alerte(utilisateur_id);
 CREATE INDEX idx_alerte_actif ON alerte(actif_id) WHERE actif_id IS NOT NULL;
 CREATE INDEX idx_annonce_date ON annonce(date_publication DESC);
 
--- Utilisateur applicatif à droits restreints (exigence CP5 : les utilisateurs sont créés
--- avec leurs droits respectifs). L'application ne se connecte jamais avec le superuser.
+-- Utilisateur applicatif à droits restreints ("les utilisateurs sont créés
+-- avec leurs droits respectifs"). L'application ne se connecte jamais avec le superuser.
 -- Le mot de passe réel est fourni via variable d'environnement au moment du déploiement,
 -- celui-ci n'est qu'un exemple pour l'environnement de développement local.
 DO $$
