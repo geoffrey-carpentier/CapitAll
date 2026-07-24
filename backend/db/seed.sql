@@ -89,3 +89,21 @@ JOIN (VALUES
      false)
 ) AS v(titre, contenu, epinglee) ON true
 WHERE u.email = 'admin@capitall.fr';
+
+-- Historique de valorisation : 90 jours de snapshots journaliers pour le compte
+-- utilisateur, afin que la courbe d'évolution du tableau de bord soit alimentée dès
+-- le premier lancement (Q-C). Les cours passés des fournisseurs n'étant pas conservés,
+-- ces valeurs ne seraient pas recalculables après coup : on les amorce donc ici.
+-- La valeur suit une tendance haussière avec une ondulation et un léger bruit, pour
+-- une courbe crédible sans être artificiellement lisse. Bornée à >= 0 par le schéma,
+-- elle reste ici largement positive.
+INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur)
+SELECT (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr'),
+       jour::date,
+       ROUND((
+           24000
+           + (jour::date - (CURRENT_DATE - 89)) * 130
+           + SIN((jour::date - (CURRENT_DATE - 89)) / 7.0) * 1600
+           + (random() - 0.5) * 900
+       )::numeric, 2)
+FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour;
