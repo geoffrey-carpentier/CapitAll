@@ -14,7 +14,7 @@ corps optionnel, uniquement si le pourquoi n'est pas évident depuis le titre et
 
 ## Branches
 
-Une branche par issue, créée depuis `dev` : `feature/<numéro>-<slug>` (fonctionnalité) ou `fix/<numéro>-<slug>` (correction), slug court en minuscules séparé par des tirets — par exemple `feature/1-init-monorepo`. La branche se ferme par une pull request vers `dev` (jamais vers `main`), avec le mot-clé `Closes #X` dans la description pour fermer l'issue à la fusion.
+Une branche par issue, créée depuis `dev` : `feature/<numéro>-<slug>` (fonctionnalité) ou `fix/<numéro>-<slug>` (correction), slug court en minuscules séparé par des tirets — par exemple `feature/1-init-monorepo`. La branche se ferme par une pull request vers `dev` (jamais vers `main`), avec le mot-clé `Closes #X` dans la description. Ce mot-clé ne ferme toutefois l'issue automatiquement qu'à la fusion dans la branche par défaut (`main`) : les pull requests étant fusionnées dans `dev`, l'issue correspondante se ferme manuellement après le merge.
 
 ## Types autorisés
 

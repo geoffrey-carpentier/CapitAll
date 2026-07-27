@@ -34,7 +34,7 @@ Les cours sont récupérés exclusivement côté serveur, via des adaptateurs in
 
 ```
 backend/    API Express, schéma SQL, services métier
-frontend/   application React (à initialiser)
+frontend/   application React (Vite + React 18)
 docs/       cadrage, cahier des charges, conception, planning, conventions
 ```
 
@@ -49,6 +49,17 @@ docs/       cadrage, cahier des charges, conception, planning, conventions
 - [Planning](docs/planning.md)
 - [Convention de commits](docs/convention-commits.md)
 
-## Installation
+## Installation (développement local)
 
-Le projet est en cours de développement. La procédure d'installation complète (docker-compose, variables d'environnement, seed) sera documentée ici au fur et à mesure.
+Prérequis : Node.js 20+, PostgreSQL 15+, Redis. Copier `backend/.env.example` vers `backend/.env` et renseigner les variables.
+
+```
+npm run install:all                          # dépendances back-end et front-end
+psql -d capitall -f backend/db/schema.sql    # création du schéma
+psql -d capitall -f backend/db/seed.sql      # jeu de données de démonstration
+npm run dev                                  # lance l'API et le front simultanément
+```
+
+L'API répond sur `http://localhost:5000` (route de santé : `/api/sante`). Les comptes de démonstration sont créés par le seed (voir l'en-tête de `backend/db/seed.sql`).
+
+La procédure complète avec Docker Compose sera ajoutée à la mise en place du déploiement.
