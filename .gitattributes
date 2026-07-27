@@ -1,0 +1,13 @@
+# Normalisation des fins de ligne : LF dans le dépôt, quel que soit le poste.
+# Évite qu'un éditeur Windows (CRLF) fasse apparaître tous les fichiers comme modifiés.
+* text=auto eol=lf
+
+# Fichiers binaires : aucune conversion.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
