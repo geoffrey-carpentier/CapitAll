@@ -4,15 +4,9 @@
 // L'URL de connexion vient de DATABASE_URL (voir backend/.env.example).
 
 const { Pool } = require('pg');
+const config = require('../config');
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL est absente de l'environnement. Copier backend/.env.example vers " +
-      'backend/.env et renseigner la chaîne de connexion PostgreSQL.'
-  );
-}
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ connectionString: config.databaseUrl });
 
 // Erreur sur un client inactif du pool (coupure réseau, base redémarrée...).
 // On journalise sans arrêter le process : les requêtes suivantes rouvriront un client.
