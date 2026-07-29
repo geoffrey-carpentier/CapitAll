@@ -32,7 +32,7 @@ Contrastes vérifiés à respecter (RGAA) : texte principal et secondaire sur fo
 ## Écrans à maquetter (Figma)
 
 1. connexion / inscription
-2. tableau de bord (valeur totale, plus-value globale, anneau de répartition, courbe d'évolution)
+2. tableau de bord (valeur totale, plus-value globale, anneau de répartition, courbe d'évolution, sélecteur de devise d'affichage euro/dollar)
 3. liste des actifs (carte par actif : symbole, quantité, PRU, cours, plus-value)
 4. détail d'un actif (historique des transactions, plus-value latente)
 5. formulaire d'ajout de transaction

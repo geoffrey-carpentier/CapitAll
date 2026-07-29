@@ -17,7 +17,7 @@
 | Ajouter un actif suivi | Utilisateur inscrit | connecté |
 | Modifier / supprimer un actif | Utilisateur inscrit | propriétaire de l'actif |
 | Enregistrer une transaction (achat ou vente) | Utilisateur inscrit | actif existant, quantité vendue disponible |
-| Consulter le détail d'un actif (PRU, plus-value) | Utilisateur inscrit | propriétaire de l'actif |
+| Consulter le détail d'un actif (PRU, plus-values latente et réalisée) | Utilisateur inscrit | propriétaire de l'actif |
 | Consulter le tableau de bord consolidé | Utilisateur inscrit | connecté |
 | Définir une alerte de seuil (sur un actif ou sur le capital total) | Utilisateur inscrit | connecté ; propriétaire de l'actif si l'alerte cible un actif |
 | Consulter / désactiver ses alertes | Utilisateur inscrit | propriétaire de l'alerte |
@@ -49,7 +49,7 @@ rectangle CapitAll {
   usecase "Se déconnecter" as UC3
   usecase "Gérer ses actifs suivis\n(ajout, modification, suppression)" as UC4
   usecase "Enregistrer une transaction\n(achat / vente)" as UC5
-  usecase "Consulter le détail d'un actif\n(PRU, plus-value latente)" as UC6
+  usecase "Consulter le détail d'un actif\n(PRU, plus-values latente et réalisée)" as UC6
   usecase "Consulter le tableau de bord\nconsolidé" as UC7
   usecase "Récupérer le cours courant" as UC8
   usecase "Définir une alerte de seuil" as UC9

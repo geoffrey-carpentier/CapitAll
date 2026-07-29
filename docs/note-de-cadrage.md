@@ -4,7 +4,7 @@
 
 De nombreux particuliers répartissent leur épargne entre plusieurs supports (cryptomonnaies, comptes titres, devises étrangères, métaux précieux) sans disposer d'une vue consolidée de leur patrimoine. Le suivi se fait généralement à la main, dans un tableur, avec des cours mis à jour manuellement et des calculs de plus-value approximatifs.
 
-CapitAll est une application web mobile-first qui centralise ces différents actifs, automatise la récupération des cours et calcule le prix de revient et la plus-value latente de chaque ligne de portefeuille.
+CapitAll est une application web mobile-first qui centralise ces différents actifs, automatise la récupération des cours et calcule le prix de revient, la plus-value latente et la plus-value réalisée de chaque ligne de portefeuille.
 
 ## Public cible
 
@@ -17,7 +17,7 @@ Fonctionnalités couvertes :
 - inscription et connexion sécurisées, chaque utilisateur ne consulte et ne modifie que son propre patrimoine
 - création, modification et suppression d'actifs suivis (cryptomonnaie, devise, métal précieux, et une liste blanche d'actions américaines)
 - enregistrement de transactions d'achat et de vente sur un actif
-- calcul automatique du prix de revient moyen pondéré par actif et de la plus-value latente, à partir des cours récupérés en temps réel
+- calcul automatique du prix de revient moyen pondéré par actif, de la plus-value latente et de la plus-value réalisée, à partir des cours récupérés en temps réel
 - tableau de bord de répartition du patrimoine et d'évolution de sa valeur
 - alertes de seuil (sur un actif ou sur le capital total)
 - historique de valorisation journalière du portefeuille
@@ -28,7 +28,8 @@ Hors périmètre du MVP, pistes d'évolution à mentionner à l'oral :
 
 - recherche libre de symboles boursiers et ETF
 - export fiscal
-- multi-devise de référence
+- multi-devise de référence complet (la bascule d'affichage euro/dollar du tableau de bord, elle, est retenue au périmètre, D43)
+- import de transactions par fichier CSV (retenu comme évolution de version 2, D44)
 - notifications par email
 - partage social, paiement, règles automatiques de trading
 - publications par les utilisateurs, widget Coin360
