@@ -33,4 +33,8 @@ const creationActif = z
   })
   .strict();
 
-module.exports = { creationActif, TYPES_ACTIF };
+// Seul le nom est modifiable : changer le symbole ou le type d'un actif déjà porteur
+// de transactions rendrait son historique incohérent.
+const modificationActif = z.object({ nom }).strict();
+
+module.exports = { creationActif, modificationActif, TYPES_ACTIF };

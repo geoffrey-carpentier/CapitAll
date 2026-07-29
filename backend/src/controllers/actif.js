@@ -48,6 +48,22 @@ async function detail(req, res, next) {
   }
 }
 
+async function modifier(req, res, next) {
+  try {
+    const actif = await modeleActif.mettreAJourNom(
+      req.params.id,
+      req.utilisateur.id,
+      req.body.nom
+    );
+    if (!actif) {
+      throw new ErreurIntrouvable('Actif introuvable.');
+    }
+    res.status(200).json(actif);
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
 async function supprimer(req, res, next) {
   try {
     const supprime = await modeleActif.supprimer(req.params.id, req.utilisateur.id);
@@ -60,4 +76,4 @@ async function supprimer(req, res, next) {
   }
 }
 
-module.exports = { lister, creer, detail, supprimer };
+module.exports = { lister, creer, detail, modifier, supprimer };
