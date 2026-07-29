@@ -1,6 +1,6 @@
 # Convention de commits - CapitAll
 
-Validée le 14/07/2026 (D19), étendue le 24/07/2026 (D39) avec la référence d'issue et le workflow de branches. Conventional Commits, messages en français (D13).
+Validée le 14/07/2026 (D19), étendue le 24/07/2026 (D39) avec la référence d'issue et le workflow de branches, puis le 29/07/2026 (D47) avec la granularité par lot fonctionnel. Conventional Commits, messages en français (D13).
 
 ## Format
 
@@ -14,7 +14,11 @@ corps optionnel, uniquement si le pourquoi n'est pas évident depuis le titre et
 
 ## Branches
 
-Une branche par issue, créée depuis `dev` : `feature/<numéro>-<slug>` (fonctionnalité) ou `fix/<numéro>-<slug>` (correction), slug court en minuscules séparé par des tirets — par exemple `feature/1-init-monorepo`. La branche se ferme par une pull request vers `dev` (jamais vers `main`), avec le mot-clé `Closes #X` dans la description. Ce mot-clé ne ferme toutefois l'issue automatiquement qu'à la fusion dans la branche par défaut (`main`) : les pull requests étant fusionnées dans `dev`, l'issue correspondante se ferme manuellement après le merge.
+Une branche par **lot fonctionnel cohérent** (D47), créée depuis `dev` : `feature/<numéro>-<slug>` (fonctionnalité) ou `fix/<numéro>-<slug>` (correction), slug court en minuscules séparé par des tirets — par exemple `feature/9-authentification`. Le numéro est celui de l'issue principale du lot.
+
+À l'intérieur du lot, chaque issue garde son commit, avec son suffixe `(#X)` : l'historique reste granulaire, seule la fréquence des branches et des pull requests diminue. Un lot regroupe des travaux qui n'ont pas d'intérêt à être livrés séparément, comme la chaîne d'authentification (configuration, inscription, connexion, middlewares).
+
+La branche se ferme par une pull request vers `dev` (jamais vers `main`), dont la description liste toutes les issues du lot avec le mot-clé `Closes #X`. Ce mot-clé ne ferme toutefois l'issue automatiquement qu'à la fusion dans la branche par défaut (`main`) : les pull requests étant fusionnées dans `dev`, chaque issue se ferme manuellement après le merge.
 
 ## Types autorisés
 
@@ -51,3 +55,4 @@ Optionnel mais recommandé dans un monorepo, pour situer immédiatement le commi
 - commits réguliers au fil du travail, pas un seul gros commit par phase : un historique granulaire documente la progression, facilite la relecture et permet un retour arrière ciblé en cas de régression
 - aucun commit directement sur `main` ou `dev` (D39) : le travail passe systématiquement par une branche `feature/<numéro>-<slug>` ou `fix/<numéro>-<slug>`, fusionnée dans `dev` via pull request revue ; `dev` est fusionnée dans `main` en fin de phase validée
 - un commit qui casse le build ou les tests existants n'est pas acceptable, y compris en cours de journée
+- les tests unitaires du back-end s'exécutent avec Vitest (D48) : `npm test` depuis `backend/`, ou `npm run test:watch` pendant le développement
