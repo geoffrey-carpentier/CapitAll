@@ -1,55 +1,35 @@
 // Règles de gestion du portefeuille, écrites en fonctions pures : elles reçoivent un
 // tableau de transactions et rendent un résultat, sans accès à la base ni à HTTP.
-// C'est ce qui les rend testables seules, et c'est la structure que reprendra le lot
-// des calculs financiers (PRU, plus-values).
+// C'est ce qui les rend testables seules, et ce qui permet de dérouler le calcul
+// devant un jury sans démarrer l'application.
 //
-// Choix de calcul : les quantités sont converties en entiers de la plus petite unité
-// représentable (10^-8, soit le maximum de décimales accepté à la validation) et
-// accumulées en BigInt. Additionner des nombres à virgule flottante ferait apparaître
-// des écarts du type 0.1 + 0.2 = 0.30000000000000004, inacceptables sur des quantités
-// financières. Le résultat est rendu sous forme de chaîne, donc exact de bout en bout.
+// L'arithmétique exacte est portée par src/utils/decimal.js, partagé avec le moteur
+// de calcul du PRU et des plus-values.
 
 const { ErreurValidation } = require('../erreurs');
-
-const DECIMALES = 8;
-const FACTEUR = 10n ** BigInt(DECIMALES);
-
-function versUnites(valeur) {
-  const [entier, decimales = ''] = String(valeur).trim().split('.');
-  const decimalesCompletees = decimales.padEnd(DECIMALES, '0').slice(0, DECIMALES);
-  return BigInt(entier) * FACTEUR + BigInt(decimalesCompletees);
-}
-
-function versChaine(unites) {
-  const negatif = unites < 0n;
-  const absolu = negatif ? -unites : unites;
-  const partieEntiere = absolu / FACTEUR;
-  const partieDecimale = (absolu % FACTEUR).toString().padStart(DECIMALES, '0').replace(/0+$/, '');
-
-  return `${negatif ? '-' : ''}${partieEntiere}${partieDecimale ? `.${partieDecimale}` : ''}`;
-}
+const { ECHELLE_QUANTITE, versUnites, versChaine } = require('../utils/decimal');
 
 // Quantité restant détenue sur un actif : somme des achats moins somme des ventes.
-// Rendue en chaîne pour rester exacte.
+// Rendue en chaîne pour rester exacte de bout en bout.
 function quantiteDetenue(transactions) {
   const total = transactions.reduce((cumul, transaction) => {
-    const unites = versUnites(transaction.quantite);
+    const unites = versUnites(transaction.quantite, ECHELLE_QUANTITE);
     return transaction.sens === 'achat' ? cumul + unites : cumul - unites;
   }, 0n);
 
-  return versChaine(total);
+  return versChaine(total, ECHELLE_QUANTITE);
 }
 
 // Règle « on ne vend pas plus que ce que l'on détient ». Elle porte sur l'agrégat de
 // plusieurs lignes de transaction : aucune contrainte SQL ne peut l'exprimer, elle
 // est donc vérifiée ici, côté serveur (voir modele-de-donnees.md).
 function verifierVenteAutorisee(transactions, quantiteVendue) {
-  const detenu = versUnites(quantiteDetenue(transactions));
-  const vendu = versUnites(quantiteVendue);
+  const detenu = versUnites(quantiteDetenue(transactions), ECHELLE_QUANTITE);
+  const vendu = versUnites(quantiteVendue, ECHELLE_QUANTITE);
 
   if (vendu > detenu) {
     throw new ErreurValidation(
-      `Quantité insuffisante : vous détenez ${versChaine(detenu)} sur cet actif.`
+      `Quantité insuffisante : vous détenez ${versChaine(detenu, ECHELLE_QUANTITE)} sur cet actif.`
     );
   }
 }
