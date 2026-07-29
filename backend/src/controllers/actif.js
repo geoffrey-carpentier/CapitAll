@@ -9,9 +9,11 @@
 // « cet actif ne vous appartient pas ».
 
 const modeleActif = require('../models/actif');
-const modeleTransaction = require('../models/transaction');
 const serviceTransaction = require('../services/transaction');
+const { creerServicePortefeuille } = require('../services/portefeuilleConsolide');
 const { ErreurIntrouvable } = require('../erreurs');
+
+const servicePortefeuille = creerServicePortefeuille();
 
 async function lister(req, res, next) {
   try {
@@ -36,21 +38,15 @@ async function creer(req, res, next) {
   }
 }
 
-// Détail d'un actif et historique de ses transactions. Le PRU et les plus-values
-// relèvent d'un lot dédié et ne sont volontairement pas calculés ici.
+// Détail d'un actif : position calculée (quantité détenue, PRU, plus-values), cours
+// courant avec sa source, et historique des transactions.
 async function detail(req, res, next) {
   try {
-    const actif = await modeleActif.trouverParIdEtUtilisateur(req.params.id, req.utilisateur.id);
-    if (!actif) {
-      throw new ErreurIntrouvable('Actif introuvable.');
-    }
-
-    const transactions = await modeleTransaction.listerParActifEtUtilisateur(
+    const detailActif = await servicePortefeuille.obtenirDetailActif(
       req.params.id,
       req.utilisateur.id
     );
-
-    res.status(200).json({ ...actif, transactions });
+    res.status(200).json(detailActif);
   } catch (erreur) {
     next(erreur);
   }
