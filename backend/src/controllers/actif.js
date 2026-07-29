@@ -9,6 +9,8 @@
 // « cet actif ne vous appartient pas ».
 
 const modeleActif = require('../models/actif');
+const modeleTransaction = require('../models/transaction');
+const serviceTransaction = require('../services/transaction');
 const { ErreurIntrouvable } = require('../erreurs');
 
 async function lister(req, res, next) {
@@ -34,15 +36,21 @@ async function creer(req, res, next) {
   }
 }
 
-// Le PRU et les plus-values relèvent d'un lot dédié et ne sont volontairement pas
-// calculés ici.
+// Détail d'un actif et historique de ses transactions. Le PRU et les plus-values
+// relèvent d'un lot dédié et ne sont volontairement pas calculés ici.
 async function detail(req, res, next) {
   try {
     const actif = await modeleActif.trouverParIdEtUtilisateur(req.params.id, req.utilisateur.id);
     if (!actif) {
       throw new ErreurIntrouvable('Actif introuvable.');
     }
-    res.status(200).json(actif);
+
+    const transactions = await modeleTransaction.listerParActifEtUtilisateur(
+      req.params.id,
+      req.utilisateur.id
+    );
+
+    res.status(200).json({ ...actif, transactions });
   } catch (erreur) {
     next(erreur);
   }
@@ -76,4 +84,38 @@ async function supprimer(req, res, next) {
   }
 }
 
-module.exports = { lister, creer, detail, modifier, supprimer };
+async function ajouterTransaction(req, res, next) {
+  try {
+    const transaction = await serviceTransaction.enregistrer({
+      actifId: req.params.id,
+      utilisateurId: req.utilisateur.id,
+      donnees: req.body,
+    });
+    res.status(201).json(transaction);
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
+async function supprimerTransaction(req, res, next) {
+  try {
+    await serviceTransaction.supprimer({
+      actifId: req.params.id,
+      idTransaction: req.params.idTransaction,
+      utilisateurId: req.utilisateur.id,
+    });
+    res.status(204).end();
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
+module.exports = {
+  lister,
+  creer,
+  detail,
+  modifier,
+  supprimer,
+  ajouterTransaction,
+  supprimerTransaction,
+};
