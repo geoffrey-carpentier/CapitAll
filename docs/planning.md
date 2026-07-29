@@ -17,11 +17,11 @@ Initialisation et fondations back-end (semaine courte, 3 jours).
 - exécution du script `backend/db/schema.sql`, création de l'utilisateur applicatif, script de seed (compte admin, annonces et jeu de données d'exemple)
 - connexion PostgreSQL, authentification (inscription, connexion, bcrypt, JWT, middleware), middleware de rôle
 - CRUD actifs et transactions avec vérification de propriété
-- collection Insomnia au fil de l'eau
+- collection Thunder Client au fil de l'eau
 - maquettes Figma des 5 écrans : à terminer sur cette période, en parallèle, sans attendre
 
 CP visées : CP1, CP2, CP5, CP6 (partiel).
-Captures : structure du dépôt et premiers commits, schéma dans pgAdmin, appels Insomnia d'inscription et de connexion.
+Captures : structure du dépôt et premiers commits, schéma dans pgAdmin, appels Thunder Client d'inscription et de connexion.
 
 ## Semaine 2 - du lundi 27 juillet au dimanche 2 août
 
@@ -34,7 +34,7 @@ Logique métier et intégration des fournisseurs de cours.
 - démarrage du front : Vite, routing, page de connexion et d'inscription, liste des actifs connectée à l'API
 
 CP visées : CP6, CP7.
-Captures : clé Redis en CLI (`GET` et `TTL`), tests unitaires au vert, appel Insomnia du portefeuille.
+Captures : clé Redis en CLI (`GET` et `TTL`), tests unitaires au vert, appel Thunder Client du portefeuille.
 
 ## Semaine 3 - du lundi 3 au dimanche 9 août
 

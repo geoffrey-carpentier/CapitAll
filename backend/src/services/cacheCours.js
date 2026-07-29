@@ -1,89 +1,65 @@
-// Cache Redis pour les cours récupérés auprès des fournisseurs externes (D14).
-// Le service de cours interroge ce cache avant d'appeler un adaptateur ; il y écrit
-// systématiquement le résultat d'un appel réussi, avec une durée de vie courte.
-// Dépendance : paquet npm "redis" (client officiel, v4+). URL de connexion fournie
-// par la variable d'environnement REDIS_URL (ex. redis://redis:6379 en docker-compose).
+// Cache Redis des cours récupérés auprès des fournisseurs externes (D14).
+// Ce module ne gère que les clés et leur durée de vie ; la connexion et sa résilience
+// sont l'affaire de src/cache/client.js.
+//
+// Deux familles de clés, aux rôles distincts :
+//   cours:{SYMBOLE}                avec TTL, le cours frais servi en priorité
+//   cours:dernier-connu:{SYMBOLE}  sans TTL, filet de sécurité quand un fournisseur
+//                                  est indisponible (cas-utilisation.md : « le dernier
+//                                  cours connu est affiché avec sa date »)
+//
+// Aucune fonction ne lève d'exception : une panne de cache dégrade vers un appel
+// direct au fournisseur, elle ne fait jamais échouer la requête de l'utilisateur.
 
-const { createClient } = require('redis');
+const cache = require('../cache/client');
 
-const DUREE_VIE_SECONDES = 120;
 const PREFIXE_CLE = 'cours';
-
-let client;
-
-function obtenirClient() {
-  if (!client) {
-    client = createClient({ url: process.env.REDIS_URL });
-    client.on('error', (erreur) => {
-      console.error('Erreur de connexion Redis', erreur);
-    });
-  }
-  return client;
-}
-
-async function connecter() {
-  const c = obtenirClient();
-  if (!c.isOpen) {
-    await c.connect();
-  }
-  return c;
-}
 
 function construireCle(symbole) {
   return `${PREFIXE_CLE}:${symbole.toUpperCase()}`;
 }
 
-// Renvoie { symbole, cours_eur, horodatage } si le cours est en cache, sinon null.
-// Ne lève jamais d'exception : une indisponibilité de Redis doit dégrader vers un
-// appel direct au fournisseur, pas faire échouer la requête de l'utilisateur.
+function construireCleDernierConnu(symbole) {
+  return `${PREFIXE_CLE}:dernier-connu:${symbole.toUpperCase()}`;
+}
+
+function analyser(valeur) {
+  if (!valeur) {
+    return null;
+  }
+  try {
+    return JSON.parse(valeur);
+  } catch {
+    // Une valeur illisible est traitée comme une absence de cache plutôt que comme
+    // une erreur : le cours sera simplement redemandé au fournisseur.
+    return null;
+  }
+}
+
 async function lireCoursCache(symbole) {
-  try {
-    const c = await connecter();
-    const valeur = await c.get(construireCle(symbole));
-    return valeur ? JSON.parse(valeur) : null;
-  } catch (erreur) {
-    console.error(`Lecture cache impossible pour ${symbole}`, erreur);
-    return null;
-  }
+  const valeur = await cache.executer((client) => client.get(construireCle(symbole)));
+  return analyser(valeur);
 }
 
-// Écrit le cours en cache avec la durée de vie par défaut. Échec silencieux pour
-// la même raison que lireCoursCache : le cache est une optimisation, pas une
-// dépendance dure du calcul de portefeuille.
-async function ecrireCoursCache(symbole, cours) {
-  try {
-    const c = await connecter();
-    await c.set(construireCle(symbole), JSON.stringify(cours), {
-      EX: DUREE_VIE_SECONDES,
-    });
-  } catch (erreur) {
-    console.error(`Écriture cache impossible pour ${symbole}`, erreur);
-  }
+// La durée de vie est désormais reçue en paramètre : elle dépend de la classe d'actif
+// (D21), le service de cours étant seul à connaître le type du symbole demandé.
+async function ecrireCoursCache(symbole, cours, dureeVieSecondes) {
+  await cache.executer((client) =>
+    client.set(construireCle(symbole), JSON.stringify(cours), { EX: dureeVieSecondes })
+  );
 }
 
-// Dernier cours connu, même expiré, utilisé en repli quand un fournisseur est
-// indisponible (cas-utilisation.md : "le dernier cours connu est affiché avec sa date").
-// Repose sur une seconde clé à durée de vie longue, mise à jour à chaque écriture réussie.
 async function lireDernierCoursConnu(symbole) {
-  try {
-    const c = await connecter();
-    const valeur = await c.get(`${PREFIXE_CLE}:dernier-connu:${symbole.toUpperCase()}`);
-    return valeur ? JSON.parse(valeur) : null;
-  } catch (erreur) {
-    console.error(`Lecture du dernier cours connu impossible pour ${symbole}`, erreur);
-    return null;
-  }
+  const valeur = await cache.executer((client) => client.get(construireCleDernierConnu(symbole)));
+  return analyser(valeur);
 }
 
+// Pas de TTL sur cette clé : elle sert de filet de sécurité de longue durée, remplacée
+// à chaque appel réussi d'un fournisseur.
 async function ecrireDernierCoursConnu(symbole, cours) {
-  try {
-    const c = await connecter();
-    // Pas de TTL ici : cette clé sert de filet de sécurité de longue durée,
-    // remplacée à chaque nouvel appel fournisseur réussi.
-    await c.set(`${PREFIXE_CLE}:dernier-connu:${symbole.toUpperCase()}`, JSON.stringify(cours));
-  } catch (erreur) {
-    console.error(`Écriture du dernier cours connu impossible pour ${symbole}`, erreur);
-  }
+  await cache.executer((client) =>
+    client.set(construireCleDernierConnu(symbole), JSON.stringify(cours))
+  );
 }
 
 module.exports = {

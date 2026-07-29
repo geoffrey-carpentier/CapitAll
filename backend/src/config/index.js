@@ -39,6 +39,11 @@ const config = Object.freeze({
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiration: process.env.JWT_EXPIRATION || '2h',
+  // REDIS_URL ne figure pas parmi les variables obligatoires, contrairement aux deux
+  // précédentes : le cache est une optimisation, pas une dépendance. Sans Redis
+  // joignable, l'application démarre et sert les cours en appelant directement les
+  // fournisseurs. Une valeur par défaut suffit donc en développement.
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 });
 
 module.exports = config;

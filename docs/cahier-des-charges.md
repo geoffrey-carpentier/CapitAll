@@ -90,7 +90,7 @@ Contexte de réalisation : projet individuel réalisé pendant la formation au T
 | GET | `/api/admin/comptes` | oui, admin | liste des comptes (sans données patrimoniales) | 200, 401, 403 |
 | PATCH | `/api/admin/comptes/:id` | oui, admin | désactivation d'un compte | 200, 401, 403, 404 |
 
-Chaque endpoint documentera son DTO d'entrée et de sortie au fil du développement (collection Insomnia comme preuve d'examen, voir plan du dossier de projet).
+Chaque endpoint documentera son DTO d'entrée et de sortie au fil du développement (collection Thunder Client comme preuve d'examen, voir plan du dossier de projet).
 
 **Contraintes de sécurité.**
 

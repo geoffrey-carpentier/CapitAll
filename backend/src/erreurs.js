@@ -25,6 +25,14 @@ class ErreurIntrouvable extends ErreurMetier {
   }
 }
 
+// Un fournisseur de cours externe est indisponible ou a renvoyé une réponse
+// inexploitable. 503 : le défaut est passager et ne vient pas de la requête du client.
+class ErreurFournisseur extends ErreurMetier {
+  constructor(message) {
+    super(message, 503);
+  }
+}
+
 // Ressource déjà existante, typiquement un email déjà inscrit.
 class ErreurConflit extends ErreurMetier {
   constructor(message) {
@@ -51,6 +59,7 @@ module.exports = {
   ErreurValidation,
   ErreurIntrouvable,
   ErreurConflit,
+  ErreurFournisseur,
   ErreurAuthentification,
   ErreurAutorisation,
 };
