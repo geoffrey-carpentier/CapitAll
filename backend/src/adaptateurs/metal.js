@@ -34,6 +34,12 @@ function creerAdaptateurMetal({ recupererJson, obtenirTauxUsdEur }) {
       );
     }
 
+    // Cette multiplication est faite en virgule flottante, alors que le portefeuille
+    // proscrit le flottant sur les montants (D4). La distinction est volontaire : il
+    // s'agit ici de convertir un cours, donnée déjà approximative reçue en flottant du
+    // fournisseur et rafraîchie en permanence, et non d'un montant du patrimoine.
+    // Le résultat est immédiatement arrondi au centime, puis manipulé en chaîne par le
+    // moteur de calcul. Aucune imprécision ne se propage donc aux PRU ni aux plus-values.
     return {
       symbole: symboleNormalise,
       cours_eur: (prixUsd * tauxUsdEur).toFixed(DECIMALES_PRIX),
