@@ -1,0 +1,215 @@
+import { describe, it, expect } from 'vitest';
+import { calculerPosition, valoriser, consolider } from '../calculPortefeuille.js';
+
+function achat(quantite, prix, frais = '0', date = '2026-01-01', id = 1) {
+  return { id, sens: 'achat', quantite, prix_unitaire: prix, frais, date_transaction: date };
+}
+
+function vente(quantite, prix, frais = '0', date = '2026-01-01', id = 1) {
+  return { id, sens: 'vente', quantite, prix_unitaire: prix, frais, date_transaction: date };
+}
+
+describe('calcul de position', () => {
+  it('rend une position vide sans transaction', () => {
+    const position = calculerPosition([]);
+    expect(position.quantite_detenue).toBe('0');
+    expect(position.pru).toBe('0');
+    expect(position.plus_value_realisee).toBe('0.00');
+  });
+
+  // Règle 1 : les frais entrent dans le coût de revient. 10 titres à 100 euros plus
+  // 5 euros de frais coûtent 1005 euros, soit un PRU de 100,50 et non de 100.
+  it("intègre les frais d'achat au prix de revient", () => {
+    const position = calculerPosition([achat('10', '100.00', '5.00')]);
+    expect(position.pru).toBe('100.5');
+    expect(position.cout_total).toBe('1005.00');
+  });
+
+  it('rend un PRU égal au prix quand les frais sont nuls', () => {
+    const position = calculerPosition([achat('10', '100.00')]);
+    expect(position.pru).toBe('100');
+  });
+
+  // Règle 2, cas vérifiable de tête : (1005 + 1205) / 20 = 110,50.
+  it('recalcule le PRU en moyenne pondérée à chaque achat', () => {
+    const position = calculerPosition([
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+    ]);
+    expect(position.quantite_detenue).toBe('20');
+    expect(position.pru).toBe('110.5');
+    expect(position.cout_total).toBe('2210.00');
+  });
+
+  // Règles 3 et 4 : la vente laisse le PRU intact et dégage
+  // 5 × (150 − 110,50) − 5 = 192,50.
+  it('ne modifie pas le PRU lors d\'une vente et cumule la plus-value réalisée', () => {
+    const position = calculerPosition([
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+      vente('5', '150.00', '5.00', '2026-03-10', 3),
+    ]);
+    expect(position.quantite_detenue).toBe('15');
+    expect(position.pru).toBe('110.5');
+    expect(position.plus_value_realisee).toBe('192.50');
+  });
+
+  it('calcule une plus-value réalisée négative sur une vente à perte', () => {
+    const position = calculerPosition([
+      achat('10', '100.00', '0', '2026-01-10', 1),
+      vente('5', '80.00', '0', '2026-02-10', 2),
+    ]);
+    expect(position.plus_value_realisee).toBe('-100.00');
+  });
+
+  // Règle 5 : après une vente totale, un rachat repart d'un PRU neuf.
+  it('remet le PRU à zéro après une vente totale, le rachat repartant de zéro', () => {
+    const position = calculerPosition([
+      achat('10', '100.00', '0', '2026-01-10', 1),
+      vente('10', '150.00', '0', '2026-02-10', 2),
+      achat('4', '200.00', '0', '2026-03-10', 3),
+    ]);
+    expect(position.quantite_detenue).toBe('4');
+    expect(position.pru).toBe('200');
+    expect(position.plus_value_realisee).toBe('500.00');
+  });
+
+  // Règle 6, garde-fou principal : saisir une transaction ancienne après coup doit
+  // donner le même résultat que l'avoir saisie dans l'ordre.
+  it('donne le même résultat quel que soit l\'ordre de saisie', () => {
+    const chronologique = [
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+      vente('5', '150.00', '5.00', '2026-03-10', 3),
+    ];
+    const desordre = [chronologique[2], chronologique[0], chronologique[1]];
+
+    expect(calculerPosition(desordre)).toEqual(calculerPosition(chronologique));
+  });
+
+  it('départage deux transactions de même date par leur identifiant', () => {
+    const ordre = [
+      achat('10', '100.00', '0', '2026-01-10', 1),
+      vente('10', '150.00', '0', '2026-01-10', 2),
+    ];
+    const inverse = [ordre[1], ordre[0]];
+
+    expect(calculerPosition(inverse)).toEqual(calculerPosition(ordre));
+    expect(calculerPosition(inverse).plus_value_realisee).toBe('500.00');
+  });
+
+  // L'arithmétique entière doit rester exacte là où le flottant dérive.
+  it('reste exact sur des quantités à 8 décimales', () => {
+    const position = calculerPosition([
+      achat('0.1', '100.00', '0', '2026-01-10', 1),
+      achat('0.2', '100.00', '0', '2026-02-10', 2),
+    ]);
+    expect(position.quantite_detenue).toBe('0.3');
+    expect(position.pru).toBe('100');
+  });
+
+  it('gère une quantité minimale de 0,00000001', () => {
+    const position = calculerPosition([achat('0.00000001', '50000.00', '0')]);
+    expect(position.quantite_detenue).toBe('0.00000001');
+    expect(position.pru).toBe('50000');
+  });
+});
+
+describe('valorisation', () => {
+  const position = calculerPosition([
+    achat('10', '100.00', '5.00', '2026-01-10', 1),
+    achat('10', '120.00', '5.00', '2026-02-10', 2),
+    vente('5', '150.00', '5.00', '2026-03-10', 3),
+  ]);
+
+  it('calcule une plus-value latente positive', () => {
+    const valorisee = valoriser(position, '130.00');
+    expect(valorisee.valeur).toBe('1950.00');
+    expect(valorisee.plus_value_latente).toBe('292.50');
+  });
+
+  it('calcule une plus-value latente négative', () => {
+    const valorisee = valoriser(position, '100.00');
+    expect(valorisee.valeur).toBe('1500.00');
+    expect(valorisee.plus_value_latente).toBe('-157.50');
+  });
+
+  // Un cours indisponible n'est pas un cours nul : la position est rendue sans
+  // valorisation, à charge pour le front de le signaler.
+  it("laisse la position non valorisée quand le cours est absent", () => {
+    const valorisee = valoriser(position, null);
+    expect(valorisee.valeur).toBeNull();
+    expect(valorisee.plus_value_latente).toBeNull();
+    expect(valorisee.quantite_detenue).toBe('15');
+  });
+
+  it('ne calcule pas de pourcentage sur une position soldée', () => {
+    const soldee = calculerPosition([
+      achat('10', '100.00', '0', '2026-01-10', 1),
+      vente('10', '150.00', '0', '2026-02-10', 2),
+    ]);
+    expect(valoriser(soldee, '150.00').pourcentage_variation).toBeNull();
+  });
+});
+
+describe('consolidation', () => {
+  const positions = [
+    { type: 'crypto', valeur: '6000.00', cout_total: '5000.00', plus_value_latente: '1000.00', plus_value_realisee: '200.00' },
+    { type: 'action', valeur: '3000.00', cout_total: '2500.00', plus_value_latente: '500.00', plus_value_realisee: '0.00' },
+    { type: 'metal', valeur: '1000.00', cout_total: '1200.00', plus_value_latente: '-200.00', plus_value_realisee: '50.00' },
+  ];
+
+  it('additionne les valeurs, les coûts et les plus-values', () => {
+    const totaux = consolider(positions);
+    expect(totaux.valeur_totale).toBe('10000.00');
+    expect(totaux.cout_total).toBe('8700.00');
+    expect(totaux.plus_value_latente).toBe('1300.00');
+    expect(totaux.plus_value_realisee).toBe('250.00');
+  });
+
+  it('répartit par classe d\'actif', () => {
+    const { repartition } = consolider(positions);
+    const parType = Object.fromEntries(repartition.map((r) => [r.type, r.pourcentage]));
+    expect(parType.crypto).toBe('60.00');
+    expect(parType.action).toBe('30.00');
+    expect(parType.metal).toBe('10.00');
+  });
+
+  // Une répartition affichée sur un graphique doit totaliser exactement 100 :
+  // arrondir chaque part isolément produirait 99,99 % ou 100,01 %.
+  it('rend une répartition dont la somme fait exactement 100', () => {
+    const troisTiers = [
+      { type: 'crypto', valeur: '100.00', cout_total: '100.00', plus_value_latente: '0.00', plus_value_realisee: '0.00' },
+      { type: 'action', valeur: '100.00', cout_total: '100.00', plus_value_latente: '0.00', plus_value_realisee: '0.00' },
+      { type: 'metal', valeur: '100.00', cout_total: '100.00', plus_value_latente: '0.00', plus_value_realisee: '0.00' },
+    ];
+    const { repartition } = consolider(troisTiers);
+    const somme = repartition.reduce((total, part) => total + Number(part.pourcentage), 0);
+    expect(somme).toBe(100);
+  });
+
+  it('exclut de la valeur totale les positions sans cours', () => {
+    const avecTrou = [
+      positions[0],
+      { type: 'action', valeur: null, cout_total: '2500.00', plus_value_latente: null, plus_value_realisee: '0.00' },
+    ];
+    const totaux = consolider(avecTrou);
+    expect(totaux.valeur_totale).toBe('6000.00');
+    expect(totaux.repartition).toHaveLength(1);
+  });
+
+  it('rend une consolidation vide sur un portefeuille sans actif', () => {
+    const totaux = consolider([]);
+    expect(totaux.valeur_totale).toBe('0.00');
+    expect(totaux.repartition).toEqual([]);
+  });
+
+  // Les plus-values réalisées restent comptabilisées même sans cours courant :
+  // elles proviennent de ventes passées, pas d'une valorisation.
+  it('comptabilise la plus-value réalisée d\'une position non valorisée', () => {
+    const totaux = consolider([
+      { type: 'crypto', valeur: null, cout_total: '0.00', plus_value_latente: null, plus_value_realisee: '300.00' },
+    ]);
+    expect(totaux.plus_value_realisee).toBe('300.00');
+  });
+});
