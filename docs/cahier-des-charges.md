@@ -73,9 +73,11 @@ Contexte de réalisation : projet individuel réalisé pendant la formation au T
 | POST | `/api/auth/connexion` | non | authentification, émission du JWT | 200, 400, 401 |
 | GET | `/api/actifs` | oui | liste des actifs de l'utilisateur | 200, 401 |
 | POST | `/api/actifs` | oui | création d'un actif suivi | 201, 400, 401, 409 |
-| GET | `/api/actifs/:id` | oui, propriétaire | détail d'un actif, PRU, plus-values latente et réalisée | 200, 401, 403, 404 |
-| DELETE | `/api/actifs/:id` | oui, propriétaire | suppression d'un actif (cascade) | 204, 401, 403, 404 |
-| POST | `/api/actifs/:id/transactions` | oui, propriétaire | enregistrement d'une transaction | 201, 400, 401, 403, 404 |
+| GET | `/api/actifs/:id` | oui, propriétaire | détail d'un actif, transactions, PRU, plus-values latente et réalisée | 200, 401, 404 |
+| PATCH | `/api/actifs/:id` | oui, propriétaire | modification du nom d'un actif | 200, 400, 401, 404 |
+| DELETE | `/api/actifs/:id` | oui, propriétaire | suppression d'un actif (cascade) | 204, 401, 404 |
+| POST | `/api/actifs/:id/transactions` | oui, propriétaire | enregistrement d'une transaction | 201, 400, 401, 404 |
+| DELETE | `/api/actifs/:id/transactions/:idTransaction` | oui, propriétaire | suppression d'une transaction (D51) | 204, 401, 404 |
 | GET | `/api/portefeuille` | oui | tableau de bord consolidé (valeur totale, plus-values latente et réalisée) | 200, 401 |
 | GET | `/api/portefeuille/historique` | oui | snapshots de valorisation | 200, 401 |
 | GET | `/api/alertes` | oui | liste des alertes de l'utilisateur | 200, 401 |
