@@ -18,4 +18,13 @@ async function inscription(req, res, next) {
   }
 }
 
-module.exports = { inscription };
+async function connexion(req, res, next) {
+  try {
+    const resultat = await serviceAuthentification.connecter(req.body);
+    res.status(200).json(resultat);
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
+module.exports = { inscription, connexion };
