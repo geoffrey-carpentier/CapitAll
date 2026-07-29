@@ -2,7 +2,7 @@
 
 Application web mobile-first de suivi de patrimoine multi-actifs : cryptomonnaies, devises étrangères, métaux précieux et une sélection d'actions américaines.
 
-CapitAll centralise les actifs suivis par l'utilisateur, enregistre ses transactions d'achat et de vente, récupère automatiquement les cours auprès d'API publiques et calcule le prix de revient moyen pondéré (PRU) et la plus-value latente, par actif et sur l'ensemble du portefeuille. Le tout est présenté dans un tableau de bord consolidé en euros.
+CapitAll centralise les actifs suivis par l'utilisateur, enregistre ses transactions d'achat et de vente, récupère automatiquement les cours auprès d'API publiques et calcule le prix de revient moyen pondéré (PRU), la plus-value latente et la plus-value réalisée, par actif et sur l'ensemble du portefeuille. Le tout est présenté dans un tableau de bord consolidé, calculé en euros et affichable en euro ou en dollar.
 
 Projet réalisé dans le cadre du Titre Professionnel Développeur Web et Web Mobile (DWWM, niveau 5).
 
@@ -11,8 +11,8 @@ Projet réalisé dans le cadre du Titre Professionnel Développeur Web et Web Mo
 - inscription et connexion sécurisées (JWT, bcrypt), cloisonnement strict des données par utilisateur
 - gestion des actifs suivis sur quatre classes : crypto, devise, métal précieux, action
 - enregistrement des transactions d'achat et de vente
-- calcul automatique du PRU et de la plus-value latente
-- tableau de bord consolidé : valeur totale, répartition, courbe d'évolution
+- calcul automatique du PRU, de la plus-value latente et de la plus-value réalisée
+- tableau de bord consolidé : valeur totale, répartition, courbe d'évolution, bascule d'affichage euro/dollar
 - alertes de seuil (sur un actif ou sur le capital total)
 - historique de valorisation journalière du portefeuille
 - annonces internes publiées par l'administrateur
