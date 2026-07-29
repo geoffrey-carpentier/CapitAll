@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 
+const routeurAuthentification = require('./routes/authentification');
 const gestionErreurs = require('./middlewares/gestionErreurs');
 
 const app = express();
@@ -11,6 +12,8 @@ app.use(express.json());
 app.get('/api/sante', (req, res) => {
   res.json({ statut: 'ok' });
 });
+
+app.use('/api/auth', routeurAuthentification);
 
 // Toujours en dernier : Express n'y passe que si une route a appelé next(erreur).
 app.use(gestionErreurs);
