@@ -10,6 +10,21 @@ class ErreurMetier extends Error {
   }
 }
 
+// Règle de gestion non respectée, au-delà de la simple forme des données.
+class ErreurValidation extends ErreurMetier {
+  constructor(message) {
+    super(message, 400);
+  }
+}
+
+// Ressource inexistante, ou appartenant à quelqu'un d'autre : les deux cas renvoient
+// volontairement le même statut, voir le commentaire des contrôleurs du portefeuille.
+class ErreurIntrouvable extends ErreurMetier {
+  constructor(message) {
+    super(message, 404);
+  }
+}
+
 // Ressource déjà existante, typiquement un email déjà inscrit.
 class ErreurConflit extends ErreurMetier {
   constructor(message) {
@@ -33,6 +48,8 @@ class ErreurAutorisation extends ErreurMetier {
 
 module.exports = {
   ErreurMetier,
+  ErreurValidation,
+  ErreurIntrouvable,
   ErreurConflit,
   ErreurAuthentification,
   ErreurAutorisation,
