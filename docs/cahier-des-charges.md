@@ -289,7 +289,9 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 
 Les routes d'administration renvoient 403 et non 404 : contrairement au cloisonnement entre utilisateurs, il n'y a ici aucun intérêt à masquer l'existence de la ressource, et un refus explicite est plus clair.
 
-Les structures de données échangées par chaque point d'entrée sont documentées au fil du développement dans une collection d'appels rejouable, versionnée avec le projet.
+**Statut à la date de cette version.** Les routes d'authentification, d'actifs, de transactions, de portefeuille et d'alertes sont développées et vérifiées. Les six routes d'annonces et d'administration constituent des engagements du présent cahier des charges, non encore développés à la date de la version 2.0. Ce tableau décrit la cible contractuelle du produit, l'état d'avancement relevant du suivi de projet.
+
+Les structures de données échangées par chaque point d'entrée seront documentées dans une collection d'appels rejouable, constituée au fil du développement et versionnée avec le projet.
 
 ## 9. Interface utilisateur
 
