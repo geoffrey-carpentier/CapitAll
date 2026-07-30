@@ -1,0 +1,35 @@
+.authentification {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espace-4);
+}
+
+.authentification__carte {
+  width: 100%;
+  max-width: 400px;
+  background: var(--couleur-carte);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+  padding: var(--espace-8) var(--espace-6);
+}
+
+.authentification__titre {
+  font-size: var(--taille-montant);
+  font-weight: var(--graisse-forte);
+  margin-bottom: var(--espace-2);
+}
+
+.authentification__intro {
+  font-size: var(--taille-corps);
+  color: var(--couleur-texte-attenue);
+  margin-bottom: var(--espace-6);
+}
+
+.authentification__bascule {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  text-align: center;
+  margin-top: var(--espace-6);
+}
