@@ -22,6 +22,13 @@ function depotTransactions(liste) {
   return { listerParActifEtUtilisateur: vi.fn().mockResolvedValue(liste) };
 }
 
+function depotAlertes(actives = []) {
+  return {
+    listerActivesParUtilisateur: vi.fn().mockResolvedValue(actives),
+    marquerDeclenchees: vi.fn().mockResolvedValue(actives.length),
+  };
+}
+
 const ACTIF_BTC = { id: 1, type: 'crypto', symbole: 'BTC', nom: 'Bitcoin', utilisateur_id: 2 };
 
 const TRANSACTIONS_BTC = [
@@ -185,6 +192,93 @@ describe('portefeuille consolidé', () => {
     await service.obtenirPortefeuille(2);
 
     expect(serviceCours.getCoursMultiples).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('évaluation des alertes au chargement', () => {
+  it('signale les alertes franchies et les marque déclenchées', async () => {
+    const actifs = depotActifs([ACTIF_BTC]);
+    const transactions = depotTransactions(TRANSACTIONS_BTC);
+    const alertes = depotAlertes([
+      {
+        id: 7,
+        type_cible: 'capital_total',
+        actif_id: null,
+        sens_seuil: 'au_dessus',
+        valeur_seuil: '100.00',
+        statut: 'active',
+      },
+    ]);
+
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([
+        { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
+      ]),
+      snapshots: snapshotsFactices(),
+      actifs,
+      transactions,
+      alertes,
+    });
+
+    const portefeuille = await service.obtenirPortefeuille(2);
+
+    expect(portefeuille.alertes_declenchees).toHaveLength(1);
+    expect(portefeuille.alertes_declenchees[0].valeur_observee).toBe('150.00');
+    expect(alertes.marquerDeclenchees).toHaveBeenCalledWith(2, [7]);
+  });
+
+  it("ne marque rien quand aucun seuil n'est franchi", async () => {
+    const actifs = depotActifs([ACTIF_BTC]);
+    const transactions = depotTransactions(TRANSACTIONS_BTC);
+    const alertes = depotAlertes([
+      {
+        id: 8,
+        type_cible: 'capital_total',
+        actif_id: null,
+        sens_seuil: 'au_dessus',
+        valeur_seuil: '999999.00',
+        statut: 'active',
+      },
+    ]);
+
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([
+        { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
+      ]),
+      snapshots: snapshotsFactices(),
+      actifs,
+      transactions,
+      alertes,
+    });
+
+    const portefeuille = await service.obtenirPortefeuille(2);
+
+    expect(portefeuille.alertes_declenchees).toEqual([]);
+    expect(alertes.marquerDeclenchees).not.toHaveBeenCalled();
+  });
+
+  // L'évaluation est un effet de bord, au même titre que l'historisation : son échec
+  // ne doit pas priver l'utilisateur de son portefeuille.
+  it("rend le portefeuille même si l'évaluation des alertes échoue", async () => {
+    const actifs = depotActifs([ACTIF_BTC]);
+    const transactions = depotTransactions(TRANSACTIONS_BTC);
+    const alertes = depotAlertes();
+    alertes.listerActivesParUtilisateur.mockRejectedValue(new Error('base indisponible'));
+
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([
+        { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
+      ]),
+      snapshots: snapshotsFactices(),
+      actifs,
+      transactions,
+      alertes,
+    });
+
+    const portefeuille = await service.obtenirPortefeuille(2);
+
+    expect(portefeuille.valeur_totale).toBe('150.00');
+    expect(portefeuille.alertes_declenchees).toEqual([]);
   });
 });
 

@@ -7,6 +7,8 @@
 const modeleActif = require('../models/actif');
 const modeleTransaction = require('../models/transaction');
 const modeleSnapshot = require('../models/snapshot');
+const modeleAlerte = require('../models/alerte');
+const { evaluerAlertes } = require('./evaluationAlertes');
 const { creerServiceCours } = require('./cours');
 const { calculerPosition, valoriser, consolider } = require('./calculPortefeuille');
 const { ECHELLE_PRU, versUnites, versChaine, diviser } = require('../utils/decimal');
@@ -19,6 +21,7 @@ function creerServicePortefeuille({
   snapshots = modeleSnapshot,
   actifs: depotActifs = modeleActif,
   transactions: depotTransactions = modeleTransaction,
+  alertes: depotAlertes = modeleAlerte,
 } = {}) {
   // Charge les positions d'un utilisateur, valorisées au cours courant.
   async function construirePositions(utilisateurId) {
@@ -107,13 +110,48 @@ function creerServicePortefeuille({
     const tauxAffichage = await obtenirTauxAffichage();
 
     await historiser(utilisateurId, totaux.valeur_totale, positions, coursIndisponibles);
+    const alertesDeclenchees = await traiterAlertes(utilisateurId, totaux.valeur_totale, positions);
 
     return {
       ...totaux,
       actifs: positions,
       cours_indisponibles: coursIndisponibles,
       taux_affichage: tauxAffichage,
+      alertes_declenchees: alertesDeclenchees,
     };
+  }
+
+  // Évaluation des alertes au chargement du tableau de bord (D50).
+  //
+  // Comme l'historisation, c'est un effet de bord : un échec est journalisé et la
+  // réponse part quand même. Priver l'utilisateur de son portefeuille parce qu'une
+  // alerte n'a pas pu être évaluée serait disproportionné.
+  async function traiterAlertes(utilisateurId, capitalTotal, positions) {
+    try {
+      const actives = await depotAlertes.listerActivesParUtilisateur(utilisateurId);
+      if (actives.length === 0) {
+        return [];
+      }
+
+      // Les alertes sur actif se comparent au cours, pas à la valeur de la position.
+      const coursParActif = Object.fromEntries(
+        positions.filter((p) => p.cours_eur !== null).map((p) => [p.id, p.cours_eur])
+      );
+
+      const franchies = evaluerAlertes(actives, { capitalTotal, coursParActif });
+
+      if (franchies.length > 0) {
+        await depotAlertes.marquerDeclenchees(
+          utilisateurId,
+          franchies.map((alerte) => alerte.id)
+        );
+      }
+
+      return franchies;
+    } catch (erreur) {
+      console.error("Évaluation des alertes impossible :", erreur.message);
+      return [];
+    }
   }
 
   // Écriture paresseuse du snapshot du jour (D49) : déclenchée par la consultation,
