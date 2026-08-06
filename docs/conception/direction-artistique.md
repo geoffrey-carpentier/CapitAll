@@ -25,16 +25,34 @@ Contrastes vérifiés à respecter (RGAA) : texte principal et secondaire sur fo
 ## Principes de mise en page
 
 - mobile-first : une colonne, cartes empilées ; sur desktop, grille deux colonnes pour le tableau de bord
-- navigation par barre d'onglets en bas sur mobile (tableau de bord, actifs, ajout, compte), barre latérale sur desktop
+- navigation par barre d'onglets en bas sur mobile à cinq entrées (patrimoine, positions, ajout au centre, seuils, compte), rail latéral sur desktop
 - coins arrondis discrets (8 px), pas d'ombres marquées, hiérarchie par la couleur de fond
 - graphique de répartition en anneau, courbe d'évolution en aire dégradée
+
+## Grammaire visuelle
+
+Trois niveaux de contenant et pas davantage : à plat sur le fond pour les listes et les formulaires, carte bordée pour les blocs à frontière logique, carte au fond accentué pour le seul bloc de patrimoine.
+
+Rythme vertical à trois valeurs : 32 px avant un changement de section, 24 px entre blocs d'une même section, 12 px entre éléments liés. L'espace au-dessus d'un titre est toujours supérieur à l'espace en dessous.
+
+Chaque classe d'actif porte un jeton distinct **par la forme** et pas seulement par la couleur : cercle pour les cryptomonnaies, carré arrondi pour les métaux, losange pour les devises, hexagone pour les actions. La forme reste lisible en niveaux de gris.
+
+Sur tout graphe de cours d'une position, le prix de revient est tracé en ligne horizontale pointillée, l'aire entre la courbe et cette ligne étant teintée selon le signe. C'est le geste graphique propre à l'application : il donne à voir d'un regard l'information principale du produit.
 
 ## Écrans à maquetter (Figma)
 
 1. connexion / inscription
-2. tableau de bord (valeur totale, plus-value globale, anneau de répartition, courbe d'évolution, sélecteur de devise d'affichage euro/dollar)
-3. liste des actifs (carte par actif : symbole, quantité, PRU, cours, plus-value)
-4. détail d'un actif (historique des transactions, plus-value latente et réalisée)
-5. formulaire d'ajout de transaction
+2. patrimoine (tableau de bord)
+3. positions
+4. détail d'une position
+5. mouvement (achat ou vente)
+6. seuils
+7. compte
 
-Chaque écran en version mobile (375 px) et desktop (1440 px).
+Chaque écran en version mobile (375 px) et desktop (1440 px), accompagné d'une planche d'états couvrant le premier lancement, le portefeuille vide, le chargement, l'erreur d'API, l'erreur réseau, la session expirée et le repli sur le dernier cours connu.
+
+Direction retenue : une seule interface à deux points de rupture, dense et outillée en desktop, resserrée sur le geste en mobile. Les prototypes HTML ayant servi aux arbitrages ne sont pas versionnés.
+
+## Documents liés
+
+Le détail de chaque écran, ses états et ses règles d'interaction : `specification-fonctionnelle.md`. Le formatage de toute valeur numérique affichée : `formatage-nombres.md`.

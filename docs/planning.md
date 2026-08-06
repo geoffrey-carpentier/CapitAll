@@ -44,7 +44,6 @@ Front-end dynamique et accessibilité.
 - formulaire d'ajout de transaction, détail d'un actif, gestion des alertes
 - gestion du jeton JWT côté client, gestion des erreurs d'API
 - responsive mobile-first, vérifications RGAA (contrastes, labels, navigation clavier)
-- fil d'annonces en lecture
 
 CP visées : CP3, CP4.
 Captures : tableau de bord en desktop et en mobile, contrôle d'accessibilité.
