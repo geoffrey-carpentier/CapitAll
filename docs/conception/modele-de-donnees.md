@@ -2,7 +2,7 @@
 
 ## Modèle conceptuel de données (MCD, formalisme Merise)
 
-Six entités couvrent le périmètre du MVP. Les trois premières (utilisateur, actif, transaction) forment le socle initial. Deux entités complémentaires ont été ajoutées le 14/07/2026 (D15, D16) pour les alertes de seuil et l'historique de valorisation, puis une sixième le 16/07/2026 (D22) pour les annonces internes publiées par l'administrateur. La même date, le type d'actif `action` a été ajouté (D20, réintégration de la bourse au MVP) et la colonne `role` sur l'utilisateur (D23).
+Six entités couvrent le périmètre du MVP. Les trois premières (utilisateur, actif, transaction) forment le socle initial. Deux entités complémentaires ont été ajoutées le 14/07/2026 (D15, D16) pour les alertes de seuil et l'historique de valorisation, puis une sixième le 16/07/2026 (D22) pour les annonces internes publiées par l'administrateur. La même date, le type d'actif `action` a été ajouté (D20, réintégration de la bourse au MVP) et la colonne `role` sur l'utilisateur (D23). Le 06/08/2026, la colonne `actif` a complété l'utilisateur (D60), le modèle ne permettant jusque-là pas de représenter la désactivation d'un compte que le rôle d'administration prévoit pourtant de déclencher.
 
 ### Entités
 
@@ -12,6 +12,7 @@ Six entités couvrent le périmètre du MVP. Les trois premières (utilisateur, 
 - mot_de_passe (haché, jamais stocké en clair)
 - pseudo
 - role (utilisateur / admin)
+- actif (le compte est-il utilisable)
 - date_inscription
 
 **ACTIF**
@@ -79,7 +80,7 @@ Notation relationnelle, clés primaires soulignées par convention # , clés ét
 ```
 utilisateur (#id, email UNIQUE NOT NULL, mot_de_passe_hache NOT NULL,
              pseudo NOT NULL, role NOT NULL DEFAULT 'utilisateur',
-             date_inscription NOT NULL)
+             actif NOT NULL DEFAULT true, date_inscription NOT NULL)
 
 actif (#id, ->utilisateur_id NOT NULL, type NOT NULL, symbole NOT NULL,
        nom NOT NULL, date_ajout NOT NULL,
@@ -105,6 +106,7 @@ Contraintes de domaine prévues pour le MPD (PostgreSQL) :
 
 - `type` restreint à ('crypto', 'devise', 'metal', 'action') par contrainte CHECK
 - `role` restreint à ('utilisateur', 'admin') par contrainte CHECK, défaut 'utilisateur'
+- `actif` booléen non nul, défaut `true` : un compte est utilisable dès sa création
 - `sens` restreint à ('achat', 'vente') par contrainte CHECK
 - `type_cible` restreint à ('actif', 'capital_total') par contrainte CHECK
 - `sens_seuil` restreint à ('au_dessus', 'en_dessous') par contrainte CHECK
@@ -135,6 +137,7 @@ erDiagram
         string mot_de_passe_hache
         string pseudo
         string role
+        boolean actif
         timestamp date_inscription
     }
     ACTIF {

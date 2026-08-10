@@ -130,7 +130,7 @@ Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
 ### 4.7 Administration
 
 - En tant qu'administrateur, je veux publier, modifier, épingler et supprimer des annonces, afin de communiquer avec les utilisateurs. Contraintes : titre et contenu obligatoires, action réservée au rôle d'administration.
-- En tant qu'administrateur, je veux lister les comptes et désactiver un compte en cas d'abus, afin d'assurer la gestion du service. Contraintes : aucune donnée patrimoniale n'est visible dans cette liste ; la désactivation est logique et réversible, elle ne supprime aucune donnée et empêche seulement la connexion (D60).
+- En tant qu'administrateur, je veux lister les comptes et désactiver un compte en cas d'abus, afin d'assurer la gestion du service. Contraintes : aucune donnée patrimoniale n'est visible dans cette liste ; la désactivation est logique et réversible, elle ne supprime aucune donnée et empêche seulement la connexion (D60). Le refus intervient après la vérification du mot de passe, afin de ne pas révéler par un temps de réponse plus court qu'un compte existe.
 
 ### 4.8 Règles de gestion
 
@@ -150,6 +150,7 @@ Ces règles s'appliquent en toute circonstance et sont vérifiées côté serveu
 | RG10 | Un seuil est franchi de manière inclusive : atteindre le seuil suffit à déclencher l'alerte | alertes |
 | RG11 | Une alerte déjà déclenchée n'est plus réévaluée, et une alerte dont le cours est indisponible n'est pas évaluée | alertes |
 | RG12 | Le rôle d'un compte n'est accepté dans aucune entrée utilisateur | sécurité |
+| RG13 | Un compte désactivé ne peut plus se connecter ; la désactivation est réversible et ne supprime aucune donnée | comptes |
 
 La règle RG3 ne peut pas être exprimée par une contrainte de base de données : elle porte sur la somme de plusieurs lignes et non sur une ligne isolée. Elle est donc vérifiée dans la couche métier. Cette distinction entre ce que le modèle relationnel garantit et ce qui relève de l'application est assumée et documentée.
 
@@ -331,7 +332,7 @@ Le produit est considéré comme conforme si l'ensemble des critères suivants e
 | C3 | Aucun utilisateur n'accède à une donnée d'un autre, y compris en interrogeant directement l'interface de programmation | appels forgés avec le jeton d'un second compte |
 | C4 | L'application reste utilisable lorsqu'un fournisseur de cours est indisponible | fournisseur simulé en échec, puis panne réelle constatée |
 | C5 | L'application reste utilisable lorsque le cache est arrêté | service de cache stoppé puis redémarré |
-| C6 | Les règles de gestion RG1 à RG12 sont toutes vérifiées côté serveur | tests unitaires et appels de contrôle |
+| C6 | Les règles de gestion RG1 à RG13 sont toutes vérifiées côté serveur | tests unitaires et appels de contrôle |
 | C7 | Les contrastes atteignent le seuil requis et aucune information n'est portée par la seule couleur | mesure par outil dédié, capture à l'appui |
 | C8 | L'ensemble se déploie sur une machine vierge à partir du dépôt et de la documentation | installation complète suivie pas à pas |
 
@@ -350,7 +351,7 @@ Correspondance entre les besoins exprimés, les moyens techniques et les compét
 | Suivre l'évolution dans le temps | historique | RG8 | CP5, CP7 |
 | Être averti au franchissement d'un seuil | alertes | RG9, RG10, RG11 | CP7 |
 | Être informé des évolutions du service | annonces | aucune | CP3, CP7 |
-| Administrer le service sans accéder aux données patrimoniales | administration | RG1, RG12 | CP7 |
+| Administrer le service sans accéder aux données patrimoniales | administration | RG1, RG12, RG13 | CP7 |
 | Consulter depuis un mobile | interface complète | aucune | CP2, CP3, CP4 |
 | Installer et redéployer l'application | composition de services et documentation | aucune | CP1, CP8 |
 
