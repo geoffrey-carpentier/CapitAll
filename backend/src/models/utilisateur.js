@@ -6,7 +6,7 @@
 
 const { query } = require('../db');
 
-const CHAMPS_PUBLICS = 'id, email, pseudo, role, date_inscription';
+const CHAMPS_PUBLICS = 'id, email, pseudo, role, actif, date_inscription';
 
 // La colonne role n'est jamais alimentée depuis une entrée utilisateur (D23) :
 // elle prend la valeur par défaut du schéma, donc 'utilisateur'.

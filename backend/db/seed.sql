@@ -7,8 +7,9 @@
 -- être rejoué autant que nécessaire pour repartir d'un état propre.
 --
 -- Comptes de démonstration (mots de passe destinés au développement uniquement) :
---   admin@capitall.fr  / Admin1234!   (rôle admin)
---   user@capitall.fr   / User1234!    (rôle utilisateur, porteur du portefeuille)
+--   admin@capitall.fr    / Admin1234!    (rôle admin)
+--   user@capitall.fr     / User1234!     (rôle utilisateur, porteur du portefeuille)
+--   suspendu@capitall.fr / Suspendu1234! (compte désactivé : la connexion est refusée)
 
 -- pgcrypto fournit crypt() et gen_salt() : le hachage bcrypt est réellement calculé
 -- en base, avec le même algorithme ($2a$, coût 10) que celui utilisé côté serveur.
@@ -20,9 +21,13 @@ TRUNCATE TABLE annonce, snapshot_valorisation, alerte, transaction, actif, utili
     RESTART IDENTITY CASCADE;
 
 -- Utilisateurs. Le rôle est fixé ici (jamais via une entrée applicative, D23).
-INSERT INTO utilisateur (email, mot_de_passe_hache, pseudo, role) VALUES
-    ('admin@capitall.fr', crypt('Admin1234!', gen_salt('bf', 10)), 'Administrateur CapitAll', 'admin'),
-    ('user@capitall.fr',  crypt('User1234!',  gen_salt('bf', 10)), 'Camille Durand',          'utilisateur');
+--
+-- Le troisième compte est volontairement désactivé : il rend le refus de connexion
+-- démontrable sans avoir à modifier la base à la main avant chaque vérification.
+INSERT INTO utilisateur (email, mot_de_passe_hache, pseudo, role, actif) VALUES
+    ('admin@capitall.fr',    crypt('Admin1234!',    gen_salt('bf', 10)), 'Administrateur CapitAll', 'admin',       true),
+    ('user@capitall.fr',     crypt('User1234!',     gen_salt('bf', 10)), 'Camille Durand',          'utilisateur', true),
+    ('suspendu@capitall.fr', crypt('Suspendu1234!', gen_salt('bf', 10)), 'Compte suspendu',         'utilisateur', false);
 
 -- Actifs suivis par le compte utilisateur, couvrant les quatre classes.
 INSERT INTO actif (utilisateur_id, type, symbole, nom)

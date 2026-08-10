@@ -16,6 +16,9 @@ CREATE TABLE utilisateur (
     mot_de_passe_hache  VARCHAR(255) NOT NULL,
     pseudo              VARCHAR(100) NOT NULL,
     role                VARCHAR(20) NOT NULL DEFAULT 'utilisateur' CHECK (role IN ('utilisateur', 'admin')),
+    -- Désactivation logique d'un compte : la connexion est refusée, mais aucune donnée
+    -- n'est supprimée et l'opération reste réversible. Un compte est actif à la création.
+    actif               BOOLEAN NOT NULL DEFAULT true,
     date_inscription    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
