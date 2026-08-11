@@ -66,6 +66,33 @@ describe('Variation', () => {
     expect(niveau('nulle')).toContain('variation--nulle');
   });
 
+  // Décalque du tableau de la catégorie 6 : quatre niveaux d'amplitude, croisés avec le
+  // sens là où la couleur intervient, soit six traitements et pas un de plus. Chaque
+  // ligne du tableau ci-dessous se lit directement dans le document de référence.
+  it('couvre exactement les six traitements du tableau des amplitudes', () => {
+    const CAS = [
+      { valeur: '11.6', niveau: 'forte', sens: 'hausse', fleche: '▲' },
+      { valeur: '-11.6', niveau: 'forte', sens: 'baisse', fleche: '▼' },
+      { valeur: '6.5', niveau: 'moyenne', sens: 'hausse', fleche: '▲' },
+      { valeur: '-6.5', niveau: 'moyenne', sens: 'baisse', fleche: '▼' },
+      { valeur: '0.4', niveau: 'faible', sens: 'hausse', fleche: null },
+      { valeur: '0', niveau: 'nulle', sens: 'stable', fleche: null },
+    ];
+
+    CAS.forEach(({ valeur, niveau, sens, fleche }) => {
+      const { container, unmount } = render(<Variation valeur={valeur} />);
+      const rendu = container.firstChild;
+      expect(rendu.className).toContain(`variation--${niveau}`);
+      expect(rendu.className).toContain(`variation--${sens}`);
+      if (fleche) {
+        expect(rendu.textContent).toContain(fleche);
+      } else {
+        expect(rendu.textContent).not.toMatch(/[▲▼]/);
+      }
+      unmount();
+    });
+  });
+
   it('abandonne la flèche sous un pour cent, mais jamais le signe', () => {
     const { container } = render(<Variation valeur="0.4" />);
     expect(container.textContent).not.toContain('▲');
