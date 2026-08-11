@@ -1,0 +1,30 @@
+.bascule-devise {
+  display: inline-flex;
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-pilule);
+  overflow: hidden;
+}
+
+.bascule-devise__choix {
+  min-width: 36px;
+  padding: var(--espace-1) var(--espace-3);
+  border: 0;
+  background: transparent;
+  color: var(--couleur-texte-attenue);
+  font-family: inherit;
+  font-size: var(--taille-corps);
+  cursor: pointer;
+}
+
+.bascule-devise__choix:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* L'état actif se marque par le fond et par le contraste du texte, pas par la seule
+   teinte : la sélection reste visible en niveaux de gris. */
+.bascule-devise__choix--actif {
+  background-color: var(--couleur-accent);
+  color: var(--couleur-fond);
+  font-weight: var(--graisse-forte);
+}

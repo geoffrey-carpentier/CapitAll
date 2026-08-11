@@ -1,0 +1,50 @@
+.squelette {
+  display: block;
+  background-color: var(--couleur-bordure);
+  border-radius: 4px;
+  /* L'animation signale que l'attente est en cours et non figée. */
+  animation: squelette-pulsation 1.4s ease-in-out infinite;
+}
+
+.squelette--ligne {
+  height: 14px;
+}
+
+.squelette--titre {
+  height: 28px;
+  border-radius: var(--rayon-carte);
+}
+
+.squelette--bloc {
+  height: 120px;
+  border-radius: var(--rayon-carte);
+}
+
+.squelette--graphe {
+  height: 180px;
+  border-radius: var(--rayon-carte);
+}
+
+.squelette--cercle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+}
+
+@keyframes squelette-pulsation {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Une animation continue est une gêne réelle pour certains utilisateurs : la préférence
+   système est respectée, la forme restant visible. */
+@media (prefers-reduced-motion: reduce) {
+  .squelette {
+    animation: none;
+  }
+}

@@ -1,0 +1,41 @@
+.message-erreur {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-3);
+  padding: var(--espace-4);
+  border: 1px solid var(--couleur-negatif);
+  border-radius: var(--rayon-carte);
+  background-color: var(--couleur-carte);
+}
+
+/* Le symbole double l'information portée par la bordure rouge : l'erreur reste
+   identifiable en niveaux de gris. */
+.message-erreur__symbole {
+  flex: none;
+  color: var(--couleur-negatif);
+  font-size: var(--taille-titre);
+  line-height: 1.2;
+}
+
+.message-erreur__texte {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-erreur__titre {
+  margin: 0 0 var(--espace-1);
+  font-weight: var(--graisse-forte);
+}
+
+.message-erreur__explication {
+  margin: 0;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .message-erreur {
+    flex-wrap: wrap;
+  }
+}

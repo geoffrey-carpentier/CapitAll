@@ -1,5 +1,10 @@
 import './Variation.css';
-import { formaterVariation, amplitudeVariation, sensVariation } from '../utils/formatage';
+import {
+  formaterVariation,
+  amplitudeVariation,
+  sensVariation,
+  symboleDevise,
+} from '../utils/formatage';
 
 // Variation d'une position ou du portefeuille, en pourcentage ou en euros.
 //
@@ -25,8 +30,14 @@ const SENS_PARLE = {
   stable: 'stable,',
 };
 
-export default function Variation({ valeur, mode = 'relative', amplitude, ...proprietes }) {
-  const texte = formaterVariation(valeur, mode);
+export default function Variation({
+  valeur,
+  mode = 'relative',
+  amplitude,
+  devise = 'EUR',
+  ...proprietes
+}) {
+  const texte = formaterVariation(valeur, mode, { symbole: symboleDevise(devise) });
 
   if (texte === null) {
     return (

@@ -1,0 +1,18 @@
+.masquage-montants {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-pilule);
+  background: transparent;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+  cursor: pointer;
+}
+
+.masquage-montants[aria-pressed='true'] {
+  color: var(--couleur-accent);
+  border-color: var(--couleur-accent);
+}

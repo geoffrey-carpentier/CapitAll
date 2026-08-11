@@ -16,6 +16,15 @@ const ESPACE_SYMBOLE = ' ';
 // les chiffres, ce qui préserve l'alignement des colonnes.
 const MOINS = '−';
 
+// Symbole de la devise d'affichage. Les montants restent en euros dans les données :
+// seule leur présentation change (D43). Cette table vit ici, avec le reste des règles
+// d'écriture, pour qu'aucun composant ne redéfinisse un symbole de son côté.
+export const SYMBOLES_DEVISE = { EUR: '€', USD: '$' };
+
+export function symboleDevise(devise) {
+  return SYMBOLES_DEVISE[devise] ?? SYMBOLES_DEVISE.EUR;
+}
+
 // Précisions par classe d'actif (catégorie 2 de la politique).
 const FORMATS_QUANTITE = {
   crypto: { decimales: 8, unite: (symbole) => symbole },
@@ -235,15 +244,16 @@ export function formaterPourcentage(chaine) {
 const AMPLITUDE_FORTE = '10';
 const AMPLITUDE_MOYENNE = '1';
 
-export function formaterVariation(chaine, mode = 'relative') {
+export function formaterVariation(chaine, mode = 'relative', options = {}) {
   if (!estDecimaleValide(chaine)) {
     return null;
   }
 
   const composants = decomposer(chaine);
+  // Le symbole ne concerne que le mode absolu : un pourcentage ne change pas de devise.
   const formatee =
     mode === 'absolue'
-      ? formaterMontant(chaine)
+      ? formaterMontant(chaine, options)
       : formaterPourcentage(chaine);
 
   if (formatee === null) {

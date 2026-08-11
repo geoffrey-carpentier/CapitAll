@@ -1,0 +1,45 @@
+.selecteur-periode {
+  display: flex;
+  gap: var(--espace-1);
+  /* Cinq onglets ne tiennent pas toujours sur un écran étroit : ils défilent
+     horizontalement plutôt que de se replier sur deux lignes. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.selecteur-periode::-webkit-scrollbar {
+  display: none;
+}
+
+.selecteur-periode__onglet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espace-1);
+  min-width: 68px;
+  padding: var(--espace-2);
+  border: 1px solid transparent;
+  border-radius: var(--rayon-carte);
+  background: transparent;
+  color: var(--couleur-texte-attenue);
+  font-family: inherit;
+  font-size: var(--taille-legende);
+  cursor: pointer;
+}
+
+/* L'onglet actif se marque par la bordure et par le contraste du libellé : la couleur
+   seule ne suffirait pas à le désigner. */
+.selecteur-periode__onglet--actif {
+  border-color: var(--couleur-bordure);
+  background-color: var(--couleur-carte);
+  color: var(--couleur-texte);
+}
+
+.selecteur-periode__onglet--actif .selecteur-periode__libelle {
+  font-weight: var(--graisse-forte);
+}
+
+.selecteur-periode__absente {
+  color: var(--couleur-texte-attenue);
+}

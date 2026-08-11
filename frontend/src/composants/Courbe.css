@@ -1,0 +1,9 @@
+.courbe {
+  width: 100%;
+}
+
+/* Recharts pose ses propres couleurs de trait : la feuille de style reprend la main sur
+   la grille et les axes pour qu'ils restent dans la palette de l'application. */
+.courbe .recharts-cartesian-axis-tick text {
+  fill: var(--couleur-texte-attenue);
+}

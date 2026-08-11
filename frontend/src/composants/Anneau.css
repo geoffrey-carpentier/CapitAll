@@ -1,0 +1,40 @@
+.anneau {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
+}
+
+.anneau__legende {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.anneau__entree {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: var(--taille-corps);
+}
+
+/* Repère de couleur reliant la ligne de légende à son segment. Il ne porte aucune
+   information à lui seul : le libellé et les deux valeurs sont écrits sur la ligne. */
+.anneau__teinte {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.anneau__part {
+  color: var(--couleur-texte-attenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.anneau__valeur {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
