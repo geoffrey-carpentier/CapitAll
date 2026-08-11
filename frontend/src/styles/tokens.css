@@ -1,0 +1,43 @@
+/*
+  Jetons de la direction artistique (D10) : interface sombre, sobre, pensée pour la
+  lecture de chiffres. Les valeurs sont reprises telles quelles dans le dépôt plutôt
+  qu'importées d'ailleurs, afin que le projet reste autonome.
+
+  Les contrastes du texte sur les fonds sombres respectent le seuil de 4,5:1 exigé par
+  le référentiel d'accessibilité. Le vert et le rouge ne portent jamais seuls une
+  information : un signe ou un symbole les accompagne systématiquement.
+*/
+
+:root {
+  /* Couleurs */
+  --couleur-fond: #101418;
+  --couleur-carte: #1a2027;
+  --couleur-bordure: #2d3640;
+  --couleur-texte: #e8ecf1;
+  --couleur-texte-attenue: #9aa7b4;
+  --couleur-accent: #4c9aff;
+  --couleur-positif: #34c77b;
+  --couleur-negatif: #f0564f;
+
+  /* Espacements */
+  --espace-1: 4px;
+  --espace-2: 8px;
+  --espace-3: 12px;
+  --espace-4: 16px;
+  --espace-6: 24px;
+  --espace-8: 32px;
+
+  /* Rayons */
+  --rayon-carte: 10px;
+  --rayon-pilule: 999px;
+
+  /* Typographie */
+  --police: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --graisse-normale: 400;
+  --graisse-forte: 600;
+
+  --taille-legende: 12px;
+  --taille-corps: 14px;
+  --taille-titre: 18px;
+  --taille-montant: 26px;
+}

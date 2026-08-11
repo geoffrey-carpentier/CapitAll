@@ -1,0 +1,50 @@
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  margin-bottom: var(--espace-4);
+}
+
+.champ__label {
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.champ__obligatoire {
+  color: var(--couleur-accent);
+}
+
+.champ__saisie {
+  font-family: var(--police);
+  font-size: var(--taille-corps);
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+  padding: var(--espace-3);
+}
+
+.champ__saisie::placeholder {
+  color: var(--couleur-texte-attenue);
+}
+
+.champ__saisie--erreur {
+  border-color: var(--couleur-negatif);
+}
+
+.champ__aide,
+.champ__erreur {
+  font-size: var(--taille-legende);
+  margin: 0;
+}
+
+.champ__aide {
+  color: var(--couleur-texte-attenue);
+}
+
+.champ__erreur {
+  color: var(--couleur-negatif);
+}

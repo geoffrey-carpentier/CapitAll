@@ -1,0 +1,134 @@
+/*
+  Mobile d'abord : la navigation est une barre d'onglets fixée en bas de l'écran,
+  là où le pouce l'atteint. À partir de 900 pixels, elle devient une colonne latérale.
+*/
+
+.coquille {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.coquille__navigation {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  background: var(--couleur-carte);
+  border-top: 1px solid var(--couleur-bordure);
+}
+
+.coquille__marque,
+.coquille__pied {
+  display: none;
+}
+
+.coquille__liste {
+  display: flex;
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.coquille__liste > li {
+  flex: 1;
+}
+
+.coquille__lien {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espace-1);
+  padding: var(--espace-2) var(--espace-1);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  text-decoration: none;
+}
+
+.coquille__lien--actif {
+  color: var(--couleur-accent);
+}
+
+/* L'indisponibilité se lit aussi au trait barré, pas seulement à l'opacité. */
+.coquille__lien--indisponible {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.coquille__symbole {
+  font-size: var(--taille-titre);
+  line-height: 1;
+}
+
+.coquille__contenu {
+  flex: 1;
+  padding: var(--espace-4);
+  padding-bottom: 88px;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .coquille {
+    flex-direction: row;
+  }
+
+  .coquille__navigation {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    height: 100vh;
+    width: 220px;
+    flex-direction: column;
+    border-top: none;
+    border-right: 1px solid var(--couleur-bordure);
+    padding: var(--espace-6) var(--espace-4);
+    gap: var(--espace-6);
+  }
+
+  .coquille__marque {
+    display: block;
+    font-size: var(--taille-titre);
+    font-weight: var(--graisse-forte);
+  }
+
+  .coquille__liste {
+    flex-direction: column;
+    gap: var(--espace-1);
+  }
+
+  .coquille__lien {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--espace-3);
+    padding: var(--espace-3);
+    font-size: var(--taille-corps);
+    border-radius: var(--rayon-carte);
+  }
+
+  .coquille__lien--actif {
+    background: rgba(76, 154, 255, 0.1);
+  }
+
+  .coquille__pied {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-2);
+    margin-top: auto;
+  }
+
+  .coquille__pseudo {
+    font-size: var(--taille-legende);
+    color: var(--couleur-texte-attenue);
+  }
+
+  .coquille__contenu {
+    padding: var(--espace-8);
+    padding-bottom: var(--espace-8);
+  }
+}

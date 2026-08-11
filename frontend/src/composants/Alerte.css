@@ -1,0 +1,27 @@
+.alerte {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-2);
+  font-size: var(--taille-corps);
+  padding: var(--espace-3);
+  border: 1px solid;
+  border-radius: var(--rayon-carte);
+  margin-bottom: var(--espace-4);
+}
+
+.alerte__symbole {
+  flex-shrink: 0;
+  font-weight: var(--graisse-forte);
+}
+
+.alerte--erreur {
+  color: var(--couleur-negatif);
+  border-color: var(--couleur-negatif);
+  background: rgba(240, 86, 79, 0.08);
+}
+
+.alerte--information {
+  color: var(--couleur-texte-attenue);
+  border-color: var(--couleur-bordure);
+  background: rgba(76, 154, 255, 0.06);
+}

@@ -44,6 +44,10 @@ const config = Object.freeze({
   // joignable, l'application démarre et sert les cours en appelant directement les
   // fournisseurs. Une valeur par défaut suffit donc en développement.
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+  // Origine autorisée à consommer l'API. En développement, c'est le serveur de Vite ;
+  // en production, le domaine qui sert l'interface. La valeur par défaut évite d'avoir
+  // à renseigner la variable sur un poste de développement.
+  origineAutorisee: process.env.ORIGINE_AUTORISEE || 'http://localhost:5173',
 });
 
 module.exports = config;
