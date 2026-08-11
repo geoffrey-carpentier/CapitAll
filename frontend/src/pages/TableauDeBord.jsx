@@ -1,4 +1,4 @@
-import { useAuthentification } from '../contexte/Authentification';
+import { useAuthentification } from '../contexte/contexteAuthentification';
 import Carte from '../composants/Carte';
 
 // Écran provisoire. Le tableau de bord réel, avec ses indicateurs, son anneau de

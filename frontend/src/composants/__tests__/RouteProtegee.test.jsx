@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import RouteProtegee from '../RouteProtegee';
-import * as contexte from '../../contexte/Authentification';
+import * as contexte from '../../contexte/contexteAuthentification';
 
 afterEach(() => {
   cleanup();

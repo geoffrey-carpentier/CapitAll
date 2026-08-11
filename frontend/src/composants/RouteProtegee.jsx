@@ -5,7 +5,7 @@
 // bord. C'est aussi ce qui se produit lorsqu'un jeton expire en cours de session.
 
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthentification } from '../contexte/Authentification';
+import { useAuthentification } from '../contexte/contexteAuthentification';
 
 export default function RouteProtegee({ children }) {
   const { estConnecte } = useAuthentification();

@@ -1,4 +1,4 @@
-// Contexte d'authentification. Le jeton vit uniquement dans l'état React (D57) :
+// Fournisseur d'authentification. Le jeton vit uniquement dans l'état React (D57) :
 // il n'est écrit ni dans le stockage local, ni dans le stockage de session, ni dans
 // un cookie. Un rafraîchissement de page déconnecte donc l'utilisateur.
 //
@@ -6,11 +6,13 @@
 // tout script injecté dans la page, ce qui est le principal scénario d'attaque sur une
 // application manipulant des données patrimoniales. La contrepartie, se reconnecter
 // après un rafraîchissement, est acceptable pour un usage de consultation.
+//
+// Le contexte et son hook d'accès vivent dans contexteAuthentification.js : ce fichier
+// n'exporte qu'un composant, condition du rechargement à chaud.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, definirRappelSessionPerdue } from '../services/api';
-
-const ContexteAuthentification = createContext(null);
+import { ContexteAuthentification } from './contexteAuthentification';
 
 export function FournisseurAuthentification({ children }) {
   const [jeton, setJeton] = useState(null);
@@ -53,16 +55,4 @@ export function FournisseurAuthentification({ children }) {
   return (
     <ContexteAuthentification.Provider value={valeur}>{children}</ContexteAuthentification.Provider>
   );
-}
-
-export function useAuthentification() {
-  const contexte = useContext(ContexteAuthentification);
-
-  if (!contexte) {
-    throw new Error(
-      "useAuthentification doit être utilisé à l'intérieur de FournisseurAuthentification."
-    );
-  }
-
-  return contexte;
 }
