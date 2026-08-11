@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
-import Alerte from '../composants/Alerte';
+import Message from '../composants/Message';
 import './Authentification.css';
 
 export default function Connexion() {
@@ -47,7 +47,7 @@ export default function Connexion() {
         <h1 className="authentification__titre">Connexion</h1>
         <p className="authentification__intro">Accédez au suivi de votre patrimoine.</p>
 
-        {erreur && <Alerte variante="erreur">{erreur}</Alerte>}
+        {erreur && <Message variante="erreur">{erreur}</Message>}
 
         <form onSubmit={soumettre} noValidate>
           <Champ

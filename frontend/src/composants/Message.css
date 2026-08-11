@@ -1,4 +1,4 @@
-.alerte {
+.message {
   display: flex;
   align-items: flex-start;
   gap: var(--espace-2);
@@ -9,18 +9,18 @@
   margin-bottom: var(--espace-4);
 }
 
-.alerte__symbole {
+.message__symbole {
   flex-shrink: 0;
   font-weight: var(--graisse-forte);
 }
 
-.alerte--erreur {
+.message--erreur {
   color: var(--couleur-negatif);
   border-color: var(--couleur-negatif);
   background: rgba(240, 86, 79, 0.08);
 }
 
-.alerte--information {
+.message--information {
   color: var(--couleur-texte-attenue);
   border-color: var(--couleur-bordure);
   background: rgba(76, 154, 255, 0.06);

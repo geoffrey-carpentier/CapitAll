@@ -1,6 +1,9 @@
-import './Alerte.css';
+import './Message.css';
 
-// Bandeau de message. Le symbole placé devant le texte double l'information portée
+// Bandeau de message. Le terme « alerte » est réservé aux seuils de franchissement du
+// portefeuille : l'employer ici aussi installerait une ambiguïté durable.
+//
+// Le symbole placé devant le texte double l'information portée
 // par la couleur : un daltonien, ou un écran en niveaux de gris, distingue toujours
 // une erreur d'une information.
 //
@@ -11,13 +14,13 @@ const SYMBOLES = {
   information: 'ℹ',
 };
 
-export default function Alerte({ variante = 'information', children }) {
+export default function Message({ variante = 'information', children }) {
   return (
     <p
-      className={`alerte alerte--${variante}`}
+      className={`message message--${variante}`}
       role={variante === 'erreur' ? 'alert' : 'status'}
     >
-      <span className="alerte__symbole" aria-hidden="true">
+      <span className="message__symbole" aria-hidden="true">
         {SYMBOLES[variante]}
       </span>
       <span>{children}</span>
