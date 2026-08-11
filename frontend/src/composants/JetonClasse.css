@@ -1,0 +1,39 @@
+.jeton-classe {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: var(--taille-legende);
+}
+
+.jeton-classe__forme {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  /*
+    La direction artistique fixe une forme par classe mais aucune couleur par classe :
+    le jeton reprend donc l'accent de l'interface, la distinction restant portée par la
+    géométrie. Le jour où des couleurs de classe seront arbitrées, elles s'ajouteront
+    ici sans toucher au composant.
+  */
+  background-color: var(--couleur-accent);
+}
+
+.jeton-classe__forme--crypto {
+  border-radius: 50%;
+}
+
+.jeton-classe__forme--metal {
+  border-radius: 3px;
+}
+
+.jeton-classe__forme--devise {
+  transform: rotate(45deg);
+}
+
+.jeton-classe__forme--action {
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+
+.jeton-classe__libelle {
+  color: var(--couleur-texte-attenue);
+}
