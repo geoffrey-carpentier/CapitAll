@@ -1,0 +1,52 @@
+.variation {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--espace-1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: var(--taille-corps);
+}
+
+.variation__fleche {
+  font-size: var(--taille-legende);
+}
+
+/*
+  Trois poids visuels, selon le tableau des amplitudes de la politique de formatage.
+  Au-delà de dix pour cent, la pastille pleine ; entre un et dix, le texte coloré seul ;
+  en deçà, le texte atténué. La couleur n'ajoute jamais d'information : elle appuie un
+  signe et une flèche déjà présents.
+*/
+.variation--forte {
+  padding: var(--espace-1) var(--espace-2);
+  border-radius: var(--rayon-pilule);
+  font-weight: var(--graisse-forte);
+}
+
+.variation--forte.variation--hausse {
+  color: var(--couleur-fond);
+  background-color: var(--couleur-positif);
+}
+
+.variation--forte.variation--baisse {
+  color: var(--couleur-fond);
+  background-color: var(--couleur-negatif);
+}
+
+.variation--moyenne {
+  font-weight: var(--graisse-forte);
+}
+
+.variation--moyenne.variation--hausse {
+  color: var(--couleur-positif);
+}
+
+.variation--moyenne.variation--baisse {
+  color: var(--couleur-negatif);
+}
+
+.variation--faible,
+.variation--nulle,
+.variation--indisponible {
+  color: var(--couleur-texte-attenue);
+}

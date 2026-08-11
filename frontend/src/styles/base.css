@@ -54,17 +54,11 @@ a {
 }
 
 /*
-  Chiffres à chasse fixe : sans cela, les montants d'une colonne ne s'alignent pas
-  verticalement, chaque chiffre ayant sa propre largeur.
+  Les règles d'affichage des valeurs numériques appartiennent désormais au composant
+  Montant et à sa feuille de style : les conserver ici en double exposait à ce qu'une
+  règle globale l'emporte sur celle du composant, le gras s'appliquant alors à toute
+  valeur, y compris aux légendes qui doivent rester discrètes.
 */
-.montant {
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--graisse-forte);
-}
-
-.montant-principal {
-  font-size: var(--taille-montant);
-}
 
 /* Réservé aux lecteurs d'écran : invisible à l'œil, restitué à la voix. */
 .lecteur-ecran-seulement {

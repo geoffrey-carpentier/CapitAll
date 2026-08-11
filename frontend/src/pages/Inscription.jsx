@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
-import Alerte from '../composants/Alerte';
+import Message from '../composants/Message';
 import './Authentification.css';
 
 // Contrôles repris de ceux du serveur, qui reste l'autorité : cette validation n'est
@@ -76,7 +76,7 @@ export default function Inscription() {
           Réunissez vos cryptomonnaies, devises, métaux et actions sur un seul tableau de bord.
         </p>
 
-        {erreur && <Alerte variante="erreur">{erreur}</Alerte>}
+        {erreur && <Message variante="erreur">{erreur}</Message>}
 
         <form onSubmit={soumettre} noValidate>
           <Champ

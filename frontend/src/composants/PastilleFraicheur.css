@@ -1,0 +1,25 @@
+.pastille-fraicheur {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-1);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.pastille-fraicheur__marque {
+  flex: none;
+  line-height: 1;
+}
+
+.pastille-fraicheur--actuel .pastille-fraicheur__marque {
+  color: var(--couleur-positif);
+}
+
+/*
+  Repli sur le dernier cours connu. La marque passe au demi-cercle en plus de changer de
+  teinte : l'état reste identifiable sans la couleur, et la valorisation continue d'être
+  affichée plutôt que masquée, comme le veut la spécification.
+*/
+.pastille-fraicheur--tiede .pastille-fraicheur__marque {
+  color: var(--couleur-accent);
+}
