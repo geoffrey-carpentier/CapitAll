@@ -160,8 +160,30 @@ function consolider(positionsValorisees) {
     cout_total: formater(coutTotal, ECHELLE_MONTANT, ECHELLE_MONTANT),
     plus_value_latente: formater(latenteTotale, ECHELLE_MONTANT, ECHELLE_MONTANT),
     plus_value_realisee: formater(realiseeTotale, ECHELLE_MONTANT, ECHELLE_MONTANT),
+    // Même mécanique que le pourcentage d'une position, appliquée aux totaux : c'est la
+    // variation du patrimoine depuis l'origine, que l'interface affiche à côté du
+    // montant dominant. La calculer ici plutôt que côté front évite d'avoir deux
+    // arithmétiques de montants dans le dépôt.
+    pourcentage_variation: pourcentageVariation(latenteTotale, coutTotal),
     repartition: repartir(valeurParType, valeurTotale),
   };
+}
+
+// Variation relative d'un ensemble, en pourcentage.
+//
+// Un coût nul ne rend pas un pourcentage infini : il rend l'absence de pourcentage.
+// Le cas se produit sur un portefeuille vide, et sur un portefeuille dont aucune
+// position n'a de coût, deux situations où « + ∞ % » n'aurait aucun sens.
+function pourcentageVariation(plusValue, cout) {
+  if (cout === 0n) {
+    return null;
+  }
+
+  return formater(
+    diviser(plusValue * 100n, cout, ECHELLE_PRU),
+    ECHELLE_PRU,
+    ECHELLE_MONTANT
+  );
 }
 
 // Répartition en pourcentages dont la somme fait exactement 100.
@@ -191,4 +213,67 @@ function repartir(valeurParType, valeurTotale) {
   });
 }
 
-module.exports = { calculerPosition, valoriser, consolider, trierChronologiquement };
+// Performance du portefeuille sur chacune des plages du sélecteur de période.
+//
+// Les plages sont calculées en une fois : l'interface les affiche toutes sans clic,
+// et cinq requêtes pour cinq chiffres serait absurde.
+//
+// La borne haute est la date du dernier instantané, jamais l'horloge du serveur. Deux
+// raisons : la fonction reste pure et testable sans figer le temps, et la performance
+// d'une plage se lit entre deux mesures réelles, pas entre une mesure et une date à
+// laquelle rien n'a été relevé.
+const PLAGES_EN_JOURS = { jour: 1, semaine: 7, mois: 30, annee: 365 };
+
+function calculerPerformances(instantanes) {
+  const plages = Object.keys(PLAGES_EN_JOURS);
+
+  // Un point isolé ne dit rien d'une évolution : aucune plage n'est calculable.
+  if (instantanes.length < 2) {
+    return Object.fromEntries([...plages, 'origine'].map((plage) => [plage, null]));
+  }
+
+  const derniereDate = instantanes[instantanes.length - 1].date_snapshot;
+
+  const performances = plages.map((plage) => {
+    const debut = reculerDe(derniereDate, PLAGES_EN_JOURS[plage]);
+    // Les dates sont au format AAAA-MM-JJ : leur ordre lexicographique est leur ordre
+    // chronologique, aucune conversion n'est nécessaire pour filtrer.
+    return [plage, performanceSurPeriode(instantanes.filter((point) => point.date_snapshot >= debut))];
+  });
+
+  return {
+    ...Object.fromEntries(performances),
+    origine: performanceSurPeriode(instantanes),
+  };
+}
+
+// Variation entre le premier et le dernier point d'une série.
+function performanceSurPeriode(points) {
+  if (points.length < 2) {
+    return null;
+  }
+
+  const depart = versUnites(points[0].valeur_totale_eur, ECHELLE_MONTANT);
+  const arrivee = versUnites(points[points.length - 1].valeur_totale_eur, ECHELLE_MONTANT);
+
+  return pourcentageVariation(arrivee - depart, depart);
+}
+
+// Date reculée d'un nombre de jours, en UTC et par composants.
+//
+// Passer par Date.UTC plutôt que par l'analyse d'une chaîne évite le décalage d'un jour
+// qu'introduit l'interprétation d'une date seule dans le fuseau local, décalage déjà
+// rencontré sur ces mêmes instantanés.
+function reculerDe(dateIso, jours) {
+  const [annee, mois, jour] = dateIso.split('-');
+  const instant = Date.UTC(Number(annee), Number(mois) - 1, Number(jour) - jours);
+  return new Date(instant).toISOString().slice(0, 10);
+}
+
+module.exports = {
+  calculerPosition,
+  valoriser,
+  consolider,
+  calculerPerformances,
+  trierChronologiquement,
+};
