@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   AreaChart,
   Area,
@@ -8,6 +9,7 @@ import {
 } from 'recharts';
 import './Courbe.css';
 import { formaterMontant, symboleDevise } from '../utils/formatage';
+import { bornes, hauteurDeBascule } from '../utils/echelleCourbe';
 
 // Évolution de la valeur dans le temps, en aire dégradée.
 //
@@ -22,6 +24,12 @@ import { formaterMontant, symboleDevise } from '../utils/formatage';
 // La ligne de prix de revient, pointillée, n'apparaît que sur le graphe d'une position :
 // le tableau de bord ne la fournit pas, le patrimoine n'ayant pas de prix de revient
 // unitaire. Le composant l'accepte donc sans l'exiger.
+//
+// Lorsqu'elle est fournie, l'aire se teinte de part et d'autre de cette ligne, en positif
+// au-dessus et en négatif en dessous. C'est le geste graphique propre à l'application :
+// il donne à voir d'un seul regard, sur toute la période, quand la position a été en
+// gain et quand elle a été en perte. Une aire d'une seule teinte ne dirait que le solde
+// du jour, et raterait l'essentiel du produit.
 
 function decrire(points, devise) {
   if (points.length < 2) {
@@ -48,6 +56,11 @@ export default function Courbe({
 }) {
   const symbole = symboleDevise(devise);
 
+  // Deux courbes peuvent coexister sur un même écran. Un identifiant de dégradé fixe
+  // serait alors dupliqué dans le document, et le navigateur appliquerait le premier
+  // aux deux tracés.
+  const identifiantDegrade = `degrade-courbe-${useId()}`;
+
   // Conversion numérique réservée à la géométrie du tracé : ces nombres donnent une
   // ordonnée en pixels et ne sont jamais affichés. Toute valeur lue par l'utilisateur
   // passe par le module de formatage, à partir de la chaîne d'origine.
@@ -61,6 +74,11 @@ export default function Courbe({
   // nombres ferait entrer un flottant dans une décision d'affichage, pour rien.
   const teinte = sens === 'baisse' ? 'var(--couleur-negatif)' : 'var(--couleur-positif)';
 
+  const seuil = prixDeRevient === null ? null : Number(prixDeRevient);
+  const hauteurs = series.map((point) => point.hauteur);
+  const bascule = hauteurDeBascule(hauteurs, seuil);
+  const aireBicolore = bascule !== null;
+
   return (
     <div
       className="courbe"
@@ -71,9 +89,22 @@ export default function Courbe({
       <ResponsiveContainer width="100%" height={200}>
         <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <defs>
-            <linearGradient id="degrade-courbe" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={teinte} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={teinte} stopOpacity={0} />
+            <linearGradient id={identifiantDegrade} x1="0" y1="0" x2="0" y2="1">
+              {aireBicolore ? (
+                <>
+                  {/* Deux arrêts confondus à la hauteur du prix de revient : la bascule
+                      de teinte y est franche, exactement sur la ligne pointillée. */}
+                  <stop offset={0} stopColor="var(--couleur-positif)" stopOpacity={0.35} />
+                  <stop offset={bascule} stopColor="var(--couleur-positif)" stopOpacity={0.04} />
+                  <stop offset={bascule} stopColor="var(--couleur-negatif)" stopOpacity={0.04} />
+                  <stop offset={1} stopColor="var(--couleur-negatif)" stopOpacity={0.35} />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor={teinte} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={teinte} stopOpacity={0} />
+                </>
+              )}
             </linearGradient>
           </defs>
 
@@ -93,23 +124,24 @@ export default function Courbe({
             tickLine={false}
             axisLine={false}
             tickFormatter={(valeur) => `${Math.round(valeur)}${symbole}`}
-            domain={['auto', 'auto']}
+            // L'échelle englobe le prix de revient : sans cela, une position toujours
+            // en gain sortirait sa ligne de référence du cadre, et la bascule de teinte
+            // n'aurait plus de sens visible.
+            domain={aireBicolore ? bornes(hauteurs, seuil) : ['auto', 'auto']}
           />
 
-          {prixDeRevient !== null && (
-            <ReferenceLine
-              y={Number(prixDeRevient)}
-              stroke="var(--couleur-texte-attenue)"
-              strokeDasharray="4 4"
-            />
+          {aireBicolore && (
+            <ReferenceLine y={seuil} stroke="var(--couleur-texte-attenue)" strokeDasharray="4 4" />
           )}
 
           <Area
             type="monotone"
             dataKey="hauteur"
-            stroke={teinte}
+            // Le trait suit la même bascule que l'aire : un trait vert traversant une
+            // zone rouge se lirait comme une contradiction.
+            stroke={aireBicolore ? `url(#${identifiantDegrade})` : teinte}
             strokeWidth={2}
-            fill="url(#degrade-courbe)"
+            fill={`url(#${identifiantDegrade})`}
             isAnimationActive={false}
           />
         </AreaChart>
