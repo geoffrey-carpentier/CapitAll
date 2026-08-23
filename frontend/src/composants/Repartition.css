@@ -1,0 +1,35 @@
+.repartition {
+  display: flex;
+  flex-direction: column;
+  /* 12 px entre éléments liés, selon le rythme vertical de la grammaire visuelle. */
+  gap: var(--espace-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+  Trois colonnes : le jeton et son libellé, la part, le montant. La part est alignée à
+  droite du bloc de texte et le montant en bout de ligne, pour que les deux colonnes de
+  chiffres se lisent verticalement.
+*/
+.repartition__entree {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: var(--espace-4);
+  font-size: var(--taille-corps);
+}
+
+.repartition__part {
+  min-width: 4.5ch;
+  text-align: right;
+  color: var(--couleur-texte-attenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.repartition__valeur {
+  min-width: 8ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
