@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -139,6 +139,14 @@ function rendre() {
 function evenementsDeLaFrise() {
   return within(screen.getByRole('list', { name: '' })).queryAllByRole('listitem');
 }
+
+// Le graphe est chargé à la demande, dans un fragment séparé. Sans cette précharge, la
+// première assertion qui l'attend court contre la résolution de ce fragment, et échoue
+// par intermittence quand la suite entière s'exécute en parallèle. L'import le résout
+// une fois pour toutes ; ni le composant ni ce qui est vérifié n'en sont modifiés.
+beforeAll(async () => {
+  await import('../../composants/Courbe');
+});
 
 beforeEach(() => {
   vi.spyOn(api, 'actif').mockResolvedValue(DETAIL);
