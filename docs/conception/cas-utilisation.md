@@ -80,3 +80,9 @@ UC8 --> API
 ```
 
 Diagramme à exporter en PNG depuis plantuml.com ou l'extension VS Code PlantUML pour intégration au dossier de projet.
+
+## Gestion du compte (D64)
+
+L'utilisateur connecté consulte les informations de son compte, change son mot de passe en fournissant l'ancien, règle la devise d'affichage et le masquage des montants, et peut supprimer son compte. La suppression exige une confirmation par mot de passe et entraîne l'effacement en cascade de ses actifs, transactions, seuils et instantanés de valorisation.
+
+Un compte désactivé par l'administration ne peut plus se connecter : la vérification intervient après la comparaison du mot de passe, afin de ne pas révéler par le temps de réponse quels comptes existent (D60).

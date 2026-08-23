@@ -95,6 +95,9 @@ Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
 - En tant que visiteur, je veux créer un compte avec une adresse électronique et un mot de passe, afin de disposer de mon propre espace. Contraintes : adresse au format valide et non déjà utilisée, mot de passe d'une longueur minimale contrôlée côté serveur, message explicite si l'adresse est déjà prise.
 - En tant qu'utilisateur inscrit, je veux me connecter, afin de retrouver mon portefeuille. Contraintes : message d'échec strictement générique, ne révélant jamais si c'est l'adresse ou le mot de passe qui est en cause ; soumission verrouillée pendant l'appel réseau.
 - En tant qu'utilisateur connecté, je veux consulter les informations de mon compte, afin de vérifier mon identité applicative.
+- En tant qu'utilisateur connecté, je veux changer mon mot de passe, afin de préserver la sécurité de mon compte. Contraintes : l'ancien mot de passe est exigé, le nouveau respecte les mêmes règles qu'à l'inscription, la session en cours n'est pas invalidée.
+- En tant qu'utilisateur connecté, je veux supprimer mon compte, afin d'exercer mon droit à l'effacement. Contraintes : confirmation par le mot de passe, suppression en cascade des actifs, transactions, alertes et instantanés, opération irréversible et annoncée comme telle.
+- En tant qu'utilisateur connecté, je veux choisir la devise d'affichage et masquer les montants, afin d'adapter la consultation à mon contexte.
 
 ### 4.2 Gestion des actifs
 
@@ -267,7 +270,9 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 | Méthode | Route | Accès | Description | Codes de statut |
 |---|---|---|---|---|
 | POST | `/api/auth/inscription` | public | création de compte | 201, 400, 409 |
-| POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401 |
+| POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401, 403 |
+| PATCH | `/api/compte/mot-de-passe` | authentifié | changement de mot de passe, ancien exigé | 204, 400, 401 |
+| DELETE | `/api/compte` | authentifié | suppression du compte et de ses données | 204, 401 |
 | GET | `/api/auth/moi` | authentifié | informations du compte courant | 200, 401 |
 | GET | `/api/actifs` | authentifié | liste des actifs suivis | 200, 401 |
 | POST | `/api/actifs` | authentifié | création d'un actif suivi | 201, 400, 401, 409 |
@@ -306,8 +311,8 @@ Les structures de données échangées par chaque point d'entrée seront documen
 | `/actifs` | authentifié | liste des actifs suivis |
 | `/actifs/:id` | propriétaire | détail d'un actif et de ses transactions |
 | `/actifs/:id/transactions/nouvelle` | propriétaire | saisie d'une transaction |
-| `/alertes` | authentifié | gestion des alertes |
-| `/annonces` | authentifié | fil d'annonces |
+| `/alertes` | authentifié | gestion des seuils |
+| `/compte` | authentifié | profil, sécurité, préférences d'affichage, mentions |
 
 Toute route privée atteinte sans jeton valide redirige vers la connexion.
 

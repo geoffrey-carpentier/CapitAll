@@ -53,6 +53,22 @@ Ces fournisseurs cotent en USD ; l'adaptateur convertit en euros via le taux EUR
 
 Particularité d'Alpha Vantage à gérer : ses erreurs (quota, symbole inconnu) arrivent en HTTP 200 avec un champ `Information` ou un objet vide. L'adaptateur valide donc la présence et la forme des champs attendus, et non le seul code HTTP. La même prudence s'applique à Finnhub, qui renvoie `c: 0` sur un symbole inconnu.
 
+**Répartition du calcul entre le serveur et l'interface**
+
+Règle opposable, applicable à tout arbitrage futur.
+
+Toute donnée représentant un **état métier** est calculée par le serveur : prix de revient, plus-values latente et réalisée, performances globales et par période, répartitions, franchissements de seuil, agrégats. Le serveur en est le propriétaire unique. Si une formule évolue, elle change à un seul endroit et se teste à un seul endroit.
+
+L'interface ne réalise que des **transformations de présentation** : conversion d'unité ou de devise à un taux fourni par le serveur, formatage, adaptation à la locale, arrondi d'affichage. Elle ne calcule jamais une règle métier.
+
+*Critère de tri en cas de doute.* Si le serveur aurait besoin de cette valeur pour répondre à une question, c'est du métier. Si elle n'existe que pour être lue par un être humain, c'est de la présentation. Une transformation de présentation n'ajoute aucune information et ne crée aucun fait que le domaine devrait conserver.
+
+*Cas limite tranché : la conversion euro/dollar.* Multiplier un montant par un taux est bien de l'arithmétique sur une valeur monétaire, mais le résultat n'est pas un fait nouveau : le patrimoine vaut ce qu'il vaut en euro, et la valeur en dollar n'est qu'un rendu du même fait dans une autre unité. La devise de référence reste l'euro, aucune valeur en dollar n'est stockée ni calculée par le domaine. C'est donc une transformation de présentation, et c'est la seule opération arithmétique que l'interface réalise.
+
+*Le taux appliqué est celui de la réponse courante*, livré par `GET /api/portefeuille` avec son horodatage. Il n'est jamais récupéré séparément ni rafraîchi par minuterie : un écran affiche toujours un seul taux, sans quoi un total pourrait cesser d'être égal à la somme de ses parties.
+
+*Non-divergence des arrondis.* La multiplication existe des deux côtés, dans `backend/src/utils/decimal.js` pour le domaine et dans l'interface pour l'affichage. La règle d'arrondi — au plus proche, les demis s'écartant de zéro — est vérifiée par un jeu d'essai partagé, `fixtures/conversion-affichage.json`, que les deux suites de tests consomment et sur lequel elles doivent rendre exactement les mêmes chaînes.
+
 **Découpage en couches côté serveur**
 
 - routes : déclaration des endpoints, branchement des middlewares
