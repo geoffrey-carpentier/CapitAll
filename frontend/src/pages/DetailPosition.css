@@ -1,0 +1,192 @@
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-6);
+}
+
+.detail__entete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+.detail__retour {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Zone tactile de 44 px (D77) pour une flèche qui n'en mesure que douze. */
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: calc(-1 * var(--espace-3));
+  font-size: 20px;
+  color: var(--couleur-texte-attenue);
+  text-decoration: none;
+}
+
+.detail__retour:hover {
+  color: var(--couleur-texte);
+}
+
+.detail__identite {
+  min-width: 0;
+}
+
+.detail__nom {
+  margin: 0;
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+}
+
+.detail__signalement {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin: 2px 0 0;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.detail__outils {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-left: auto;
+}
+
+/*
+  Bloc dominant de l'écran, seul de niveau 2 ici comme le total l'est sur le patrimoine.
+  Le fond relevé le détache sans le border d'une carte : c'est un aplat de valeur, pas
+  un contenant.
+*/
+.detail__valorisation {
+  background: var(--couleur-carte-haute);
+  border-radius: var(--rayon-carte);
+  padding: var(--espace-4) var(--espace-6);
+}
+
+.detail__intitule {
+  margin: 0;
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-normale);
+  color: var(--couleur-texte-attenue);
+}
+
+.detail__valeur {
+  display: block;
+  margin: var(--espace-2) 0 0;
+  font-size: var(--taille-montant);
+  font-weight: var(--graisse-forte);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__variations {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin: var(--espace-2) 0 0;
+}
+
+.detail__depuis {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+/*
+  Trio de contexte : quantité, cours, prix de revient. Trois lignes filetées et non
+  trois cartes, pour la même raison que sur l'écran Patrimoine — ce sont des repères,
+  pas des indicateurs de tête (D78).
+*/
+.detail__trio {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+
+.detail__repere {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espace-4);
+  padding: var(--espace-3) 0;
+  border-bottom: 1px solid var(--couleur-bordure);
+}
+
+.detail__repere:last-child {
+  border-bottom: 0;
+}
+
+.detail__repere dt {
+  color: var(--couleur-texte-attenue);
+}
+
+.detail__repere dd {
+  margin: 0;
+  font-weight: var(--graisse-forte);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__onglets {
+  padding: var(--espace-4) var(--espace-4) var(--espace-6);
+}
+
+.detail__seuils {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-6);
+}
+
+.detail__seuil-intitule {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin: 0 0 var(--espace-3);
+}
+
+.detail__seuil-franchi {
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-avertissement);
+  border: 1px solid var(--couleur-avertissement);
+  border-radius: var(--rayon-pilule);
+  padding: 1px var(--espace-2);
+}
+
+.detail__sans-seuil {
+  margin: 0;
+  color: var(--couleur-texte-attenue);
+}
+
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  justify-content: space-between;
+}
+
+@media (min-width: 768px) {
+  /* En desktop, le trio devient une rangée : la place existe, et les trois repères se
+     comparent mieux côte à côte qu'empilés. */
+  .detail__trio {
+    flex-direction: row;
+    gap: var(--espace-4);
+  }
+
+  .detail__repere {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--espace-1);
+    padding: var(--espace-4);
+    border-bottom: 0;
+    background: var(--couleur-carte);
+    border: 1px solid var(--couleur-bordure);
+    border-radius: var(--rayon-carte);
+  }
+}

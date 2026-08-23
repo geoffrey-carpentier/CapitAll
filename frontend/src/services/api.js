@@ -95,4 +95,13 @@ export const api = {
     requete(jours ? `/portefeuille/historique?jours=${jours}` : '/portefeuille/historique', {
       jeton,
     }),
+  // Détail d'une position : état courant, mouvements enrichis de leur effet sur le prix
+  // de revient, et historique de cours avec la performance de chaque plage. Une
+  // ressource appartenant à un autre compte répond 404, jamais 403 (D52) : l'appelant
+  // ne peut pas distinguer l'inexistant de ce qui ne lui appartient pas.
+  actif: (jeton, id) => requete(`/actifs/${id}`, { jeton }),
+  supprimerActif: (jeton, id) => requete(`/actifs/${id}`, { methode: 'DELETE', jeton }),
+  supprimerTransaction: (jeton, actifId, transactionId) =>
+    requete(`/actifs/${actifId}/transactions/${transactionId}`, { methode: 'DELETE', jeton }),
+  alertes: (jeton) => requete('/alertes', { jeton }),
 };
