@@ -7,11 +7,18 @@ import './Coquille.css';
 // barre, désactivés : l'utilisateur voit où il ira, sans pouvoir atteindre une page
 // vide. Leur indisponibilité est portée par l'attribut aria-disabled et par une
 // mention textuelle, jamais par la seule couleur atténuée.
+//
+// Les libellés et les chemins suivent le lexique du projet : un même objet porte le
+// même nom dans l'interface, dans le code et dans les routes. « Patrimoine » et non
+// « tableau de bord », « Positions » et non « actifs », « Seuils » et non « alertes »,
+// ce dernier terme étant réservé au franchissement d'un seuil.
+//
+// Le fil d'annonces ne figure plus ici : D64 l'a retiré de l'interface utilisateur, sa
+// publication restant au périmètre de l'espace d'administration.
 const ENTREES = [
-  { chemin: '/tableau-de-bord', libelle: 'Tableau de bord', symbole: '◫', disponible: true },
-  { chemin: '/actifs', libelle: 'Actifs', symbole: '◈', disponible: false },
-  { chemin: '/alertes', libelle: 'Alertes', symbole: '△', disponible: false },
-  { chemin: '/annonces', libelle: 'Annonces', symbole: '✉', disponible: false },
+  { chemin: '/patrimoine', libelle: 'Patrimoine', symbole: '◫', disponible: true },
+  { chemin: '/positions', libelle: 'Positions', symbole: '◈', disponible: false },
+  { chemin: '/seuils', libelle: 'Seuils', symbole: '△', disponible: false },
   { chemin: '/compte', libelle: 'Compte', symbole: '◉', disponible: false },
 ];
 

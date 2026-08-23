@@ -17,7 +17,7 @@ export default function Connexion() {
   const [enCours, setEnCours] = useState(false);
 
   // Route demandée avant la redirection vers la connexion, le cas échéant.
-  const destination = emplacement.state?.depuis ?? '/tableau-de-bord';
+  const destination = emplacement.state?.depuis ?? '/patrimoine';
 
   if (estConnecte) {
     return <Navigate to={destination} replace />;

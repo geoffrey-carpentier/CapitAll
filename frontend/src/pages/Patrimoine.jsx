@@ -15,7 +15,13 @@ import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
 import Repartition from '../composants/Repartition';
 import Message from '../composants/Message';
-import './TableauDeBord.css';
+import {
+  lirePreference,
+  ecrirePreference,
+  CLE_DEVISE,
+  CLE_MASQUAGE,
+} from '../utils/preferences';
+import './Patrimoine.css';
 
 // La courbe est chargée à la demande. Elle apporte la bibliothèque de tracé, qui pèse
 // plus lourd que tout le reste de l'application réunie : la charger d'emblée retarderait
@@ -45,29 +51,6 @@ const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: 
 // reste à un clic.
 const PERIODE_PAR_DEFAUT = 'mois';
 
-const CLE_DEVISE = 'capitall.devise';
-const CLE_MASQUAGE = 'capitall.masquage';
-
-// Préférences d'affichage conservées le temps de la session. Le stockage local
-// survivrait à la fermeture du navigateur, ce qui n'aurait pas de sens pour un jeton qui
-// ne survit pas au rechargement, et laisserait une trace sur un poste partagé.
-function lirePreference(cle, valeurParDefaut) {
-  try {
-    return window.sessionStorage.getItem(cle) ?? valeurParDefaut;
-  } catch {
-    // Navigation privée stricte ou stockage refusé : l'écran fonctionne sans mémoire.
-    return valeurParDefaut;
-  }
-}
-
-function ecrirePreference(cle, valeur) {
-  try {
-    window.sessionStorage.setItem(cle, valeur);
-  } catch {
-    // Sans conséquence : seule la persistance est perdue, pas le comportement.
-  }
-}
-
 function natureDeLErreur(erreur) {
   if (!(erreur instanceof ErreurApi)) {
     return 'api';
@@ -79,7 +62,7 @@ function natureDeLErreur(erreur) {
   return erreur.statut === 401 ? 'session' : 'api';
 }
 
-export default function TableauDeBord() {
+export default function Patrimoine() {
   const { jeton, utilisateur } = useAuthentification();
   const naviguer = useNavigate();
   const emplacement = useLocation();

@@ -4,7 +4,7 @@ import RouteProtegee from './composants/RouteProtegee';
 import Coquille from './mise-en-page/Coquille';
 import Connexion from './pages/Connexion';
 import Inscription from './pages/Inscription';
-import TableauDeBord from './pages/TableauDeBord';
+import Patrimoine from './pages/Patrimoine';
 import Introuvable from './pages/Introuvable';
 
 export default function App() {
@@ -23,10 +23,10 @@ export default function App() {
               </RouteProtegee>
             }
           >
-            <Route path="/tableau-de-bord" element={<TableauDeBord />} />
+            <Route path="/patrimoine" element={<Patrimoine />} />
           </Route>
 
-          <Route path="/" element={<Navigate to="/tableau-de-bord" replace />} />
+          <Route path="/" element={<Navigate to="/patrimoine" replace />} />
           <Route path="*" element={<Introuvable />} />
         </Routes>
       </FournisseurAuthentification>
