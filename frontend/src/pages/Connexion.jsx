@@ -7,7 +7,7 @@ import Message from '../composants/Message';
 import './Authentification.css';
 
 export default function Connexion() {
-  const { connecter, estConnecte } = useAuthentification();
+  const { connecter, estConnecte, sessionExpiree } = useAuthentification();
   const naviguer = useNavigate();
   const emplacement = useLocation();
 
@@ -47,6 +47,13 @@ export default function Connexion() {
         <h1 className="authentification__titre">Connexion</h1>
         <p className="authentification__intro">Accédez au suivi de votre patrimoine.</p>
 
+        {/* Le jeton ne vit qu'en mémoire : une session expirée ramène ici. Le dire
+            explicitement évite que la reconnexion passe pour une anomalie. */}
+        {sessionExpiree && !erreur && (
+          <Message variante="information">
+            Votre session a expiré. Reconnectez-vous pour retrouver vos données.
+          </Message>
+        )}
         {erreur && <Message variante="erreur">{erreur}</Message>}
 
         <form onSubmit={soumettre} noValidate>

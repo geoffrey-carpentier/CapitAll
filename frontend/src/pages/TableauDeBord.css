@@ -1,0 +1,175 @@
+/*
+  Composition asymétrique et assumée. Le patrimoine et sa courbe occupent le haut de
+  l'écran ; les chiffres de contexte sont des lignes de texte séparées par des filets,
+  jamais des cartes, parce que trois cartes de même poids donneraient à croire à trois
+  indicateurs de tête là où il n'y en a qu'un.
+
+  Deux niveaux de contenant seulement, comme le veut la grammaire visuelle : la carte au
+  fond accentué pour le patrimoine, la carte bordée pour le graphe et la répartition.
+  Les chiffres de contexte ne sont pas dans un contenant, ils sont à plat sur le fond.
+*/
+
+.patrimoine {
+  display: flex;
+  flex-direction: column;
+  /* Rythme vertical : 32 px avant un changement de section. */
+  gap: var(--espace-8);
+}
+
+.patrimoine__entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+}
+
+.patrimoine__titre {
+  margin: 0;
+  font-size: var(--taille-titre);
+}
+
+.patrimoine__outils {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.patrimoine__principal {
+  display: flex;
+  flex-direction: column;
+  /* 24 px entre blocs d'une même section. */
+  gap: var(--espace-6);
+}
+
+/*
+  Niveau 2, le seul bloc au fond accentué de toute l'application. Le fond est le dérivé
+  dédié (D70) et non la couleur de carte ordinaire : c'est lui qui distingue ce bloc des
+  cartes bordées, sans qu'il ait besoin d'une bordure d'accent pour se signaler.
+*/
+.patrimoine__total {
+  padding: var(--espace-6);
+  border-radius: var(--rayon-carte);
+  background-color: var(--couleur-carte-haute);
+  border: 1px solid var(--couleur-bordure);
+}
+
+.patrimoine__intitule {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-normale);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.patrimoine__valeur {
+  margin: 0;
+  font-size: var(--taille-montant);
+  font-weight: var(--graisse-forte);
+  font-variant-numeric: tabular-nums;
+}
+
+.patrimoine__variations {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  /* 12 px entre éléments liés. */
+  gap: var(--espace-3);
+  margin: var(--espace-3) 0 0;
+}
+
+.patrimoine__depuis {
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-legende);
+}
+
+.patrimoine__incident {
+  margin: 0;
+}
+
+.patrimoine__evolution-absente {
+  margin: 0;
+  padding: var(--espace-8) var(--espace-4);
+  text-align: center;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+}
+
+/* Chiffres de contexte : à plat, séparés par des filets. */
+.patrimoine__contexte {
+  margin: 0;
+}
+
+.patrimoine__ligne {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espace-4);
+  padding: var(--espace-3) 0;
+  border-bottom: 1px solid var(--couleur-bordure);
+}
+
+.patrimoine__ligne:last-child {
+  border-bottom: 0;
+}
+
+.patrimoine__ligne dt {
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+}
+
+.patrimoine__ligne dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.patrimoine__seuils {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--taille-corps);
+}
+
+/*
+  À partir du point de rupture, le patrimoine occupe environ les deux tiers de la
+  largeur et la courbe le reste, les chiffres de contexte passant en colonne latérale.
+  C'est la composition asymétrique de la spécification : rien n'est une grille de
+  quatre cartes égales.
+*/
+@media (min-width: 768px) {
+  .patrimoine__principal {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+  }
+
+  .patrimoine__total {
+    /* Le bloc dominant garde ses deux tiers, la courbe occupe le tiers restant. */
+    grid-column: 1;
+  }
+
+  .patrimoine__evolution {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .patrimoine__contexte {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--espace-6);
+  }
+
+  .patrimoine__ligne {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--espace-1);
+    padding: 0 0 0 var(--espace-4);
+    border-bottom: 0;
+    /* Le filet devient vertical : il sépare toujours, sans découper la page en
+       cartes. */
+    border-left: 1px solid var(--couleur-bordure);
+  }
+}

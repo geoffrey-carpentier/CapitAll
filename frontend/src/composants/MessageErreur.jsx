@@ -34,12 +34,13 @@ export default function MessageErreur({
   message,
   libelleAction = 'Réessayer',
   surAction,
+  className = '',
   ...proprietes
 }) {
   const { titre, explication } = MESSAGES[nature] ?? MESSAGES.api;
 
   return (
-    <div className="message-erreur" role="alert" {...proprietes}>
+    <div className={`message-erreur${className ? ` ${className}` : ''}`} role="alert" {...proprietes}>
       <span className="message-erreur__symbole" aria-hidden="true">
         ⚠
       </span>

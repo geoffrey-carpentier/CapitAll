@@ -17,23 +17,34 @@ import { ContexteAuthentification } from './contexteAuthentification';
 export function FournisseurAuthentification({ children }) {
   const [jeton, setJeton] = useState(null);
   const [utilisateur, setUtilisateur] = useState(null);
+  const [sessionExpiree, setSessionExpiree] = useState(false);
 
   const deconnecter = useCallback(() => {
     setJeton(null);
     setUtilisateur(null);
   }, []);
 
+  // Une session perdue et une déconnexion volontaire vident toutes deux l'état, mais ne
+  // se racontent pas de la même façon. La garde de routes renvoie vers la connexion dans
+  // les deux cas ; sans ce drapeau, l'expiration serait une redirection silencieuse, et
+  // l'utilisateur se retrouverait devant un formulaire sans savoir pourquoi.
+  const signalerSessionPerdue = useCallback(() => {
+    setSessionExpiree(true);
+    deconnecter();
+  }, [deconnecter]);
+
   // Le client d'API prévient d'un 401 : la session est perdue, l'état est vidé et la
   // garde de routes renvoie vers la connexion au rendu suivant.
   useEffect(() => {
-    definirRappelSessionPerdue(deconnecter);
+    definirRappelSessionPerdue(signalerSessionPerdue);
     return () => definirRappelSessionPerdue(null);
-  }, [deconnecter]);
+  }, [signalerSessionPerdue]);
 
   const connecter = useCallback(async (identifiants) => {
     const reponse = await api.connexion(identifiants);
     setJeton(reponse.token);
     setUtilisateur(reponse.utilisateur);
+    setSessionExpiree(false);
     return reponse.utilisateur;
   }, []);
 
@@ -48,8 +59,16 @@ export function FournisseurAuthentification({ children }) {
   );
 
   const valeur = useMemo(
-    () => ({ jeton, utilisateur, estConnecte: Boolean(jeton), connecter, inscrire, deconnecter }),
-    [jeton, utilisateur, connecter, inscrire, deconnecter]
+    () => ({
+      jeton,
+      utilisateur,
+      estConnecte: Boolean(jeton),
+      sessionExpiree,
+      connecter,
+      inscrire,
+      deconnecter,
+    }),
+    [jeton, utilisateur, sessionExpiree, connecter, inscrire, deconnecter]
   );
 
   return (
