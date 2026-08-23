@@ -4,6 +4,7 @@ import Montant from './Montant';
 import Variation from './Variation';
 import JetonClasse from './JetonClasse';
 import PastilleFraicheur from './PastilleFraicheur';
+import CourbeMiniature from './CourbeMiniature';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
 import { formaterMontant, symboleDevise } from '../utils/formatage';
 
@@ -29,6 +30,10 @@ const COLONNES = [
   { cle: 'pru', libelle: 'Prix de revient', triable: true, numerique: true },
   { cle: 'valeur', libelle: 'Valorisation', triable: true, numerique: true },
   { cle: 'plus_value_latente', libelle: 'Plus-value', triable: true, numerique: true },
+  // Tendance sur trente jours, alimentée par l'historique de cours par position
+  // (D81). Elle n'a pas d'équivalent dans la liste mobile, qui n'a pas la place
+  // d'une seconde variation à côté de celle depuis l'origine.
+  { cle: 'tendance', libelle: '30 jours', triable: true, numerique: true },
 ];
 
 // aria-sort ne se pose que sur la colonne effectivement triée : l'annoncer sur toutes
@@ -179,6 +184,12 @@ export default function TableauPositions({
                     amplitude={position.pourcentage_variation}
                   />
                 )}
+              </td>
+              {/* La tendance est une variation relative : elle ne dit rien de ce que
+                  l'utilisateur possède et échappe donc au masquage, comme les
+                  performances du sélecteur de période. */}
+              <td className="positions-liste__colonne-nombre">
+                <CourbeMiniature tendance={position.tendance_30j} />
               </td>
             </tr>
           ))}

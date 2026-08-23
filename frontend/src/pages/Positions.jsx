@@ -36,9 +36,25 @@ const TRIS = [
   { cle: 'quantite_detenue', libelle: 'Quantité' },
   { cle: 'cours_eur', libelle: 'Cours' },
   { cle: 'pru', libelle: 'Prix de revient' },
+  // La tendance sur trente jours n'existe que dans le tableau desktop : la liste
+  // mobile ne l'affiche pas, et proposer de trier sur une colonne invisible rendrait
+  // l'ordre de la liste inexplicable. Elle reste triable par son en-tête de colonne,
+  // et donc admise dans l'adresse.
+  { cle: 'tendance', libelle: '30 jours', surMobile: false },
 ];
 
 const TRIS_AUTORISES = TRIS.map((option) => option.cle);
+
+// Le tri porte sur des chaînes de montants. Toutes se lisent directement sur la
+// position, sauf la tendance, qui est un objet : son accès est décrit ici plutôt que
+// dans le comparateur, qui n'a pas à connaître la forme de la réponse.
+const VALEURS_DE_TRI = {
+  tendance: (position) => position.tendance_30j?.variation ?? null,
+};
+
+function valeurDeTri(position, cle) {
+  return (VALEURS_DE_TRI[cle] ?? ((ligne) => ligne[cle]))(position);
+}
 
 // Tri par défaut : la valorisation décroissante. C'est l'ordre qui répond à la question
 // posée en arrivant sur l'écran, « qu'est-ce qui pèse le plus ».
@@ -135,7 +151,9 @@ export default function Positions() {
         : positions.filter((position) => classesFiltrees.includes(position.type));
 
     return [...retenues].sort((a, b) =>
-      comparerDecimales(a[tri.cle], b[tri.cle], { descendant: tri.descendant })
+      comparerDecimales(valeurDeTri(a, tri.cle), valeurDeTri(b, tri.cle), {
+        descendant: tri.descendant,
+      })
     );
   }, [positions, classesFiltrees, tri]);
 
@@ -288,7 +306,7 @@ export default function Positions() {
               modifierParametres({ tri: cle, sens });
             }}
           >
-            {TRIS.map((option) => (
+            {TRIS.filter((option) => option.surMobile !== false).map((option) => (
               <optgroup key={option.cle} label={option.libelle}>
                 <option value={`${option.cle}:desc`}>{option.libelle}, décroissant</option>
                 <option value={`${option.cle}:asc`}>{option.libelle}, croissant</option>

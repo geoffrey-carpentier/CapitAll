@@ -344,3 +344,67 @@ describe('accessibilité et affichage', () => {
     expect(lignesDuTableau()).toHaveLength(3);
   });
 });
+
+// Colonne de tendance sur trente jours (D81). La courbe miniature ne porte jamais
+// l'information seule : c'est la variation chiffrée qui l'accompagne qui est lue.
+describe('tendance sur trente jours', () => {
+  const AVEC_TENDANCES = {
+    ...PORTEFEUILLE,
+    actifs: [
+      { ...POSITIONS[0], tendance_30j: { variation: '12.59', points: ['54000.00', '57200.00', '60801.20'] } },
+      { ...POSITIONS[1], tendance_30j: { variation: '-3.20', points: ['95.20', '93.10', '92.14'] } },
+      // Position trop jeune : un seul relevé, aucune tendance calculable.
+      { ...POSITIONS[2], tendance_30j: { variation: null, points: ['0.8547'] } },
+    ],
+  };
+
+  beforeEach(() => {
+    api.portefeuille.mockResolvedValue(AVEC_TENDANCES);
+  });
+
+  it('chiffre la tendance à côté de la courbe miniature', async () => {
+    rendre();
+    await screen.findByRole('table');
+
+    const entetes = within(screen.getByRole('table')).getAllByRole('columnheader');
+    expect(entetes.some((entete) => entete.textContent.includes('30 jours'))).toBe(true);
+    // La politique de formatage arrondit un pourcentage à une décimale : 12,59 se lit
+    // 12,6. L'expression régulière évite en outre de dépendre de l'espace insécable
+    // qui précède le signe pour cent.
+    expect(screen.getByLabelText(/en hausse de 12,6/)).toBeTruthy();
+    expect(screen.getByLabelText(/en baisse de 3,2/)).toBeTruthy();
+  });
+
+  // Tracer une ligne plate affirmerait une stagnation qui n'a pas été constatée.
+  it("dit l'historique trop court plutôt que de tracer une ligne plate", async () => {
+    rendre();
+    await screen.findByRole('table');
+
+    expect(screen.getByText('tendance indisponible, historique trop court')).toBeTruthy();
+  });
+
+  it('trie sur la colonne, les positions sans tendance restant en dernier', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('table');
+
+    await utilisateur.click(screen.getByRole('button', { name: /30 jours/ }));
+
+    expect(lignesDuTableau().map((ligne) => ligne.slice(0, 20))).toEqual([
+      expect.stringContaining('Bitcoin'),
+      expect.stringContaining('Or'),
+      expect.stringContaining('Dollar'),
+    ]);
+    expect(adresse.search).toContain('tri=tendance');
+  });
+
+  // La liste mobile n'affiche pas cette colonne : proposer de trier dessus rendrait
+  // l'ordre de la liste inexplicable pour qui ne la voit pas.
+  it('ne propose pas ce tri dans le menu du mobile', async () => {
+    rendre();
+    await screen.findByRole('table');
+
+    const menu = screen.getByLabelText('Trier par');
+    expect(within(menu).queryByText(/30 jours/)).toBeNull();
+  });
+});
