@@ -267,9 +267,14 @@ function repartir(valeurParType, valeurTotale) {
 // raisons : la fonction reste pure et testable sans figer le temps, et la performance
 // d'une plage se lit entre deux mesures réelles, pas entre une mesure et une date à
 // laquelle rien n'a été relevé.
+//
+// Le nom de la colonne mesurée est un paramètre : la même mécanique sert la valeur
+// totale du portefeuille et le cours d'une position, deux séries de même forme dont
+// seule l'étiquette diffère. En écrire une seconde copie garantirait qu'un jour les
+// deux sélecteurs de période ne comptent plus les jours de la même façon.
 const PLAGES_EN_JOURS = { jour: 1, semaine: 7, mois: 30, annee: 365 };
 
-function calculerPerformances(instantanes) {
+function calculerPerformances(instantanes, champ = 'valeur_totale_eur') {
   const plages = Object.keys(PLAGES_EN_JOURS);
 
   // Un point isolé ne dit rien d'une évolution : aucune plage n'est calculable.
@@ -283,23 +288,29 @@ function calculerPerformances(instantanes) {
     const debut = reculerDe(derniereDate, PLAGES_EN_JOURS[plage]);
     // Les dates sont au format AAAA-MM-JJ : leur ordre lexicographique est leur ordre
     // chronologique, aucune conversion n'est nécessaire pour filtrer.
-    return [plage, performanceSurPeriode(instantanes.filter((point) => point.date_snapshot >= debut))];
+    return [
+      plage,
+      performanceSurPeriode(
+        instantanes.filter((point) => point.date_snapshot >= debut),
+        champ
+      ),
+    ];
   });
 
   return {
     ...Object.fromEntries(performances),
-    origine: performanceSurPeriode(instantanes),
+    origine: performanceSurPeriode(instantanes, champ),
   };
 }
 
 // Variation entre le premier et le dernier point d'une série.
-function performanceSurPeriode(points) {
+function performanceSurPeriode(points, champ = 'valeur_totale_eur') {
   if (points.length < 2) {
     return null;
   }
 
-  const depart = versUnites(points[0].valeur_totale_eur, ECHELLE_MONTANT);
-  const arrivee = versUnites(points[points.length - 1].valeur_totale_eur, ECHELLE_MONTANT);
+  const depart = versUnites(points[0][champ], ECHELLE_MONTANT);
+  const arrivee = versUnites(points[points.length - 1][champ], ECHELLE_MONTANT);
 
   return pourcentageVariation(arrivee - depart, depart);
 }
@@ -321,5 +332,6 @@ module.exports = {
   valoriser,
   consolider,
   calculerPerformances,
+  performanceSurPeriode,
   trierChronologiquement,
 };
