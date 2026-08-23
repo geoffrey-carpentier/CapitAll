@@ -5,8 +5,14 @@
   overflow: hidden;
 }
 
+/*
+  La zone tactile atteint 44 px en mobile (D77), l'apparence du contrôle restant celle
+  d'une pilule discrète : c'est l'enveloppe qui s'étend, pas le dessin. En desktop, où
+  le pointeur est précis, la hauteur revient à celle du texte.
+*/
 .bascule-devise__choix {
-  min-width: 36px;
+  min-width: 44px;
+  min-height: 44px;
   padding: var(--espace-1) var(--espace-3);
   border: 0;
   background: transparent;
@@ -27,4 +33,11 @@
   background-color: var(--couleur-accent);
   color: var(--couleur-fond);
   font-weight: var(--graisse-forte);
+}
+
+@media (min-width: 768px) {
+  .bascule-devise__choix {
+    min-width: 36px;
+    min-height: 24px;
+  }
 }
