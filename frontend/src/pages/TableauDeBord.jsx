@@ -262,7 +262,7 @@ export default function TableauDeBord() {
       )}
 
       {enRepli.length > 0 && (
-        <Message variante="information">
+        <Message variante="avertissement">
           Cours momentanément indisponible pour {enRepli.map((actif) => actif.symbole).join(', ')}.
           La valorisation utilise le dernier cours connu, relevé le{' '}
           {new Date(enRepli[0].horodatage_cours).toLocaleDateString('fr-FR')}.
@@ -270,7 +270,7 @@ export default function TableauDeBord() {
       )}
 
       {sansCours.length > 0 && (
-        <Message variante="erreur">
+        <Message variante="avertissement">
           Aucun cours disponible pour {sansCours.join(', ')} : ces positions ne sont pas
           valorisées et n'entrent pas dans le total ci-dessous.
         </Message>

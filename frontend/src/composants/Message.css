@@ -20,6 +20,18 @@
   background: rgba(240, 86, 79, 0.08);
 }
 
+/*
+  Donnée incomplète ou dégradée : cours absent, ou valorisation reprise du dernier cours
+  connu. Ni une erreur, qui annoncerait un échec, ni une simple information, qui
+  n'appellerait aucune vigilance. L'ambre est la couleur de cet état, et de lui seul
+  (D70).
+*/
+.message--avertissement {
+  color: var(--couleur-avertissement);
+  border-color: var(--couleur-avertissement);
+  background: rgba(227, 179, 65, 0.08);
+}
+
 .message--information {
   color: var(--couleur-texte-attenue);
   border-color: var(--couleur-bordure);

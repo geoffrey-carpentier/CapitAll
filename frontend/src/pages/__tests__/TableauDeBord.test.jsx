@@ -151,10 +151,13 @@ describe('règles de comportement', () => {
     });
     rendre();
 
-    expect(await screen.findByText(/dernier cours connu/)).toBeTruthy();
+    const bandeau = await screen.findByText(/dernier cours connu/);
     expect(screen.getByText(/BTC/)).toBeTruthy();
     // La valorisation reste affichée : c'est la règle.
     expect(screen.getByText(/12.480,65/)).toBeTruthy();
+    // Donnée dégradée, pas panne ni simple information : c'est l'avertissement que D70
+    // réserve à cet état.
+    expect(bandeau.closest('.message').className).toContain('message--avertissement');
   });
 
   it('nomme les actifs sans aucun cours et dit qu\'ils sortent du total', async () => {
@@ -162,7 +165,10 @@ describe('règles de comportement', () => {
     rendre();
 
     expect(await screen.findByText(/XAU/)).toBeTruthy();
-    expect(screen.getByText(/n'entrent pas dans le total/)).toBeTruthy();
+    const bandeau = screen.getByText(/n'entrent pas dans le total/);
+    // Un cours absent est une donnée incomplète, pas une perte financière : le rouge
+    // ferait lire une baisse là où il n'y a qu'un trou (D70).
+    expect(bandeau.closest('.message').className).toContain('message--avertissement');
   });
 
   // Une carte vide intitulée « Seuils franchis » inquiéterait pour rien.
