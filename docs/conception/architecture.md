@@ -28,7 +28,8 @@ Architecture front / back séparée. Le client React ne parle qu'à l'API Expres
         |                              clé cours:{type}:{symbole}, TTL par classe
         v
 [ PostgreSQL ]
-  utilisateur / actif / transaction / alerte / snapshot_valorisation / annonce
+  utilisateur / actif / transaction / alerte / snapshot_valorisation /
+  snapshot_cours / annonce
 ```
 
 ## Justification des choix
@@ -97,6 +98,8 @@ Chaque fournisseur implémente la même interface : `getCours(symbole) -> { symb
 **Évaluation des alertes** : à chaque consultation du tableau de bord, après le calcul de la valeur du portefeuille et des plus-values par actif, le service d'alertes compare les alertes actives de l'utilisateur (statut = active) aux valeurs courantes (cours d'un actif ou capital total) ; toute alerte franchie passe au statut declenchee et est signalée au front. Aucune tâche planifiée en tâche de fond dans la version MVP : l'évaluation reste liée au chargement du tableau de bord (version light retenue).
 
 **Alimentation de l'historique de valorisation** : à la première consultation du tableau de bord d'une journée donnée, si aucun snapshot n'existe encore pour ce jour, le service de portefeuille enregistre un snapshot_valorisation avec la valeur totale calculée. La courbe d'évolution du tableau de bord se construit ensuite par simple lecture des snapshots existants, sans rappeler les API de cours pour les jours passés.
+
+**Alimentation de l'historique de cours par position** : au même point d'appel et par le même déclencheur, le service enregistre pour chaque position valorisée son cours du jour et la quantité détenue dans snapshot_cours. Aucune tâche planifiée n'est introduite : les positions valorisées sont déjà disponibles à cet endroit, l'écriture s'y ajoute. Une position dont le cours n'a pas pu être obtenu est écartée plutôt qu'enregistrée à zéro, pour la même raison qu'un portefeuille entièrement sans cours n'est pas historisé — un trou dans la courbe est préférable à un point faux. Cet historique alimente le graphe de cours de l'écran de détail et la tendance sur trente jours du tableau des positions.
 
 **Bascule d'affichage euro/dollar (D43)** : le tableau de bord peut présenter les montants en euro ou en dollar. La devise de référence de calcul et de stockage reste l'euro ; la bascule est une simple conversion à l'affichage, appliquée au taux EUR/USD de Frankfurter déjà présent en cache pour les actions, sans appel supplémentaire. Aucun montant en dollar n'est stocké, aucun PRU n'est recalculé par devise ; les snapshots restent enregistrés en euro et sont convertis au taux courant à la lecture. Le multi-devise de référence complet reste hors périmètre.
 
