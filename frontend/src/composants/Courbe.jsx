@@ -31,7 +31,7 @@ import { bornes, hauteurDeBascule } from '../utils/echelleCourbe';
 // gain et quand elle a été en perte. Une aire d'une seule teinte ne dirait que le solde
 // du jour, et raterait l'essentiel du produit.
 
-function decrire(points, devise) {
+function decrire(points, devise, sujet, prixDeRevient) {
   if (points.length < 2) {
     return 'Évolution indisponible.';
   }
@@ -40,9 +40,21 @@ function decrire(points, devise) {
   const debut = points[0];
   const fin = points[points.length - 1];
 
+  const evolution =
+    `Évolution ${sujet}, du ${debut.date} au ${fin.date}, ` +
+    `de ${formaterMontant(debut.valeur, { symbole })} à ${formaterMontant(fin.valeur, { symbole })}.`;
+
+  if (prixDeRevient === null) {
+    return evolution;
+  }
+
+  // D79 : la ligne de prix de revient est nommée explicitement dans la description.
+  // Sans cela, le tracé annoncerait une évolution sans dire par rapport à quoi il se
+  // teinte, et c'est précisément ce que le graphe existe pour montrer.
   return (
-    `Évolution de la valeur du portefeuille, du ${debut.date} au ${fin.date}, ` +
-    `de ${formaterMontant(debut.valeur, { symbole })} à ${formaterMontant(fin.valeur, { symbole })}.`
+    `${evolution} Le prix de revient, ${formaterMontant(prixDeRevient, { symbole })}, ` +
+    "est figuré par une ligne horizontale pointillée : l'aire est teintée en positif " +
+    'au-dessus et en négatif en dessous.'
   );
 }
 
@@ -52,6 +64,10 @@ export default function Courbe({
   masque = false,
   sens = 'hausse',
   prixDeRevient = null,
+  // Ce que la courbe donne à lire. Le tableau de bord trace un patrimoine, l'écran de
+  // détail le cours d'une position : la description ne peut pas être la même, et une
+  // description fausse vaut moins qu'une absence de description.
+  sujet = 'de la valeur du portefeuille',
   ...proprietes
 }) {
   const symbole = symboleDevise(devise);
@@ -83,7 +99,11 @@ export default function Courbe({
     <div
       className="courbe"
       role="img"
-      aria-label={masque ? 'Évolution de la valeur du portefeuille, montants masqués.' : decrire(points, devise)}
+      aria-label={
+        masque
+          ? `Évolution ${sujet}, montants masqués.`
+          : decrire(points, devise, sujet, prixDeRevient)
+      }
       {...proprietes}
     >
       <ResponsiveContainer width="100%" height={200}>
@@ -131,7 +151,25 @@ export default function Courbe({
           />
 
           {aireBicolore && (
-            <ReferenceLine y={seuil} stroke="var(--couleur-texte-attenue)" strokeDasharray="4 4" />
+            <ReferenceLine
+              y={seuil}
+              stroke="var(--couleur-texte-attenue)"
+              strokeDasharray="4 4"
+              // Le libellé chiffré accompagne la ligne (D79) : sans lui, le trait
+              // pointillé ne dirait pas à quelle hauteur il se trouve, et l'aire
+              // bicolore basculerait sur une frontière sans nom. Il disparaît avec le
+              // masquage, au même titre que l'échelle.
+              label={
+                masque
+                  ? undefined
+                  : {
+                      value: `Prix de revient ${formaterMontant(prixDeRevient, { symbole })}`,
+                      position: 'insideTopLeft',
+                      fill: 'var(--couleur-texte-attenue)',
+                      fontSize: 11,
+                    }
+              }
+            />
           )}
 
           <Area

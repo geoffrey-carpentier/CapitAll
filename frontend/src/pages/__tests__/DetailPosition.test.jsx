@@ -267,7 +267,10 @@ describe('onglets', () => {
     rendre();
     await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
 
-    const atteignables = screen
+    // L'écran porte deux groupes d'onglets, le sélecteur de période et celui-ci :
+    // l'assertion vise explicitement le second.
+    const groupe = within(screen.getByRole('tablist', { name: 'Détail de la position' }));
+    const atteignables = groupe
       .getAllByRole('tab')
       .filter((onglet) => onglet.getAttribute('tabindex') === '0');
     expect(atteignables).toHaveLength(1);
@@ -376,5 +379,53 @@ describe('suppression', () => {
 
     expect(api.supprimerTransaction).toHaveBeenCalledWith('jeton-de-test', '1', 2);
     expect(api.actif).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('graphe de cours', () => {
+  const SERIE = [
+    { date_snapshot: '2026-08-19', cours_eur: '54000.00', quantite: '0.6' },
+    { date_snapshot: '2026-08-20', cours_eur: '57200.00', quantite: '0.6' },
+    { date_snapshot: '2026-08-21', cours_eur: '59100.00', quantite: '0.6' },
+    { date_snapshot: '2026-08-22', cours_eur: '60100.00', quantite: '0.6' },
+    { date_snapshot: '2026-08-23', cours_eur: '60801.20', quantite: '0.6' },
+  ];
+
+  // L'historique s'amorce à la première consultation : une position trop jeune n'a pas
+  // assez de points, et rien n'est interpolé pour combler les jours manquants.
+  it("annonce l'absence d'historique plutôt que de tracer une ligne inventée", async () => {
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+
+    expect(screen.getByText(/s'affichera après quelques jours de suivi/)).toBeTruthy();
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  // D79 : la description accessible nomme explicitement la ligne de prix de revient.
+  // Sans elle, le tracé annoncerait une évolution sans dire par rapport à quoi il se
+  // teinte, c'est-à-dire sans dire ce que le graphe existe pour montrer.
+  it('nomme la ligne de prix de revient dans sa description', async () => {
+    api.actif.mockResolvedValue({
+      ...DETAIL,
+      historique: { points: SERIE, performances: { jour: '1.17', mois: '12.59', origine: '12.59' } },
+    });
+    rendre();
+
+    const graphe = await screen.findByRole('img');
+    expect(graphe.getAttribute('aria-label')).toMatch(/cours de Bitcoin/);
+    expect(graphe.getAttribute('aria-label')).toMatch(/prix de revient/i);
+    expect(graphe.getAttribute('aria-label')).toMatch(/pointill/);
+  });
+
+  it("affiche la performance de chaque plage sans qu'il faille cliquer", async () => {
+    api.actif.mockResolvedValue({
+      ...DETAIL,
+      historique: { points: SERIE, performances: { jour: '1.17', mois: '12.59', origine: '12.59' } },
+    });
+    rendre();
+    await screen.findByRole('img');
+
+    const plages = within(screen.getByRole('tablist', { name: 'Période de la courbe' }));
+    expect(plages.getAllByRole('tab')).toHaveLength(5);
   });
 });

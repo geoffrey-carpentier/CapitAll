@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
+import { sensVariation } from '../utils/formatage';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
 import Carte from '../composants/Carte';
 import Montant from '../composants/Montant';
@@ -10,6 +11,7 @@ import Variation from '../composants/Variation';
 import JetonClasse from '../composants/JetonClasse';
 import PastilleFraicheur from '../composants/PastilleFraicheur';
 import Onglets from '../composants/Onglets';
+import SelecteurPeriode from '../composants/SelecteurPeriode';
 import FriseMouvements from '../composants/FriseMouvements';
 import BarreProgression from '../composants/BarreProgression';
 import Confirmation from '../composants/Confirmation';
@@ -27,6 +29,17 @@ import {
   CLE_MASQUAGE,
 } from '../utils/preferences';
 import './DetailPosition.css';
+
+// Même arbitrage que sur le tableau de bord : la bibliothèque de tracé pèse plus lourd
+// que tout le reste de l'application, elle n'est chargée qu'à l'affichage du graphe.
+const Courbe = lazy(() => import('../composants/Courbe'));
+
+// Nombre de points repris pour chaque plage. La série est journalière et continue :
+// borner la fenêtre revient à en garder la fin. C'est de la présentation, les
+// performances de chaque plage restant calculées par le serveur sur la série entière.
+const JOURS_PAR_PERIODE = { jour: 2, semaine: 7, mois: 30, annee: 365, origine: null };
+
+const PERIODE_PAR_DEFAUT = 'mois';
 
 // Écran de détail d'une position.
 //
@@ -67,6 +80,7 @@ export default function DetailPosition() {
   const [erreur, setErreur] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [onglet, setOnglet] = useState('mouvements');
+  const [periode, setPeriode] = useState(PERIODE_PAR_DEFAUT);
   const [aSupprimer, setASupprimer] = useState(null);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
 
@@ -119,6 +133,20 @@ export default function DetailPosition() {
     },
     [devise, taux]
   );
+
+  // Points du graphe, bornés à la plage choisie puis convertis à l'affichage. La
+  // conversion vient après le découpage : convertir quatre-vingt-dix points pour n'en
+  // tracer sept serait du travail perdu.
+  const points = useMemo(() => {
+    const serie = position?.historique?.points ?? [];
+    const jours = JOURS_PAR_PERIODE[periode];
+    const fenetre = jours ? serie.slice(-jours) : serie;
+
+    return fenetre.map((point) => ({
+      date: point.date_snapshot,
+      valeur: afficher(point.cours_eur) ?? point.cours_eur,
+    }));
+  }, [position, periode, afficher]);
 
   async function confirmerSuppression() {
     setSuppressionEnCours(true);
@@ -196,6 +224,11 @@ export default function DetailPosition() {
   const enRepli = position.source_cours === 'repli';
   const sansCours = position.cours_eur === null;
   const mouvements = position.transactions ?? [];
+  const performances = position.historique?.performances ?? {};
+
+  // Le sens du tracé vient de la performance calculée par le serveur, jamais d'une
+  // comparaison entre deux montants convertis en nombres.
+  const sensDeLaPeriode = sensVariation(performances[periode] ?? '0') ?? 'stable';
 
   return (
     <div className="detail">
@@ -323,6 +356,42 @@ export default function DetailPosition() {
           </dd>
         </div>
       </dl>
+
+      {/*
+        Le graphe de cours et sa ligne de prix de revient (D79). L'aire se teinte de part
+        et d'autre de cette ligne : c'est le geste graphique propre à l'application, celui
+        qui donne à voir d'un regard quand la position a été en gain et quand elle a été
+        en perte. Il s'insère entre le trio de contexte et la carte à onglets.
+      */}
+      <Carte className="detail__evolution">
+        <SelecteurPeriode
+          periode={periode}
+          performances={performances}
+          surChangement={setPeriode}
+          identifiantPanneau="panneau-cours"
+        />
+        <div id="panneau-cours" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
+          {/* Une série trop courte ne trace rien et laisserait croire à une perte de
+              données. L'historique s'amorce à la première consultation : il n'est jamais
+              interpolé pour combler les jours manquants. */}
+          {points.length < 2 ? (
+            <p className="detail__evolution-absente">
+              L'évolution du cours s'affichera après quelques jours de suivi.
+            </p>
+          ) : (
+            <Suspense fallback={<Squelette forme="graphe" />}>
+              <Courbe
+                points={points}
+                devise={devise}
+                masque={masque}
+                sens={sensDeLaPeriode}
+                prixDeRevient={afficher(position.pru)}
+                sujet={`du cours de ${position.nom}`}
+              />
+            </Suspense>
+          )}
+        </div>
+      </Carte>
 
       <Carte className="detail__onglets">
         <Onglets

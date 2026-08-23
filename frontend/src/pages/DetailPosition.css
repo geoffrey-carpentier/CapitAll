@@ -190,3 +190,14 @@
     border-radius: var(--rayon-carte);
   }
 }
+
+.detail__evolution {
+  padding: var(--espace-4);
+}
+
+.detail__evolution-absente {
+  margin: 0;
+  padding: var(--espace-6) 0;
+  text-align: center;
+  color: var(--couleur-texte-attenue);
+}
