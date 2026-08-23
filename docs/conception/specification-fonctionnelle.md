@@ -62,7 +62,7 @@ Existants dans le dépôt : `Bouton`, `Carte`, `Champ`, `Chargement`, `Alerte` (
 | `MessageErreur` | erreur avec cause et action de reprise | tous |
 | `PastilleFraicheur` | ancienneté et source d'un cours | E2, E3, E4 |
 | `SelecteurPeriode` | plages avec performance affichée par plage | E2, E4 |
-| `Anneau` | répartition, légende chiffrée | E2 |
+| `Repartition` | répartition par classe, en liste chiffrée | E2 |
 | `Courbe` | évolution, avec ligne de prix de revient optionnelle | E2, E4 |
 | `TableauPositions` | liste responsive des positions | E2, E3 |
 | `FrisesMouvements` | chronologie des mouvements avec effet sur le prix de revient | E4 |
@@ -95,11 +95,11 @@ Les sept états demandés sont définis **une fois ici** et ne sont rappelés da
 
 ## 6. Premier lancement, le parcours qui décide de tout
 
-Un compte neuf n'a aucune position. Aujourd'hui, cela produirait un tableau de bord affichant zéro euro, quatre indicateurs vides et un anneau sans segment : le pire accueil possible pour une application patrimoniale.
+Un compte neuf n'a aucune position. Aujourd'hui, cela produirait un tableau de bord affichant zéro euro, quatre indicateurs vides et une répartition sans ligne : le pire accueil possible pour une application patrimoniale.
 
 Parcours retenu : après inscription, l'utilisateur arrive sur le tableau de bord en état **premier lancement**. L'écran ne montre ni graphe ni répartition. Il montre un texte court expliquant ce que fait l'application, et une action principale unique, « Ajouter votre première position », qui ouvre directement le formulaire de mouvement pré-réglé sur un achat.
 
-Après le premier enregistrement, le tableau de bord bascule en état normal. Tant qu'une seule position existe, l'anneau de répartition reste masqué : un anneau à un seul segment n'informe pas.
+Après le premier enregistrement, le tableau de bord bascule en état normal. Tant qu'une seule position existe, le bloc de répartition reste masqué : une répartition à une seule ligne n'informe pas.
 
 ---
 
@@ -141,7 +141,7 @@ Après le premier enregistrement, le tableau de bord bascule en état normal. Ta
 
 *Priorité 3, sans carte, en colonne latérale sur desktop.* Montant investi, plus-value latente, plus-value réalisée. Trois lignes de texte séparées par des filets, pas trois cartes : ce sont des chiffres de contexte, pas des indicateurs de tête.
 
-*Priorité 4.* Répartition en anneau avec légende chiffrée par classe, montant et part.
+*Priorité 4.* Répartition par classe, en liste chiffrée : libellé, part et montant sur chaque ligne. La visualisation graphique en anneau a été retirée aux deux points de rupture (D74) ; la donnée, elle, est intégralement conservée.
 
 *Priorité 5.* Seuils franchis, en liste courte, seulement s'il y en a. Le bloc disparaît entièrement s'il est vide.
 
@@ -149,15 +149,15 @@ Après le premier enregistrement, le tableau de bord bascule en état normal. Ta
 
 **Source.** `GET /api/portefeuille` fournit `valeur_totale`, `cout_total`, `plus_value_latente`, `plus_value_realisee`, `repartition`, `actifs`, `cours_indisponibles`, `taux_affichage`, `alertes_declenchees`. `GET /api/portefeuille/historique` fournit la courbe.
 
-**Composants.** `Montant`, `Variation`, `SelecteurPeriode`, `Courbe`, `Anneau`, `TableauPositions` en mode réduit, `PastilleFraicheur`, `BasculeDevise`, `MasquageMontants`, `EtatVide`, `Squelette`, `MessageErreur`.
+**Composants.** `Montant`, `Variation`, `SelecteurPeriode`, `Courbe`, `Repartition`, `TableauPositions` en mode réduit, `PastilleFraicheur`, `BasculeDevise`, `MasquageMontants`, `EtatVide`, `Squelette`, `MessageErreur`.
 
 **Interactions.** La bascule euro-dollar convertit l'affichage sans nouvelle requête, le taux étant déjà dans la réponse ; le choix persiste dans la session. Le masquage remplace tout montant par une suite de points, y compris dans le graphe dont l'axe est masqué ; l'état persiste. Le sélecteur de période recharge la courbe. Un clic sur une classe de la légende filtre l'écran Positions et y navigue. Un clic sur une position ouvre son détail. Le bouton d'ajout ouvre E5.
 
 **États particuliers.**
 
-*Premier lancement et portefeuille vide.* Voir I.6. Ni courbe, ni anneau, ni indicateurs. Un texte, une action.
+*Premier lancement et portefeuille vide.* Voir I.6. Ni courbe, ni répartition, ni indicateurs. Un texte, une action.
 
-*Une seule position.* Anneau masqué, la répartition n'a pas de sens.
+*Une seule position.* Bloc de répartition masqué : répartir un patrimoine entre une seule ligne n'a pas de sens.
 
 *Historique insuffisant.* Moins de deux points de mesure : la courbe est remplacée par un message « l'évolution s'affichera après quelques jours de suivi ». Ne jamais tracer une courbe à un point.
 
@@ -165,7 +165,7 @@ Après le premier enregistrement, le tableau de bord bascule en état normal. Ta
 
 *Chargement.* Squelette respectant la composition : un grand bloc, une zone de graphe, trois lignes, un cercle.
 
-**Accessibilité.** La courbe et l'anneau portent un `role="img"` avec un `aria-label` décrivant la donnée en toutes lettres, et sont doublés par la légende chiffrée qui suffit à comprendre sans voir le graphique. Aucune information n'est portée par la couleur seule dans la légende : chaque entrée porte son libellé et sa valeur. Le sélecteur de période est un vrai groupe d'onglets navigable aux flèches. Le masquage des montants est annoncé par `aria-pressed`.
+**Accessibilité.** La courbe porte un `role="img"` avec un `aria-label` décrivant la donnée en toutes lettres, et le sélecteur de période en donne la performance chiffrée : le tracé n'est jamais la seule source de l'information. La répartition n'étant plus un graphique mais une liste (D74), elle se lit directement, chaque entrée portant son libellé, sa part et son montant. Aucune information n'y est portée par la couleur : la classe est signalée par la forme du jeton (D76). Le sélecteur de période est un vrai groupe d'onglets navigable aux flèches. Le masquage des montants est annoncé par `aria-pressed`.
 
 **Questions ouvertes.**
 1. Le bloc des cinq principales positions fait-il doublon avec l'écran Positions ? Il évite un aller-retour mais ajoute de la hauteur. Recommandation : le conserver en desktop, le supprimer en mobile où le défilement est déjà long.

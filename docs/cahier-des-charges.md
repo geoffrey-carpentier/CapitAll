@@ -248,7 +248,7 @@ Description complète : `conception/architecture.md`. Résumé des choix engagea
 | Cache | Redis 7 | cache court des cours, nécessaire de toute façon, et couvrant un besoin réel de stockage clé-valeur (D14) |
 | Authentification | jeton signé et bcrypt | interface sans état, adaptée à un client découplé |
 | Validation | schémas déclaratifs | source unique de la forme attendue, réutilisable des deux côtés (D41) |
-| Représentation graphique | Recharts (D58) | composants natifs de l'écosystème de l'interface, sans adaptateur à écrire ; un anneau de répartition et une courbe d'aire suffisent au besoin |
+| Représentation graphique | Recharts (D58) | composants natifs de l'écosystème de l'interface, sans adaptateur à écrire ; la courbe d'aire couvre le besoin depuis que la répartition se lit en liste chiffrée (D74) |
 | Conteneurisation | Docker et Docker Compose | reproductibilité de l'environnement et démonstration de la procédure de déploiement |
 
 Les cours sont appelés exclusivement côté serveur (D6). Chaque fournisseur est encapsulé dans un adaptateur exposant une interface commune, ce qui permet d'en changer sans toucher à la logique métier (D5).

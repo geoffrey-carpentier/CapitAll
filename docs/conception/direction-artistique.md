@@ -34,7 +34,7 @@ Contrastes vérifiés à respecter (RGAA) : texte principal et secondaire sur fo
 - mobile-first : une colonne, cartes empilées ; sur desktop, grille deux colonnes pour le tableau de bord
 - navigation par barre d'onglets en bas sur mobile à cinq entrées (patrimoine, positions, ajout au centre, seuils, compte), rail latéral sur desktop
 - coins arrondis discrets (8 px), pas d'ombres marquées, hiérarchie par la couleur de fond
-- graphique de répartition en anneau, courbe d'évolution en aire dégradée
+- répartition en liste chiffrée et non en anneau (D74), courbe d'évolution en aire dégradée
 
 ## Grammaire visuelle
 
