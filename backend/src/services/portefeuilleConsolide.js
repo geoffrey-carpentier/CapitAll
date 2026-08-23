@@ -272,6 +272,11 @@ function creerServicePortefeuille({
       ...valoriser(position, coursActif?.cours_eur ?? null),
       transactions: mouvements,
       historique: await obtenirHistoriqueCours(actifId, utilisateurId),
+      // Même taux que celui du portefeuille, et pour la même raison (D43, D69) : la
+      // bascule euro/dollar ne doit déclencher aucune requête. Sans lui, l'écran de
+      // détail afficherait des euros alors que les deux écrans qui y mènent affichent
+      // des dollars, ce qui se lirait comme une erreur de chiffres.
+      taux_affichage: await obtenirTauxAffichage(),
     };
   }
 
