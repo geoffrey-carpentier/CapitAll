@@ -1,0 +1,45 @@
+.filtres-classe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.filtres-classe__bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  /* Zone tactile de 44 px en mobile (D77) ; le pointeur du desktop se contente de 24. */
+  min-height: 44px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-pilule);
+  background: transparent;
+  color: var(--couleur-texte-attenue);
+  font-family: inherit;
+  font-size: var(--taille-legende);
+  cursor: pointer;
+}
+
+/*
+  L'état actif se marque par la bordure, le fond et le contraste du texte, jamais par la
+  seule teinte : un filtre engagé doit rester visible en niveaux de gris. L'attribut
+  aria-pressed le porte pour les technologies d'assistance.
+*/
+.filtres-classe__bouton--actif {
+  border-color: var(--couleur-accent);
+  background-color: rgba(76, 154, 255, 0.12);
+  color: var(--couleur-texte);
+  font-weight: var(--graisse-forte);
+}
+
+.filtres-classe__compteur {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+@media (min-width: 768px) {
+  .filtres-classe__bouton {
+    min-height: 24px;
+    padding: var(--espace-1) var(--espace-3);
+  }
+}

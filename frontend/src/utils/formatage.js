@@ -273,21 +273,36 @@ export function formaterVariation(chaine, mode = 'relative', options = {}) {
 // Compare deux valeurs décimales en valeur absolue, sans jamais les convertir : d'abord
 // la longueur de la partie entière, qui donne l'ordre de grandeur, puis l'ordre
 // lexicographique une fois les parties alignées sur la même longueur.
-function estSuperieureOuEgale(composants, reference) {
-  const b = decomposer(reference);
-
-  const entiereA = composants.entiere.replace(/^0+(?=\d)/, '');
+// Compare deux valeurs absolues décomposées. Rend -1, 0 ou 1.
+//
+// La comparaison est lexicographique, jamais numérique : la partie entière se compare
+// d'abord par sa longueur, ce qui départage les ordres de grandeur, puis chiffre à
+// chiffre ; la partie décimale est complétée de zéros pour que les deux chaînes aient la
+// même longueur avant d'être comparées. Aucune conversion n'intervient, la précision est
+// donc celle des chaînes reçues, quelle qu'elle soit.
+function comparerAbsolus(a, b) {
+  const entiereA = a.entiere.replace(/^0+(?=\d)/, '');
   const entiereB = b.entiere.replace(/^0+(?=\d)/, '');
 
   if (entiereA.length !== entiereB.length) {
-    return entiereA.length > entiereB.length;
+    return entiereA.length > entiereB.length ? 1 : -1;
   }
   if (entiereA !== entiereB) {
-    return entiereA > entiereB;
+    return entiereA > entiereB ? 1 : -1;
   }
 
-  const longueur = Math.max(composants.decimale.length, b.decimale.length);
-  return composants.decimale.padEnd(longueur, '0') >= b.decimale.padEnd(longueur, '0');
+  const longueur = Math.max(a.decimale.length, b.decimale.length);
+  const decimaleA = a.decimale.padEnd(longueur, '0');
+  const decimaleB = b.decimale.padEnd(longueur, '0');
+
+  if (decimaleA === decimaleB) {
+    return 0;
+  }
+  return decimaleA > decimaleB ? 1 : -1;
+}
+
+function estSuperieureOuEgale(composants, reference) {
+  return comparerAbsolus(composants, decomposer(reference)) >= 0;
 }
 
 // Niveau de traitement visuel d'une variation, selon son amplitude en pourcentage.
@@ -328,3 +343,48 @@ export function sensVariation(chaine) {
 }
 
 export const CLASSES_QUANTITE = Object.keys(FORMATS_QUANTITE);
+
+// Comparateur de deux valeurs décimales transmises en chaînes, pour trier une liste.
+//
+// Trier, c'est de la présentation : cela n'ajoute aucune information et ne crée aucun
+// fait que le domaine devrait connaître. Mais comparer reste une opération sur des
+// montants, et la faire en convertissant en nombres ferait rentrer par la fenêtre le
+// flottant que toute cette politique met dehors. La comparaison se fait donc sur les
+// chaînes, avec la même exactitude que le reste du module.
+//
+// Le sens du tri est un paramètre et ne s'obtient pas en inversant les arguments : une
+// valeur absente doit se ranger en dernier dans les deux sens, et l'inversion des
+// arguments la ferait remonter en tête au tri décroissant. Une position dont le cours
+// n'a pas pu être obtenu n'a pas de rang ; la voir en tête laisserait croire à une
+// valorisation extrême.
+export function comparerDecimales(a, b, { descendant = false } = {}) {
+  const aValide = estDecimaleValide(a);
+  const bValide = estDecimaleValide(b);
+
+  if (!aValide || !bValide) {
+    if (aValide) {
+      return -1;
+    }
+    return bValide ? 1 : 0;
+  }
+
+  const composantsA = decomposer(a);
+  const composantsB = decomposer(b);
+
+  // Le zéro n'a pas de signe : « -0.00 » et « 0.00 » sont la même valeur.
+  const signeA = estNul(composantsA) ? 0 : (composantsA.negatif ? -1 : 1);
+  const signeB = estNul(composantsB) ? 0 : (composantsB.negatif ? -1 : 1);
+
+  const sens = descendant ? -1 : 1;
+
+  if (signeA !== signeB) {
+    return (signeA < signeB ? -1 : 1) * sens;
+  }
+  if (signeA === 0) {
+    return 0;
+  }
+
+  // À signe égal, l'ordre des valeurs absolues s'inverse chez les négatifs :
+  // -12 est plus petit que -3.
+  return comparerAbsolus(composantsA, composantsB) * signeA * sens;
+}

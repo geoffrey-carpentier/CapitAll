@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import TableauDeBord from '../TableauDeBord';
+import Patrimoine from '../Patrimoine';
 import * as contexte from '../../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../../services/api';
 
@@ -46,8 +46,8 @@ function rendre(etat = {}) {
   });
 
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/tableau-de-bord', state: etat }]}>
-      <TableauDeBord />
+    <MemoryRouter initialEntries={[{ pathname: '/patrimoine', state: etat }]}>
+      <Patrimoine />
     </MemoryRouter>
   );
 }

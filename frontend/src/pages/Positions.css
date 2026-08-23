@@ -1,0 +1,91 @@
+.positions {
+  display: flex;
+  flex-direction: column;
+  /* 24 px entre blocs d'une même section, selon le rythme vertical. */
+  gap: var(--espace-6);
+}
+
+.positions__entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+}
+
+.positions__titre {
+  margin: 0;
+  font-size: var(--taille-titre);
+}
+
+/* Le nombre de positions affichées suit le titre : il change avec les filtres et sert
+   de retour immédiat à leur activation. */
+.positions__compte {
+  margin-left: var(--espace-2);
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+  font-variant-numeric: tabular-nums;
+}
+
+.positions__outils {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.positions__commandes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.positions__tri-mobile {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.positions__tri-mobile select {
+  flex: 1;
+  min-height: 44px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+  background-color: var(--couleur-carte);
+  color: var(--couleur-texte);
+  font-family: inherit;
+  font-size: var(--taille-corps);
+}
+
+.positions__squelette {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
+}
+
+.positions__sans-resultat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espace-3);
+  padding: var(--espace-6) 0;
+  color: var(--couleur-texte-attenue);
+}
+
+.positions__sans-resultat p {
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .positions__commandes {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Les en-têtes de colonne portent le tri : le menu ferait double emploi. */
+  .positions__tri-mobile {
+    display: none;
+  }
+}

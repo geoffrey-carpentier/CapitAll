@@ -7,7 +7,7 @@ export default function Introuvable() {
       <p style={{ color: 'var(--couleur-texte-attenue)', margin: 'var(--espace-4) 0' }}>
         Cette adresse ne correspond à aucun écran de l'application.
       </p>
-      <Link to="/tableau-de-bord">Retour au tableau de bord</Link>
+      <Link to="/patrimoine">Retour au patrimoine</Link>
     </main>
   );
 }

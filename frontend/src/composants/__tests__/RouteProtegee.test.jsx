@@ -17,11 +17,11 @@ function rendreAvecSession(estConnecte) {
   });
 
   return render(
-    <MemoryRouter initialEntries={['/tableau-de-bord']}>
+    <MemoryRouter initialEntries={['/patrimoine']}>
       <Routes>
         <Route path="/connexion" element={<p>Écran de connexion</p>} />
         <Route
-          path="/tableau-de-bord"
+          path="/patrimoine"
           element={
             <RouteProtegee>
               <p>Contenu protégé</p>

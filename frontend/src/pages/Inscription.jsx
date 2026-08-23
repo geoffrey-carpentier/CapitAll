@@ -35,7 +35,7 @@ export default function Inscription() {
   const [enCours, setEnCours] = useState(false);
 
   if (estConnecte) {
-    return <Navigate to="/tableau-de-bord" replace />;
+    return <Navigate to="/patrimoine" replace />;
   }
 
   async function soumettre(evenement) {
@@ -55,7 +55,7 @@ export default function Inscription() {
       await inscrire({ email, motDePasse, ...(pseudo ? { pseudo } : {}) });
       // Le tableau de bord distingue le premier lancement d'un portefeuille devenu
       // vide : le compte vient d'être créé, l'accueil n'est pas le même.
-      naviguer('/tableau-de-bord', { replace: true, state: { premierLancement: true } });
+      naviguer('/patrimoine', { replace: true, state: { premierLancement: true } });
     } catch (echec) {
       // Le serveur renvoie une erreur par champ sur une validation, et un message
       // global sur un conflit d'adresse déjà utilisée.
