@@ -1,0 +1,60 @@
+{
+  "_objet": "Jeu d'essai partage de la conversion d'affichage (D69). Consomme par les tests du serveur et par ceux de l'interface : les deux implementations doivent rendre exactement les memes chaines.",
+  "_regle_arrondi": "arrondi au plus proche, les demis s'ecartant de zero, sur 2 decimales",
+  "cas": [
+    {
+      "libelle": "montant courant",
+      "montant": "12345.67",
+      "taux": "1.17235",
+      "attendu": "14473.45"
+    },
+    {
+      "libelle": "valeur nulle",
+      "montant": "0.00",
+      "taux": "1.17235",
+      "attendu": "0.00"
+    },
+    {
+      "libelle": "valeur negative",
+      "montant": "-135.51",
+      "taux": "1.17235",
+      "attendu": "-158.87"
+    },
+    {
+      "libelle": "demi exact, doit s ecarter de zero",
+      "montant": "10.00",
+      "taux": "1.005",
+      "attendu": "10.05"
+    },
+    {
+      "libelle": "demi exact negatif, doit s ecarter de zero",
+      "montant": "-10.00",
+      "taux": "1.005",
+      "attendu": "-10.05"
+    },
+    {
+      "libelle": "valeur inferieure au centime apres conversion",
+      "montant": "0.01",
+      "taux": "0.5",
+      "attendu": "0.01"
+    },
+    {
+      "libelle": "grand montant que Number corromprait",
+      "montant": "9007199254740993.01",
+      "taux": "1.17235",
+      "attendu": "10559590046295603.16"
+    },
+    {
+      "libelle": "taux inverse dollar vers euro",
+      "montant": "14473.45",
+      "taux": "0.85298",
+      "attendu": "12345.56"
+    },
+    {
+      "libelle": "taux neutre",
+      "montant": "12345.67",
+      "taux": "1",
+      "attendu": "12345.67"
+    }
+  ]
+}

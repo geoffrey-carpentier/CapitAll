@@ -35,16 +35,22 @@ function versEntier(valeur, decimales) {
   return negatif ? -entier : entier;
 }
 
-// Entier vers chaîne décimale, sans zéros de fin inutiles.
+// Entier vers chaîne décimale, à nombre fixe de décimales.
+//
+// Les zéros de fin sont conservés, contrairement à ce que fait l'affichage : la valeur
+// rendue ici n'est pas destinée à l'œil mais à `formaterMontant`, qui les retirera. Elle
+// a donc exactement la forme des montants du serveur, « 0.00 » comme « 14473.45 », ce
+// qui permet au jeu d'essai partagé de comparer les deux implémentations chaîne à
+// chaîne.
 function versChaine(entier, decimales) {
   const negatif = entier < 0n;
   const absolu = negatif ? -entier : entier;
   const facteur = 10n ** BigInt(decimales);
 
   const partieEntiere = absolu / facteur;
-  const partieDecimale = (absolu % facteur).toString().padStart(decimales, '0').replace(/0+$/, '');
+  const partieDecimale = (absolu % facteur).toString().padStart(decimales, '0');
 
-  return `${negatif ? '-' : ''}${partieEntiere}${partieDecimale ? `.${partieDecimale}` : ''}`;
+  return `${negatif ? '-' : ''}${partieEntiere}.${partieDecimale}`;
 }
 
 // Applique un taux de change à un montant, les deux étant des chaînes.
