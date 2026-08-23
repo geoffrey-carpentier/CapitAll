@@ -1,0 +1,26 @@
+.masquage-montants {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Zone tactile de 44 px en mobile (D77), ramenée à la taille du dessin en desktop. */
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-pilule);
+  background: transparent;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+  cursor: pointer;
+}
+
+.masquage-montants[aria-pressed='true'] {
+  color: var(--couleur-accent);
+  border-color: var(--couleur-accent);
+}
+
+@media (min-width: 768px) {
+  .masquage-montants {
+    width: 36px;
+    height: 36px;
+  }
+}

@@ -19,7 +19,11 @@
   Repli sur le dernier cours connu. La marque passe au demi-cercle en plus de changer de
   teinte : l'état reste identifiable sans la couleur, et la valorisation continue d'être
   affichée plutôt que masquée, comme le veut la spécification.
+
+  L'ambre est la couleur de cet état, et de lui seul (D70). L'accent, employé ici
+  auparavant, désigne les actions et les liens : le réutiliser pour un avertissement
+  aurait brouillé les deux significations.
 */
 .pastille-fraicheur--tiede .pastille-fraicheur__marque {
-  color: var(--couleur-accent);
+  color: var(--couleur-avertissement);
 }

@@ -53,7 +53,9 @@ export default function Inscription() {
       // L'inscription enchaîne sur la connexion : inutile de ressaisir les mêmes
       // identifiants immédiatement après avoir créé le compte.
       await inscrire({ email, motDePasse, ...(pseudo ? { pseudo } : {}) });
-      naviguer('/tableau-de-bord', { replace: true });
+      // Le tableau de bord distingue le premier lancement d'un portefeuille devenu
+      // vide : le compte vient d'être créé, l'accueil n'est pas le même.
+      naviguer('/tableau-de-bord', { replace: true, state: { premierLancement: true } });
     } catch (echec) {
       // Le serveur renvoie une erreur par champ sur une validation, et un message
       // global sur un conflit d'adresse déjà utilisée.

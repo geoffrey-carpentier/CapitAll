@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { calculerPosition, valoriser, consolider } from '../calculPortefeuille.js';
+import {
+  calculerPosition,
+  valoriser,
+  consolider,
+  calculerPerformances,
+} from '../calculPortefeuille.js';
 
 function achat(quantite, prix, frais = '0', date = '2026-01-01', id = 1) {
   return { id, sens: 'achat', quantite, prix_unitaire: prix, frais, date_transaction: date };
@@ -202,6 +207,100 @@ describe('consolidation', () => {
     const totaux = consolider([]);
     expect(totaux.valeur_totale).toBe('0.00');
     expect(totaux.repartition).toEqual([]);
+  });
+
+  // Variation du patrimoine depuis l'origine, affichée à côté du montant dominant du
+  // tableau de bord. Même mécanique que le pourcentage d'une position.
+  it('rend la variation relative du patrimoine', () => {
+    expect(consolider(positions).pourcentage_variation).toBe('14.94');
+  });
+
+  it('rend une variation relative nulle quand le patrimoine vaut son coût', () => {
+    const equilibre = [
+      { type: 'crypto', valeur: '5000.00', cout_total: '5000.00', plus_value_latente: '0.00', plus_value_realisee: '0.00' },
+    ];
+    expect(consolider(equilibre).pourcentage_variation).toBe('0.00');
+  });
+
+  // Un coût nul ne rend pas un pourcentage infini mais l'absence de pourcentage :
+  // portefeuille vide, ou positions reçues sans coût d'acquisition.
+  it("n'invente aucun pourcentage lorsque le coût est nul", () => {
+    expect(consolider([]).pourcentage_variation).toBeNull();
+
+    const sansCout = [
+      { type: 'crypto', valeur: '80.00', cout_total: '0.00', plus_value_latente: '80.00', plus_value_realisee: '0.00' },
+    ];
+    expect(consolider(sansCout).pourcentage_variation).toBeNull();
+  });
+});
+
+describe('performance par plage du sélecteur de période', () => {
+  // La borne haute est la date du dernier instantané : les plages se lisent donc à
+  // rebours du 31 mars, sans dépendre de l'horloge de la machine qui exécute le test.
+  const historique = [
+    { date_snapshot: '2024-06-30', valeur_totale_eur: '9000.00' },
+    { date_snapshot: '2026-01-31', valeur_totale_eur: '9500.00' },
+    { date_snapshot: '2026-03-01', valeur_totale_eur: '10000.00' },
+    { date_snapshot: '2026-03-24', valeur_totale_eur: '11000.00' },
+    { date_snapshot: '2026-03-30', valeur_totale_eur: '12000.00' },
+    { date_snapshot: '2026-03-31', valeur_totale_eur: '12600.00' },
+  ];
+
+  it('calcule les cinq plages en une fois', () => {
+    const performances = calculerPerformances(historique);
+    expect(performances.jour).toBe('5.00');
+    expect(performances.semaine).toBe('14.55');
+    expect(performances.mois).toBe('26.00');
+    expect(performances.annee).toBe('32.63');
+    expect(performances.origine).toBe('40.00');
+  });
+
+  // Un point isolé ne dit rien d'une évolution : mieux vaut l'absence de chiffre qu'un
+  // zéro qui se lirait comme une stagnation constatée.
+  it('ne calcule aucune plage sous deux points de mesure', () => {
+    const performances = calculerPerformances([historique[0]]);
+    expect(performances.origine).toBeNull();
+    expect(performances.jour).toBeNull();
+    expect(calculerPerformances([]).origine).toBeNull();
+  });
+
+  it("laisse vide une plage qui ne contient qu'un point", () => {
+    const espace = [
+      { date_snapshot: '2026-01-01', valeur_totale_eur: '1000.00' },
+      { date_snapshot: '2026-06-30', valeur_totale_eur: '1200.00' },
+    ];
+    const performances = calculerPerformances(espace);
+    expect(performances.jour).toBeNull();
+    expect(performances.semaine).toBeNull();
+    expect(performances.origine).toBe('20.00');
+  });
+
+  it('rend une performance négative sans ambiguïté de signe', () => {
+    const baisse = [
+      { date_snapshot: '2026-03-30', valeur_totale_eur: '1000.00' },
+      { date_snapshot: '2026-03-31', valeur_totale_eur: '750.00' },
+    ];
+    expect(calculerPerformances(baisse).jour).toBe('-25.00');
+  });
+
+  // Le portefeuille était vide au départ : la progression n'est pas exprimable en
+  // pourcentage, et surtout pas par une division par zéro.
+  it('ne divise jamais par une valeur de départ nulle', () => {
+    const depuisZero = [
+      { date_snapshot: '2026-03-30', valeur_totale_eur: '0.00' },
+      { date_snapshot: '2026-03-31', valeur_totale_eur: '500.00' },
+    ];
+    expect(calculerPerformances(depuisZero).origine).toBeNull();
+  });
+
+  // Une plage se compte en jours calendaires : le passage d'un mois à l'autre et
+  // l'année bissextile ne doivent pas décaler la borne.
+  it('recule correctement par-dessus une fin de mois', () => {
+    const surDeuxMois = [
+      { date_snapshot: '2026-02-28', valeur_totale_eur: '1000.00' },
+      { date_snapshot: '2026-03-01', valeur_totale_eur: '1100.00' },
+    ];
+    expect(calculerPerformances(surDeuxMois).jour).toBe('10.00');
   });
 
   // Les plus-values réalisées restent comptabilisées même sans cours courant :

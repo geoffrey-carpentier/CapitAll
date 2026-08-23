@@ -10,7 +10,12 @@ const modeleSnapshot = require('../models/snapshot');
 const modeleAlerte = require('../models/alerte');
 const { evaluerAlertes } = require('./evaluationAlertes');
 const { creerServiceCours } = require('./cours');
-const { calculerPosition, valoriser, consolider } = require('./calculPortefeuille');
+const {
+  calculerPosition,
+  valoriser,
+  consolider,
+  calculerPerformances,
+} = require('./calculPortefeuille');
 const { ECHELLE_PRU, versUnites, versChaine, diviser } = require('../utils/decimal');
 const { ErreurIntrouvable } = require('../erreurs');
 
@@ -202,8 +207,19 @@ function creerServicePortefeuille({
     };
   }
 
+  // Historique du portefeuille : les points de la plage demandée, et la performance de
+  // chacune des plages du sélecteur.
+  //
+  // Les performances portent sur l'historique complet, pas sur la fenêtre demandée :
+  // la performance depuis l'origine et celle sur un an ne se déduisent pas d'une
+  // fenêtre d'une semaine. D'où le second chargement lorsqu'une fenêtre est demandée.
   async function obtenirHistorique(utilisateurId, nombreDeJours) {
-    return snapshots.listerParUtilisateur(utilisateurId, nombreDeJours);
+    const points = await snapshots.listerParUtilisateur(utilisateurId, nombreDeJours);
+    const complet = nombreDeJours
+      ? await snapshots.listerParUtilisateur(utilisateurId)
+      : points;
+
+    return { points, performances: calculerPerformances(complet) };
   }
 
   return { obtenirPortefeuille, obtenirDetailActif, obtenirHistorique };

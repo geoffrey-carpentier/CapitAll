@@ -1,0 +1,31 @@
+.etat-vide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--espace-4);
+  padding: var(--espace-8) var(--espace-4);
+}
+
+/* Forme décorative, volontairement abstraite : une illustration figurative daterait
+   plus vite que le reste de l'interface et n'apporterait aucune information. */
+.etat-vide__illustration {
+  width: 64px;
+  height: 64px;
+  border: 2px dashed var(--couleur-bordure);
+  border-radius: 50%;
+}
+
+.etat-vide__titre {
+  margin: 0;
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+}
+
+.etat-vide__explication {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-corps);
+  line-height: 1.5;
+}

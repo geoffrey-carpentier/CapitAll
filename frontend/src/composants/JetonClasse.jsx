@@ -1,5 +1,6 @@
 import './JetonClasse.css';
 import { CLASSES_QUANTITE } from '../utils/formatage';
+import { LIBELLES_CLASSE } from '../utils/classesActifs';
 
 // Marqueur visuel de la classe d'un actif.
 //
@@ -10,19 +11,12 @@ import { CLASSES_QUANTITE } from '../utils/formatage';
 // La forme seule ne se prononce pas : le nom de la classe accompagne toujours le jeton,
 // visible lorsque l'appelant le demande, restitué à la voix dans tous les cas.
 
-const LIBELLES = {
-  crypto: 'Cryptomonnaie',
-  metal: 'Métal précieux',
-  devise: 'Devise',
-  action: 'Action',
-};
-
 export default function JetonClasse({ classe, avecLibelle = false, ...proprietes }) {
   if (!CLASSES_QUANTITE.includes(classe)) {
     return null;
   }
 
-  const libelle = LIBELLES[classe];
+  const libelle = LIBELLES_CLASSE[classe];
 
   return (
     <span className="jeton-classe" {...proprietes}>

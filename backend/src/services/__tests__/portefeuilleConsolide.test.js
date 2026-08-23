@@ -318,3 +318,74 @@ describe("détail d'un actif", () => {
     await expect(service.obtenirDetailActif(999, 2)).rejects.toThrow(/introuvable/);
   });
 });
+
+describe('historique du portefeuille', () => {
+  const SERIE = [
+    { date_snapshot: '2026-03-29', valeur_totale_eur: '1000.00' },
+    { date_snapshot: '2026-03-30', valeur_totale_eur: '1100.00' },
+    { date_snapshot: '2026-03-31', valeur_totale_eur: '1210.00' },
+  ];
+
+  function snapshotsAvecSerie(serie, fenetre) {
+    return {
+      enregistrerSiAbsent: vi.fn().mockResolvedValue({ id: 1 }),
+      listerParUtilisateur: vi
+        .fn()
+        .mockImplementation((_utilisateurId, jours) =>
+          Promise.resolve(jours ? (fenetre ?? serie) : serie)
+        ),
+    };
+  }
+
+  it('rend les points de la période et la performance de chaque plage', async () => {
+    const snapshots = snapshotsAvecSerie(SERIE);
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([]),
+      snapshots,
+      actifs: depotActifs([]),
+      transactions: depotTransactions([]),
+      alertes: depotAlertes(),
+    });
+
+    const historique = await service.obtenirHistorique(2);
+
+    expect(historique.points).toHaveLength(3);
+    expect(historique.performances.jour).toBe('10.00');
+    expect(historique.performances.origine).toBe('21.00');
+  });
+
+  // La performance depuis l'origine ne se déduit pas d'une fenêtre d'un jour : les
+  // plages se calculent sur l'historique complet, la fenêtre ne borne que la courbe.
+  it("calcule les plages sur l'historique complet, pas sur la fenêtre demandée", async () => {
+    const fenetre = SERIE.slice(-2);
+    const snapshots = snapshotsAvecSerie(SERIE, fenetre);
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([]),
+      snapshots,
+      actifs: depotActifs([]),
+      transactions: depotTransactions([]),
+      alertes: depotAlertes(),
+    });
+
+    const historique = await service.obtenirHistorique(2, 1);
+
+    expect(historique.points).toHaveLength(2);
+    expect(historique.performances.origine).toBe('21.00');
+    expect(snapshots.listerParUtilisateur).toHaveBeenCalledTimes(2);
+  });
+
+  it('rend des plages vides sur un historique trop court', async () => {
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([]),
+      snapshots: snapshotsAvecSerie([SERIE[0]]),
+      actifs: depotActifs([]),
+      transactions: depotTransactions([]),
+      alertes: depotAlertes(),
+    });
+
+    const historique = await service.obtenirHistorique(2);
+
+    expect(historique.points).toHaveLength(1);
+    expect(historique.performances.origine).toBeNull();
+  });
+});

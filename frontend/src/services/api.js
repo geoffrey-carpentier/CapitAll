@@ -88,4 +88,11 @@ export const api = {
   inscription: (donnees) => requete('/auth/inscription', { methode: 'POST', corps: donnees }),
   connexion: (donnees) => requete('/auth/connexion', { methode: 'POST', corps: donnees }),
   profil: (jeton) => requete('/auth/moi', { jeton }),
+  portefeuille: (jeton) => requete('/portefeuille', { jeton }),
+  // La fenêtre borne les points de la courbe ; les performances par plage, elles,
+  // portent toujours sur l'historique complet et sont calculées par le serveur.
+  historique: (jeton, jours) =>
+    requete(jours ? `/portefeuille/historique?jours=${jours}` : '/portefeuille/historique', {
+      jeton,
+    }),
 };

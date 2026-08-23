@@ -19,6 +19,15 @@
   --couleur-positif: #34c77b;
   --couleur-negatif: #f0564f;
 
+  /*
+    Deux dérivés fonctionnels (D70), à l'emploi strictement borné. La carte haute est
+    l'unique fond du niveau 2 de contenant, c'est-à-dire du seul bloc de patrimoine.
+    L'ambre est l'unique couleur de l'état « cours en repli » et de la pastille de
+    fraîcheur tiède. Aucune autre couleur ne s'ajoute à la palette.
+  */
+  --couleur-carte-haute: #212a33;
+  --couleur-avertissement: #e3b341;
+
   /* Espacements */
   --espace-1: 4px;
   --espace-2: 8px;
@@ -28,7 +37,7 @@
   --espace-8: 32px;
 
   /* Rayons */
-  --rayon-carte: 10px;
+  --rayon-carte: 8px;
   --rayon-pilule: 999px;
 
   /* Typographie */
@@ -39,5 +48,5 @@
   --taille-legende: 12px;
   --taille-corps: 14px;
   --taille-titre: 18px;
-  --taille-montant: 26px;
+  --taille-montant: 28px;
 }

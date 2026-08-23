@@ -15,7 +15,14 @@ Direction retenue : interface sombre, sobre, inspirée des applications de suivi
 | Plus-value positive | vert | #34C77B |
 | Plus-value négative | rouge | #F0564F |
 
-Contrastes vérifiés à respecter (RGAA) : texte principal et secondaire sur fond carte au minimum 4,5:1 ; le vert et le rouge sont toujours accompagnés d'un signe (+/-) et d'une flèche, jamais seuls porteurs de l'information.
+Deux dérivés fonctionnels s'y ajoutent (D70), à l'emploi strictement borné :
+
+| Usage | Couleur | Code |
+|---|---|---|
+| Carte au fond accentué, niveau 2 de contenant | gris bleuté | #212A33 |
+| Cours en repli, fraîcheur tiède | ambre | #E3B341 |
+
+Contrastes vérifiés à respecter (RGAA) : texte principal et secondaire sur fond carte au minimum 4,5:1 ; l'ambre d'avertissement atteint 9,5:1 sur le fond principal et 8,4:1 sur une carte ; sur la carte accentuée, le texte principal atteint 12,3:1 et le texte secondaire 5,9:1, mais le rouge n'y descend qu'à 4,3:1 et ne doit donc jamais y être employé ; le vert et le rouge sont toujours accompagnés d'un signe (+/-) et d'une flèche, jamais seuls porteurs de l'information.
 
 ## Typographie
 
@@ -27,11 +34,11 @@ Contrastes vérifiés à respecter (RGAA) : texte principal et secondaire sur fo
 - mobile-first : une colonne, cartes empilées ; sur desktop, grille deux colonnes pour le tableau de bord
 - navigation par barre d'onglets en bas sur mobile à cinq entrées (patrimoine, positions, ajout au centre, seuils, compte), rail latéral sur desktop
 - coins arrondis discrets (8 px), pas d'ombres marquées, hiérarchie par la couleur de fond
-- graphique de répartition en anneau, courbe d'évolution en aire dégradée
+- répartition en liste chiffrée et non en anneau (D74), courbe d'évolution en aire dégradée
 
 ## Grammaire visuelle
 
-Trois niveaux de contenant et pas davantage : à plat sur le fond pour les listes et les formulaires, carte bordée pour les blocs à frontière logique, carte au fond accentué pour le seul bloc de patrimoine.
+Trois niveaux de contenant et pas davantage : à plat sur le fond pour les listes et les formulaires, carte bordée pour les blocs à frontière logique, carte au fond accentué (#212A33) pour le seul bloc de patrimoine.
 
 Rythme vertical à trois valeurs : 32 px avant un changement de section, 24 px entre blocs d'une même section, 12 px entre éléments liés. L'espace au-dessus d'un titre est toujours supérieur à l'espace en dessous.
 
@@ -49,7 +56,9 @@ Sur tout graphe de cours d'une position, le prix de revient est tracé en ligne 
 6. seuils
 7. compte
 
-Chaque écran en version mobile (375 px) et desktop (1440 px), accompagné d'une planche d'états couvrant le premier lancement, le portefeuille vide, le chargement, l'erreur d'API, l'erreur réseau, la session expirée et le repli sur le dernier cours connu.
+**Sept écrans en mobile 375 px, trois en desktop 1440 px** (D66) : patrimoine, positions et détail d'une position, seuls à changer réellement de structure entre les deux points de rupture. Les formulaires, les feuilles et l'écran de compte se contentent d'une largeur maximale centrée, ce qui relève de la règle de mise en page et non d'une maquette distincte.
+
+S'y ajoutent une **planche d'états** couvrant le premier lancement, le portefeuille vide, le chargement, l'erreur d'API, l'erreur réseau, la session expirée et le repli sur le dernier cours connu, ainsi que le **schéma d'enchaînement des écrans**.
 
 Direction retenue : une seule interface à deux points de rupture, dense et outillée en desktop, resserrée sur le geste en mobile. Les prototypes HTML ayant servi aux arbitrages ne sont pas versionnés.
 
