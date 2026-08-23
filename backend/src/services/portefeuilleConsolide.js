@@ -11,6 +11,7 @@ const modeleAlerte = require('../models/alerte');
 const { evaluerAlertes } = require('./evaluationAlertes');
 const { creerServiceCours } = require('./cours');
 const {
+  derouler,
   calculerPosition,
   valoriser,
   consolider,
@@ -187,8 +188,11 @@ function creerServicePortefeuille({
       throw new ErreurIntrouvable('Actif introuvable.');
     }
 
+    // Un seul déroulé sert les deux besoins de l'écran de détail : l'état courant de la
+    // position, et l'effet de chaque mouvement sur le prix de revient. Les mouvements
+    // sortent donc enrichis, dans l'ordre chronologique du calcul.
     const transactions = await depotTransactions.listerParActifEtUtilisateur(actifId, utilisateurId);
-    const position = calculerPosition(transactions);
+    const { mouvements, position } = derouler(transactions);
 
     let coursActif = null;
     try {
@@ -203,7 +207,7 @@ function creerServicePortefeuille({
       source_cours: coursActif?.source ?? null,
       horodatage_cours: coursActif?.horodatage ?? null,
       ...valoriser(position, coursActif?.cours_eur ?? null),
-      transactions,
+      transactions: mouvements,
     };
   }
 

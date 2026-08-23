@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  derouler,
   calculerPosition,
   valoriser,
   consolider,
@@ -310,5 +311,108 @@ describe('performance par plage du sélecteur de période', () => {
       { type: 'crypto', valeur: null, cout_total: '0.00', plus_value_latente: null, plus_value_realisee: '300.00' },
     ]);
     expect(totaux.plus_value_realisee).toBe('300.00');
+  });
+});
+
+// Déroulé des mouvements : l'effet de chacun sur le prix de revient.
+//
+// C'est la colonne la plus difficile à défendre à l'oral, et celle que l'interface ne
+// doit surtout pas reconstituer de son côté. Les cas ci-dessous sont les mêmes que ceux
+// du calcul de position, relus mouvement par mouvement.
+describe('déroulé des mouvements', () => {
+  it('rend une liste vide sans transaction', () => {
+    expect(derouler([]).mouvements).toEqual([]);
+  });
+
+  // Premier achat : le prix de revient part de zéro, l'effet vaut donc le PRU entier.
+  it('porte le prix de revient de zéro à sa valeur au premier achat', () => {
+    const [mouvement] = derouler([achat('10', '100.00', '5.00')]).mouvements;
+
+    expect(mouvement.pru_avant).toBe('0');
+    expect(mouvement.pru_apres).toBe('100.5');
+    expect(mouvement.effet_pru).toBe('100.5');
+    expect(mouvement.quantite_apres).toBe('10');
+    expect(mouvement.montant).toBe('1000.00');
+    expect(mouvement.plus_value_realisee).toBeNull();
+  });
+
+  // Second achat : 110,50 − 100,50 = 10, vérifiable de tête.
+  it('chiffre le déplacement du prix de revient provoqué par un achat', () => {
+    const { mouvements } = derouler([
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+    ]);
+
+    expect(mouvements[1].pru_avant).toBe('100.5');
+    expect(mouvements[1].pru_apres).toBe('110.5');
+    expect(mouvements[1].effet_pru).toBe('10');
+  });
+
+  // Règle 3 : une vente partielle laisse le prix de revient intact. L'effet est nul,
+  // et c'est bien un zéro constaté, pas une donnée absente.
+  it("laisse le prix de revient inchangé lors d'une vente partielle", () => {
+    const { mouvements } = derouler([
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+      vente('5', '150.00', '5.00', '2026-03-10', 3),
+    ]);
+
+    expect(mouvements[2].effet_pru).toBe('0');
+    expect(mouvements[2].pru_apres).toBe('110.5');
+    expect(mouvements[2].quantite_apres).toBe('15');
+  });
+
+  // Règle 4, appliquée à une opération et non au cumul : 5 × (150 − 110,50) − 5.
+  it('rend la plus-value dégagée par chaque vente prise isolément', () => {
+    const { mouvements, position } = derouler([
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+      vente('5', '150.00', '5.00', '2026-03-10', 3),
+      vente('5', '160.00', '0', '2026-04-10', 4),
+    ]);
+
+    expect(mouvements[2].plus_value_realisee).toBe('192.50');
+    expect(mouvements[3].plus_value_realisee).toBe('247.50');
+    // Le cumul de la position doit être exactement la somme des opérations : si les
+    // deux divergeaient, l'écran de détail contredirait le tableau de bord.
+    expect(position.plus_value_realisee).toBe('440.00');
+  });
+
+  // Règle 5 : la vente qui solde la position remet le prix de revient à zéro. L'effet
+  // est alors franchement négatif, et c'est ce chiffre qui explique la remise à zéro.
+  it('signale la remise à zéro du prix de revient sur une vente totale', () => {
+    const { mouvements } = derouler([
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+      vente('10', '150.00', '0', '2026-02-10', 2),
+    ]);
+
+    expect(mouvements[1].pru_avant).toBe('100.5');
+    expect(mouvements[1].pru_apres).toBe('0');
+    expect(mouvements[1].effet_pru).toBe('-100.5');
+    expect(mouvements[1].quantite_apres).toBe('0');
+  });
+
+  // Règle 6 : le déroulé suit l'ordre chronologique, jamais l'ordre de saisie. Une
+  // opération ancienne saisie après coup doit s'insérer à sa date.
+  it("déroule dans l'ordre chronologique et non dans l'ordre de saisie", () => {
+    const { mouvements } = derouler([
+      achat('10', '120.00', '5.00', '2026-02-10', 2),
+      achat('10', '100.00', '5.00', '2026-01-10', 1),
+    ]);
+
+    expect(mouvements.map((mouvement) => mouvement.id)).toEqual([1, 2]);
+    expect(mouvements[0].pru_apres).toBe('100.5');
+  });
+
+  // Les champs d'origine de la transaction restent présents : la frise affiche la date,
+  // le sens et les frais tels que saisis, à côté des chiffres calculés.
+  it("conserve les champs d'origine de la transaction", () => {
+    const [mouvement] = derouler([achat('10', '100.00', '5.00', '2026-01-10', 7)]).mouvements;
+
+    expect(mouvement.id).toBe(7);
+    expect(mouvement.sens).toBe('achat');
+    expect(mouvement.quantite).toBe('10');
+    expect(mouvement.frais).toBe('5.00');
+    expect(mouvement.date_transaction).toBe('2026-01-10');
   });
 });

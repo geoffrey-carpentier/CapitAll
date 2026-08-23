@@ -44,13 +44,23 @@ function trierChronologiquement(transactions) {
   });
 }
 
-function calculerPosition(transactions) {
+// Déroulé complet d'une position : l'état après chaque mouvement, et l'état final.
+//
+// Une seule traversée produit les deux, et c'est délibéré. Le prix de revient après un
+// achat donné ne se retrouve pas en rejouant un calcul séparé : il faut avoir rejoué
+// toute l'histoire de la position dans le même ordre, avec les mêmes arrondis. Deux
+// implémentations parallèles finiraient par diverger sur un cas de bord, et c'est
+// précisément ce chiffre qu'il faut pouvoir défendre au tableau.
+//
+// L'effet de chaque mouvement sur le prix de revient est donc un fait calculé ici, du
+// côté qui détient le moteur, et non une reconstitution faite par l'interface (D69).
+function derouler(transactions) {
   // Quantité et PRU sont tenus à l'échelle des quantités et du PRU, soit 8 décimales.
   let quantite = 0n;
   let pru = 0n;
   let plusValueRealisee = 0n;
 
-  for (const transaction of trierChronologiquement(transactions)) {
+  const mouvements = trierChronologiquement(transactions).map((transaction) => {
     const quantiteTransaction = versUnites(transaction.quantite, ECHELLE_QUANTITE);
     // Prix et frais sont saisis à 2 décimales, remontés à 8 pour rester homogènes
     // avec le PRU pendant le calcul.
@@ -65,6 +75,11 @@ function calculerPosition(transactions) {
       ECHELLE_PRU
     );
 
+    const pruAvant = pru;
+    // Plus-value de cette vente-ci, à distinguer du cumul de la position. Elle reste
+    // nulle sur un achat, qui n'en dégage aucune.
+    let gainDeLOperation = null;
+
     if (transaction.sens === 'achat') {
       // Règles 1 et 2 : moyenne pondérée, frais d'achat inclus au coût de revient.
       const coutExistant = multiplier(pru, quantite, ECHELLE_PRU);
@@ -78,7 +93,8 @@ function calculerPosition(transactions) {
     } else {
       // Règles 3 et 4 : le PRU ne bouge pas, la plus-value réalisée est cumulée.
       const gainUnitaire = prixUnitaire - pru;
-      plusValueRealisee += multiplier(gainUnitaire, quantiteTransaction, ECHELLE_PRU) - frais;
+      gainDeLOperation = multiplier(gainUnitaire, quantiteTransaction, ECHELLE_PRU) - frais;
+      plusValueRealisee += gainDeLOperation;
       quantite -= quantiteTransaction;
 
       // Règle 5 : position soldée, le PRU repart de zéro pour un éventuel rachat.
@@ -87,15 +103,44 @@ function calculerPosition(transactions) {
         pru = 0n;
       }
     }
-  }
+
+    return {
+      ...transaction,
+      // Montant brut de l'opération, frais exclus : ils sont déjà rendus à part et les
+      // additionner ici les compterait deux fois à l'écran.
+      montant: formater(
+        multiplier(prixUnitaire, quantiteTransaction, ECHELLE_PRU),
+        ECHELLE_PRU,
+        ECHELLE_MONTANT
+      ),
+      pru_avant: versChaine(pruAvant, ECHELLE_PRU),
+      pru_apres: versChaine(pru, ECHELLE_PRU),
+      // Zéro sur une vente ordinaire, la règle 3 laissant le prix de revient intact ;
+      // franchement négatif sur une vente qui solde la position, où la règle 5 le
+      // remet à zéro. Les deux cas se lisent sur ce seul chiffre.
+      effet_pru: versChaine(pru - pruAvant, ECHELLE_PRU),
+      quantite_apres: versChaine(quantite, ECHELLE_QUANTITE),
+      plus_value_realisee:
+        gainDeLOperation === null
+          ? null
+          : formater(gainDeLOperation, ECHELLE_PRU, ECHELLE_MONTANT),
+    };
+  });
 
   return {
-    quantite_detenue: versChaine(quantite, ECHELLE_QUANTITE),
-    pru: versChaine(pru, ECHELLE_PRU),
-    // Ce que représente encore la position au prix de revient, frais compris.
-    cout_total: formater(multiplier(pru, quantite, ECHELLE_PRU), ECHELLE_PRU, ECHELLE_MONTANT),
-    plus_value_realisee: formater(plusValueRealisee, ECHELLE_PRU, ECHELLE_MONTANT),
+    mouvements,
+    position: {
+      quantite_detenue: versChaine(quantite, ECHELLE_QUANTITE),
+      pru: versChaine(pru, ECHELLE_PRU),
+      // Ce que représente encore la position au prix de revient, frais compris.
+      cout_total: formater(multiplier(pru, quantite, ECHELLE_PRU), ECHELLE_PRU, ECHELLE_MONTANT),
+      plus_value_realisee: formater(plusValueRealisee, ECHELLE_PRU, ECHELLE_MONTANT),
+    },
   };
+}
+
+function calculerPosition(transactions) {
+  return derouler(transactions).position;
 }
 
 // Valorisation d'une position à un cours donné. Un cours absent ne vaut pas zéro :
@@ -271,6 +316,7 @@ function reculerDe(dateIso, jours) {
 }
 
 module.exports = {
+  derouler,
   calculerPosition,
   valoriser,
   consolider,
