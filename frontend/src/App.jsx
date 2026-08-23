@@ -5,6 +5,7 @@ import Coquille from './mise-en-page/Coquille';
 import Connexion from './pages/Connexion';
 import Inscription from './pages/Inscription';
 import Patrimoine from './pages/Patrimoine';
+import Positions from './pages/Positions';
 import Introuvable from './pages/Introuvable';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
             }
           >
             <Route path="/patrimoine" element={<Patrimoine />} />
+            <Route path="/positions" element={<Positions />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/patrimoine" replace />} />

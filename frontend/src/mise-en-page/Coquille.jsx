@@ -17,7 +17,7 @@ import './Coquille.css';
 // publication restant au périmètre de l'espace d'administration.
 const ENTREES = [
   { chemin: '/patrimoine', libelle: 'Patrimoine', symbole: '◫', disponible: true },
-  { chemin: '/positions', libelle: 'Positions', symbole: '◈', disponible: false },
+  { chemin: '/positions', libelle: 'Positions', symbole: '◈', disponible: true },
   { chemin: '/seuils', libelle: 'Seuils', symbole: '△', disponible: false },
   { chemin: '/compte', libelle: 'Compte', symbole: '◉', disponible: false },
 ];

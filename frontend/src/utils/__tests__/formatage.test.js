@@ -8,6 +8,7 @@ import {
   formaterVariation,
   amplitudeVariation,
   sensVariation,
+  comparerDecimales,
 } from '../formatage';
 
 // Les séparateurs sont des caractères invisibles : les nommer rend les attentes
@@ -258,5 +259,55 @@ describe('garantie de non-conversion en virgule flottante', () => {
     expect(formaterQuantite('123456789.12345678', 'crypto', 'BTC')).toBe(
       `123${FINE}456${FINE}789,12345678${NBSP}BTC`
     );
+  });
+});
+
+describe('comparaison de valeurs décimales', () => {
+  it('ordonne des montants de même signe', () => {
+    expect(comparerDecimales('10.00', '9.99')).toBe(1);
+    expect(comparerDecimales('9.99', '10.00')).toBe(-1);
+    expect(comparerDecimales('10.00', '10.0')).toBe(0);
+  });
+
+  it('départage les ordres de grandeur par la longueur, pas par la valeur', () => {
+    expect(comparerDecimales('100.00', '99.99')).toBe(1);
+    expect(comparerDecimales('1000000.00', '999999.99')).toBe(1);
+  });
+
+  // À signe égal, l'ordre des valeurs absolues s'inverse chez les négatifs.
+  it('ordonne correctement les négatifs entre eux', () => {
+    expect(comparerDecimales('-3.00', '-12.00')).toBe(1);
+    expect(comparerDecimales('-12.00', '-3.00')).toBe(-1);
+  });
+
+  it('place tout négatif sous tout positif', () => {
+    expect(comparerDecimales('-0.01', '0.00')).toBe(-1);
+    expect(comparerDecimales('0.00', '-0.01')).toBe(1);
+  });
+
+  // Le zéro n'a pas de signe.
+  it('traite zéro et moins zéro comme une même valeur', () => {
+    expect(comparerDecimales('-0.00', '0.00')).toBe(0);
+  });
+
+  // Le cœur de l'intérêt : ces deux valeurs sont indiscernables en virgule flottante.
+  it('départage des valeurs que Number confondrait', () => {
+    expect(comparerDecimales('9007199254740993.00', '9007199254740992.00')).toBe(1);
+    expect(comparerDecimales('0.30000001', '0.30000000')).toBe(1);
+  });
+
+  // Une position sans cours n'a pas de rang : elle se range en dernier dans les deux
+  // sens de tri, plutôt que de passer pour une valorisation extrême.
+  it('range les valeurs absentes en dernier, quel que soit le sens', () => {
+    expect(comparerDecimales(null, '10.00')).toBe(1);
+    expect(comparerDecimales('10.00', null)).toBe(-1);
+    expect(comparerDecimales(null, null)).toBe(0);
+
+    // Le sens passe par le paramètre, jamais par l'inversion des arguments : celle-ci
+    // ferait remonter les valeurs absentes en tête du tri décroissant.
+    const liste = ['5.00', null, '12.00'];
+    const decroissant = (a, b) => comparerDecimales(a, b, { descendant: true });
+    expect([...liste].sort(decroissant)).toEqual(['12.00', '5.00', null]);
+    expect([...liste].sort((a, b) => comparerDecimales(a, b))).toEqual(['5.00', '12.00', null]);
   });
 });

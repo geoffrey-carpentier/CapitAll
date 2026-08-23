@@ -1,0 +1,138 @@
+/*
+  Niveau 0 de contenant : la liste est à plat sur le fond, séparée par des filets. Ce
+  n'est pas un ensemble de cartes, et lui en donner l'apparence ferait passer chaque
+  position pour un bloc autonome alors que l'intérêt de l'écran est la comparaison.
+
+  Les deux structures, liste et tableau, sont dans le document ; le point de rupture
+  décide laquelle s'affiche.
+*/
+
+.positions-liste__tableau {
+  display: none;
+}
+
+.positions-liste__cartes {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.positions-liste__carte {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+  /* Zone tactile confortable, au-delà du minimum de 44 px (D77). */
+  min-height: 64px;
+  padding: var(--espace-3) var(--espace-2);
+  border-bottom: 1px solid var(--couleur-bordure);
+  color: inherit;
+  text-decoration: none;
+}
+
+.positions-liste__cartes li:last-child .positions-liste__carte {
+  border-bottom: 0;
+}
+
+.positions-liste__identite {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  min-width: 0;
+}
+
+.positions-liste__nom {
+  display: block;
+  font-size: var(--taille-corps);
+}
+
+.positions-liste__symbole {
+  display: block;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.positions-liste__detail {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-top: var(--espace-1);
+}
+
+.positions-liste__chiffres {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--espace-1);
+  flex: none;
+}
+
+.positions-liste__masque {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 768px) {
+  .positions-liste__cartes {
+    display: none;
+  }
+
+  .positions-liste__tableau {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .positions-liste__tableau th,
+  .positions-liste__tableau td {
+    padding: var(--espace-3) var(--espace-2);
+    border-bottom: 1px solid var(--couleur-bordure);
+    text-align: left;
+    font-weight: var(--graisse-normale);
+  }
+
+  .positions-liste__tableau thead th {
+    font-size: var(--taille-legende);
+    color: var(--couleur-texte-attenue);
+    white-space: nowrap;
+  }
+
+  /* Les colonnes de chiffres s'alignent à droite : c'est ce qui permet de comparer les
+     ordres de grandeur d'un coup d'œil, avec les chiffres à chasse fixe. */
+  .positions-liste__colonne-nombre {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .positions-liste__tri {
+    display: inline-flex;
+    align-items: center;
+    /* Le pointeur est précis en desktop : 24 px suffisent (D77). */
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .positions-liste__cellule-actif {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-2);
+  }
+
+  .positions-liste__lien {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-2);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .positions-liste__lien:hover .positions-liste__nom {
+    text-decoration: underline;
+  }
+}
