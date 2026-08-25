@@ -24,6 +24,15 @@ routeur.post(
   valider(creationTransaction),
   controleur.ajouterTransaction
 );
+// Même corps et mêmes contrôles que la création, mais sans écriture : la route rend
+// l'effet qu'aurait le mouvement sur la position. Elle est déclarée avant la route
+// paramétrée par identifiant de transaction, qui ne répond qu'en DELETE.
+routeur.post(
+  '/:id/transactions/simulation',
+  validerParamId('id'),
+  valider(creationTransaction),
+  controleur.simulerTransaction
+);
 routeur.delete(
   '/:id/transactions/:idTransaction',
   validerParamId('id'),

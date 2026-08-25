@@ -280,6 +280,7 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 | PATCH | `/api/actifs/:id` | propriétaire | modification du nom | 200, 400, 401, 404 |
 | DELETE | `/api/actifs/:id` | propriétaire | suppression, en cascade sur les transactions et alertes liées | 204, 401, 404 |
 | POST | `/api/actifs/:id/transactions` | propriétaire | enregistrement d'une transaction | 201, 400, 401, 404 |
+| POST | `/api/actifs/:id/transactions/simulation` | propriétaire | effet d'une transaction sur la position, avant enregistrement et sans écriture | 200, 400, 401, 404 |
 | DELETE | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | suppression d'une transaction | 204, 401, 404 |
 | GET | `/api/portefeuille` | authentifié | consolidation : valeur totale, coût de revient, plus-values, répartition, taux de change, alertes franchies | 200, 401 |
 | GET | `/api/portefeuille/historique` | authentifié | instantanés de valorisation | 200, 401 |
@@ -307,12 +308,15 @@ Les structures de données échangées par chaque point d'entrée seront documen
 |---|---|---|
 | `/connexion` | public | formulaire de connexion |
 | `/inscription` | public | formulaire d'inscription |
-| `/tableau-de-bord` | authentifié | consolidation, répartition, courbe d'évolution, alertes franchies, annonces |
-| `/actifs` | authentifié | liste des actifs suivis |
-| `/actifs/:id` | propriétaire | détail d'un actif et de ses transactions |
-| `/actifs/:id/transactions/nouvelle` | propriétaire | saisie d'une transaction |
-| `/alertes` | authentifié | gestion des seuils |
+| `/patrimoine` | authentifié | consolidation, répartition, courbe d'évolution, seuils franchis |
+| `/positions` | authentifié | liste des positions, filtres par classe et tri |
+| `/positions/:id` | propriétaire | détail d'une position, ses mouvements et ses seuils |
+| `/seuils` | authentifié | gestion des seuils |
 | `/compte` | authentifié | profil, sécurité, préférences d'affichage, mentions |
+
+Les libellés et les chemins suivent le lexique du projet : patrimoine, position, seuil.
+
+La saisie d'un mouvement n'a pas de route à elle : c'est une feuille glissante en mobile et un dialogue centré en desktop, ouverts par-dessus l'écran courant, dont ils préservent le contexte. Leur ouverture est portée par le paramètre `?mouvement` de l'écran d'origine, de sorte qu'elle survive à un rechargement et se referme par le bouton de retour du navigateur.
 
 Toute route privée atteinte sans jeton valide redirige vers la connexion.
 

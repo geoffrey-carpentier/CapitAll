@@ -9,11 +9,12 @@
 // « cet actif ne vous appartient pas ».
 
 const modeleActif = require('../models/actif');
-const serviceTransaction = require('../services/transaction');
+const { creerServiceTransaction } = require('../services/transaction');
 const { creerServicePortefeuille } = require('../services/portefeuilleConsolide');
 const { ErreurIntrouvable } = require('../erreurs');
 
 const servicePortefeuille = creerServicePortefeuille();
+const serviceTransaction = creerServiceTransaction();
 
 async function lister(req, res, next) {
   try {
@@ -93,6 +94,22 @@ async function ajouterTransaction(req, res, next) {
   }
 }
 
+// Effet d'un mouvement avant son enregistrement, pour le récapitulatif de l'écran de
+// saisie. Rien n'est écrit : le corps de la requête est celui d'une création, et la
+// réponse est un 200 et non un 201, aucune ressource n'ayant été créée.
+async function simulerTransaction(req, res, next) {
+  try {
+    const effet = await serviceTransaction.simuler({
+      actifId: req.params.id,
+      utilisateurId: req.utilisateur.id,
+      donnees: req.body,
+    });
+    res.status(200).json(effet);
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
 async function supprimerTransaction(req, res, next) {
   try {
     await serviceTransaction.supprimer({
@@ -113,5 +130,6 @@ module.exports = {
   modifier,
   supprimer,
   ajouterTransaction,
+  simulerTransaction,
   supprimerTransaction,
 };
