@@ -4,6 +4,7 @@
 
 -- Nettoyage pour ré-exécution en environnement de développement
 DROP TABLE IF EXISTS annonce CASCADE;
+DROP TABLE IF EXISTS snapshot_cours CASCADE;
 DROP TABLE IF EXISTS snapshot_valorisation CASCADE;
 DROP TABLE IF EXISTS alerte CASCADE;
 DROP TABLE IF EXISTS transaction CASCADE;
@@ -65,6 +66,25 @@ CREATE TABLE snapshot_valorisation (
     date_snapshot       DATE NOT NULL,
     valeur_totale_eur   NUMERIC(18, 2) NOT NULL CHECK (valeur_totale_eur >= 0),
     UNIQUE (utilisateur_id, date_snapshot)
+);
+
+-- Historique du cours de chaque position, jour par jour.
+--
+-- Même dérogation assumée que snapshot_valorisation : un cours passé ne se recalcule
+-- pas, les fournisseurs ne conservant pas leur historique de la même façon selon la
+-- classe d'actif. C'est un fait daté, pas une valeur dérivée.
+--
+-- Aucun utilisateur_id ici : le propriétaire se lit par jointure sur actif, comme pour
+-- transaction. Le dupliquer créerait une seconde vérité sur le cloisonnement.
+CREATE TABLE snapshot_cours (
+    id             SERIAL PRIMARY KEY,
+    actif_id       INTEGER NOT NULL REFERENCES actif(id) ON DELETE CASCADE,
+    date_snapshot  DATE NOT NULL,
+    cours_eur      NUMERIC(18, 2) NOT NULL CHECK (cours_eur >= 0),
+    -- Quantité détenue ce jour-là : elle rend l'historique lisible sans avoir à rejouer
+    -- les transactions antérieures à chaque point de la courbe.
+    quantite       NUMERIC(24, 8) NOT NULL CHECK (quantite >= 0),
+    UNIQUE (actif_id, date_snapshot)
 );
 
 CREATE TABLE annonce (

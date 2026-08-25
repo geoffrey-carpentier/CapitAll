@@ -1,0 +1,46 @@
+.barre-progression {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.barre-progression__piste {
+  height: 6px;
+  border-radius: var(--rayon-pilule);
+  background: var(--couleur-carte-haute);
+  overflow: hidden;
+}
+
+.barre-progression__remplissage {
+  display: block;
+  height: 100%;
+  background: var(--couleur-accent);
+  border-radius: var(--rayon-pilule);
+}
+
+/* Un seuil franchi n'est plus une progression mais un fait : la barre prend la couleur
+   d'avertissement, celle que D70 réserve aux états qui demandent un regard. */
+.barre-progression__piste--atteint .barre-progression__remplissage {
+  background: var(--couleur-avertissement);
+}
+
+.barre-progression__reperes {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espace-2);
+  margin: 0;
+  color: var(--couleur-texte-attenue);
+}
+
+.barre-progression__cible {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--espace-1);
+}
+
+.barre-progression__indisponible {
+  margin: 0;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}

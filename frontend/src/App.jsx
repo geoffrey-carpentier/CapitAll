@@ -6,6 +6,7 @@ import Connexion from './pages/Connexion';
 import Inscription from './pages/Inscription';
 import Patrimoine from './pages/Patrimoine';
 import Positions from './pages/Positions';
+import DetailPosition from './pages/DetailPosition';
 import Introuvable from './pages/Introuvable';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
           >
             <Route path="/patrimoine" element={<Patrimoine />} />
             <Route path="/positions" element={<Positions />} />
+            <Route path="/positions/:id" element={<DetailPosition />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/patrimoine" replace />} />

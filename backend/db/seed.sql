@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Remise à zéro. RESTART IDENTITY réinitialise les séquences, CASCADE couvre les
 -- tables filles ; l'ordre importe peu grâce à CASCADE.
-TRUNCATE TABLE annonce, snapshot_valorisation, alerte, transaction, actif, utilisateur
+TRUNCATE TABLE annonce, snapshot_cours, snapshot_valorisation, alerte, transaction, actif, utilisateur
     RESTART IDENTITY CASCADE;
 
 -- Utilisateurs. Le rôle est fixé ici (jamais via une entrée applicative, D23).
@@ -112,3 +112,48 @@ SELECT (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr'),
            + (random() - 0.5) * 900
        )::numeric, 2)
 FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour;
+
+-- Historique de cours par position : les mêmes quatre-vingt-dix jours, déclinés actif
+-- par actif, pour alimenter le graphe de cours de l'écran de détail et la colonne de
+-- tendance sur trente jours du tableau des positions.
+--
+-- Deux différences assumées avec le bloc précédent.
+--
+-- La série est déterministe : aucune fonction aléatoire n'y intervient, l'ondulation
+-- venant d'un sinus décalé par l'identifiant de l'actif. Deux exécutions du seed
+-- produisent donc exactement les mêmes courbes, ce qui permet de s'y appuyer dans une
+-- vérification. Le bloc de valorisation totale, antérieur, conserve son bruit
+-- aléatoire : le rendre déterministe ne relève pas de ce lot.
+--
+-- Le cours part du prix du premier achat réel de l'actif et progresse d'environ
+-- dix-huit pour cent sur la période. Il reste ainsi cohérent avec le prix de revient
+-- calculé depuis les transactions du même jeu de données, sans quoi le graphe montrerait
+-- une ligne de prix de revient sans rapport avec la courbe qu'elle traverse.
+--
+-- La quantité est celle réellement détenue ce jour-là, reconstituée depuis les
+-- transactions. Elle vaut zéro avant le premier achat, ce qui est exact : la position
+-- n'existait pas encore.
+INSERT INTO snapshot_cours (actif_id, date_snapshot, cours_eur, quantite)
+SELECT a.id,
+       jour::date,
+       ROUND((premier.prix * (
+           1
+           + (jour::date - (CURRENT_DATE - 89)) * 0.0020
+           + SIN(((jour::date - (CURRENT_DATE - 89)) + a.id * 7) / 9.0) * 0.055
+       ))::numeric, 2),
+       COALESCE((
+           SELECT SUM(CASE WHEN t.sens = 'achat' THEN t.quantite ELSE -t.quantite END)
+           FROM transaction t
+           WHERE t.actif_id = a.id
+             AND t.date_transaction::date <= jour::date
+       ), 0)
+FROM actif a
+JOIN LATERAL (
+    SELECT t.prix_unitaire AS prix
+    FROM transaction t
+    WHERE t.actif_id = a.id
+    ORDER BY t.date_transaction, t.id
+    LIMIT 1
+) AS premier ON true
+CROSS JOIN generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour
+WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr');

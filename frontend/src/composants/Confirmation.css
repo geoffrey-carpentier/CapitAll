@@ -1,0 +1,48 @@
+.confirmation__voile {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espace-4);
+  background: rgba(16, 20, 24, 0.72);
+}
+
+.confirmation {
+  width: 100%;
+  max-width: 420px;
+  background: var(--couleur-carte);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+  padding: var(--espace-6);
+}
+
+.confirmation__titre {
+  margin: 0 0 var(--espace-3);
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+}
+
+.confirmation__consequence {
+  margin: 0 0 var(--espace-6);
+  font-size: var(--taille-corps);
+  color: var(--couleur-texte-attenue);
+  line-height: 1.5;
+}
+
+.confirmation__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espace-3);
+}
+
+/* Sous le point de rupture, les deux boutons s'empilent sur toute la largeur, et
+   l'inversion place l'annulation en bas, là où le pouce arrive naturellement. Le
+   bouton destructeur reste ainsi celui qu'il faut aller chercher, sans changer pour
+   autant l'ordre du document ni celui de la tabulation. */
+@media (max-width: 480px) {
+  .confirmation__actions {
+    flex-direction: column-reverse;
+  }
+}

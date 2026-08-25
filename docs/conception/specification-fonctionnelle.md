@@ -228,8 +228,9 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 **Accessibilité.** La frise est une liste ordonnée sémantique. La ligne de prix de revient est décrite dans l'`aria-label` du graphe. Les onglets suivent le motif ARIA d'onglets, navigables aux flèches, avec `aria-controls`. La confirmation de suppression capture le focus, se ferme par Échap, et son bouton destructeur n'est jamais le premier dans l'ordre de tabulation.
 
-**Questions ouvertes.**
-1. La colonne « effet sur le prix de revient » suppose un calcul historique que l'API ne renvoie pas aujourd'hui. Deux options : la calculer côté client par reconstitution séquentielle, ou l'ajouter à la réponse de l'API. Recommandation : côté serveur, dans le détail d'actif, le moteur de calcul étant déjà là et le client ne devant pas refaire de calcul métier. **Impact API à valider.**
+**Questions tranchées.**
+1. La colonne « effet sur le prix de revient » est calculée **côté serveur**, dans le détail d'actif, conformément à la recommandation. Chaque mouvement y porte le prix de revient avant et après, son déplacement, la quantité restante, le montant de l'opération et, pour une vente, la plus-value qu'elle dégage à elle seule. Le chiffre ne se retrouve pas en rejouant un calcul isolé : il faut avoir rejoué toute l'histoire de la position dans le même ordre et avec les mêmes arrondis, ce que seul le moteur sait faire.
+2. Le graphe de cours est alimenté par l'historique par position introduit par **D81**. Un actif dont l'historique compte moins de deux points affiche l'état « pas assez de points », jamais une interpolation.
 
 ---
 
@@ -338,7 +339,6 @@ Ces règles sont énoncées à l'écran, en français, pour que le comportement 
 
 ## Points de vigilance identifiés
 
-1. La colonne « effet sur le prix de revient » de E4 n'est pas fournie par l'API (question ouverte E4.1).
-2. Deux routes restent à créer pour E7.
-3. L'écran d'administration prévu au périmètre n'est pas spécifié ici : il relève d'un parcours distinct et d'un rôle distinct.
-4. Le formatage des valeurs doit passer sans exception par le module dédié, sous peine de divergence entre écrans.
+1. Deux routes restent à créer pour E7.
+2. L'écran d'administration prévu au périmètre n'est pas spécifié ici : il relève d'un parcours distinct et d'un rôle distinct.
+3. Le formatage des valeurs doit passer sans exception par le module dédié, sous peine de divergence entre écrans.

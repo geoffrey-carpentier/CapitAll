@@ -1,0 +1,146 @@
+.frise-mouvements {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--espace-4);
+  /* Le filet vertical est la frise elle-même : il relie les événements entre eux et
+     matérialise la continuité du temps, qu'une simple pile de cartes ne montrerait pas. */
+  border-left: 1px solid var(--couleur-bordure);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-6);
+}
+
+.frise-mouvements__evenement {
+  position: relative;
+}
+
+/* Le point posé sur le filet marque la date de l'événement. Décoratif : la liste
+   ordonnée porte déjà la chronologie pour un lecteur d'écran. */
+.frise-mouvements__evenement::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--espace-4) - 4px);
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--couleur-texte-attenue);
+}
+
+.frise-mouvements__evenement--achat::before {
+  background: var(--couleur-accent);
+}
+
+.frise-mouvements__evenement--vente::before {
+  background: var(--couleur-avertissement);
+}
+
+.frise-mouvements__tete {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espace-2);
+  flex-wrap: wrap;
+}
+
+.frise-mouvements__etiquette {
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  border-radius: var(--rayon-pilule);
+  padding: 1px var(--espace-2);
+  border: 1px solid;
+}
+
+.frise-mouvements__etiquette--achat {
+  color: var(--couleur-accent);
+  border-color: var(--couleur-accent);
+}
+
+.frise-mouvements__etiquette--vente {
+  color: var(--couleur-avertissement);
+  border-color: var(--couleur-avertissement);
+}
+
+.frise-mouvements__date {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.frise-mouvements__quantite {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--graisse-forte);
+}
+
+.frise-mouvements__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espace-2) var(--espace-4);
+  margin: var(--espace-3) 0 0;
+  padding: var(--espace-3);
+  background: var(--couleur-carte-haute);
+  border-radius: var(--rayon-carte);
+}
+
+.frise-mouvements__details dt {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.frise-mouvements__details dd {
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--graisse-forte);
+}
+
+/* L'effet sur le prix de revient occupe toute la largeur : c'est l'information propre à
+   cet écran, elle ne se range pas comme une donnée de saisie parmi les autres. */
+.frise-mouvements__effet {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--couleur-bordure);
+  padding-top: var(--espace-2);
+}
+
+.frise-mouvements__inchange {
+  color: var(--couleur-texte-attenue);
+  font-weight: var(--graisse-normale);
+}
+
+.frise-mouvements__suppression {
+  font-family: var(--police);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  /* Zone tactile de 44 px en mobile (D77), obtenue par le remplissage : le libellé
+     reste discret, il n'a pas à concurrencer les chiffres. */
+  padding: var(--espace-3) 0;
+  min-height: 44px;
+  text-decoration: underline;
+}
+
+.frise-mouvements__suppression:hover {
+  color: var(--couleur-negatif);
+}
+
+.frise-mouvements__vide {
+  margin: 0;
+  color: var(--couleur-texte-attenue);
+}
+
+@media (min-width: 768px) {
+  .frise-mouvements__details {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .frise-mouvements__effet {
+    grid-column: auto;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .frise-mouvements__suppression {
+    min-height: 0;
+    padding: var(--espace-2) 0;
+  }
+}

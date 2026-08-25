@@ -32,3 +32,17 @@
 .bouton--secondaire:hover:not(:disabled) {
   border-color: var(--couleur-accent);
 }
+
+/* Action destructrice. Le rouge est celui des moins-values : c'est la seule couleur du
+   système qui signale déjà une perte, et l'employer ici n'en introduit aucune autre. Le
+   bouton reste en contour plutôt qu'en aplat, pour qu'il n'attire pas l'oeil davantage
+   que l'annulation placée à côté de lui. */
+.bouton--danger {
+  background: transparent;
+  color: var(--couleur-negatif);
+  border-color: var(--couleur-negatif);
+}
+
+.bouton--danger:hover:not(:disabled) {
+  background: rgba(240, 86, 79, 0.12);
+}

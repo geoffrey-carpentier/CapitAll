@@ -255,7 +255,7 @@ Les cours sont appelés exclusivement côté serveur (D6). Chaque fournisseur es
 
 ## 7. Modèle de données
 
-Six entités : `utilisateur`, `actif`, `transaction`, `alerte`, `snapshot_valorisation`, `annonce`. Modèle conceptuel, modèle logique, cardinalités et diagramme : `conception/modele-de-donnees.md`. Script de création : `../backend/db/schema.sql`.
+Sept entités : `utilisateur`, `actif`, `transaction`, `alerte`, `snapshot_valorisation`, `snapshot_cours`, `annonce`. Modèle conceptuel, modèle logique, cardinalités et diagramme : `conception/modele-de-donnees.md`. Script de création : `../backend/db/schema.sql`.
 
 Trois partis pris de modélisation méritent d'être signalés ici, car ils conditionnent le comportement fonctionnel :
 

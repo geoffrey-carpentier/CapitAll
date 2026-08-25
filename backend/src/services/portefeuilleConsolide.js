@@ -7,23 +7,32 @@
 const modeleActif = require('../models/actif');
 const modeleTransaction = require('../models/transaction');
 const modeleSnapshot = require('../models/snapshot');
+const modeleSnapshotCours = require('../models/snapshotCours');
 const modeleAlerte = require('../models/alerte');
 const { evaluerAlertes } = require('./evaluationAlertes');
 const { creerServiceCours } = require('./cours');
 const {
+  derouler,
   calculerPosition,
   valoriser,
   consolider,
   calculerPerformances,
+  performanceSurPeriode,
 } = require('./calculPortefeuille');
 const { ECHELLE_PRU, versUnites, versChaine, diviser } = require('../utils/decimal');
 const { ErreurIntrouvable } = require('../erreurs');
+
+// Fenêtre de la tendance affichée en regard de chaque position dans le tableau des
+// positions. Trente jours : c'est la plage que porte la maquette desktop, et celle qui
+// correspond au rythme réel de consultation d'un patrimoine.
+const JOURS_DE_TENDANCE = 30;
 
 // Les modèles et le service de cours sont injectables : le service s'exécute alors
 // sans base ni réseau dans les tests, avec le même code qu'en production.
 function creerServicePortefeuille({
   serviceCours = creerServiceCours(),
   snapshots = modeleSnapshot,
+  snapshotsCours = modeleSnapshotCours,
   actifs: depotActifs = modeleActif,
   transactions: depotTransactions = modeleTransaction,
   alertes: depotAlertes = modeleAlerte,
@@ -117,9 +126,17 @@ function creerServicePortefeuille({
     await historiser(utilisateurId, totaux.valeur_totale, positions, coursIndisponibles);
     const alertesDeclenchees = await traiterAlertes(utilisateurId, totaux.valeur_totale, positions);
 
+    // L'historisation précède la lecture des tendances : le point du jour vient d'être
+    // écrit et doit compter dans la fenêtre, sans quoi la tendance affichée s'arrêterait
+    // systématiquement la veille.
+    const tendances = await obtenirTendances(utilisateurId);
+
     return {
       ...totaux,
-      actifs: positions,
+      actifs: positions.map((position) => ({
+        ...position,
+        tendance_30j: tendances.get(position.id) ?? null,
+      })),
       cours_indisponibles: coursIndisponibles,
       taux_affichage: tauxAffichage,
       alertes_declenchees: alertesDeclenchees,
@@ -178,6 +195,53 @@ function creerServicePortefeuille({
       // l'utilisateur de son portefeuille.
       console.error("Enregistrement du snapshot impossible :", erreur.message);
     }
+
+    // Historique par position (D81), alimenté par le même déclencheur et au même
+    // endroit : les positions valorisées sont déjà là, aucune tâche planifiée n'est
+    // introduite. Les positions sans cours sont écartées par le modèle plutôt que
+    // enregistrées à zéro, pour la même raison qu'au-dessus : un trou dans la courbe
+    // est préférable à un point faux.
+    try {
+      await snapshotsCours.enregistrerSiAbsent(utilisateurId, positions);
+    } catch (erreur) {
+      console.error("Enregistrement de l'historique des cours impossible :", erreur.message);
+    }
+  }
+
+  // Tendance récente de chaque position, indexée par identifiant d'actif.
+  //
+  // La variation est calculée ici et non côté interface : c'est une valeur dérivée de
+  // deux cours, donc du ressort du serveur (D69). Les points, eux, ne servent qu'au
+  // tracé de la courbe miniature, où seule compte la forme.
+  async function obtenirTendances(utilisateurId) {
+    try {
+      const releves = await snapshotsCours.listerRecentsParUtilisateur(
+        utilisateurId,
+        JOURS_DE_TENDANCE
+      );
+
+      const parActif = new Map();
+      for (const releve of releves) {
+        const serie = parActif.get(releve.actif_id) ?? [];
+        serie.push(releve);
+        parActif.set(releve.actif_id, serie);
+      }
+
+      return new Map(
+        [...parActif.entries()].map(([actifId, serie]) => [
+          actifId,
+          {
+            variation: performanceSurPeriode(serie, 'cours_eur'),
+            points: serie.map((point) => point.cours_eur),
+          },
+        ])
+      );
+    } catch (erreur) {
+      // Une tendance absente n'empêche pas de lire son portefeuille : la colonne
+      // affiche alors son état « pas assez de points », comme pour un actif trop jeune.
+      console.error('Lecture des tendances impossible :', erreur.message);
+      return new Map();
+    }
   }
 
   // Détail d'un actif : position, valorisation et historique de ses transactions.
@@ -187,8 +251,11 @@ function creerServicePortefeuille({
       throw new ErreurIntrouvable('Actif introuvable.');
     }
 
+    // Un seul déroulé sert les deux besoins de l'écran de détail : l'état courant de la
+    // position, et l'effet de chaque mouvement sur le prix de revient. Les mouvements
+    // sortent donc enrichis, dans l'ordre chronologique du calcul.
     const transactions = await depotTransactions.listerParActifEtUtilisateur(actifId, utilisateurId);
-    const position = calculerPosition(transactions);
+    const { mouvements, position } = derouler(transactions);
 
     let coursActif = null;
     try {
@@ -203,8 +270,33 @@ function creerServicePortefeuille({
       source_cours: coursActif?.source ?? null,
       horodatage_cours: coursActif?.horodatage ?? null,
       ...valoriser(position, coursActif?.cours_eur ?? null),
-      transactions,
+      transactions: mouvements,
+      historique: await obtenirHistoriqueCours(actifId, utilisateurId),
+      // Même taux que celui du portefeuille, et pour la même raison (D43, D69) : la
+      // bascule euro/dollar ne doit déclencher aucune requête. Sans lui, l'écran de
+      // détail afficherait des euros alors que les deux écrans qui y mènent affichent
+      // des dollars, ce qui se lirait comme une erreur de chiffres.
+      taux_affichage: await obtenirTauxAffichage(),
     };
+  }
+
+  // Historique de cours d'une position, avec la performance de chacune des plages du
+  // sélecteur de période.
+  //
+  // La série entière part dans la réponse plutôt qu'une fenêtre à la demande : quatre-
+  // vingt-dix points pèsent moins qu'un aller-retour, et changer de plage devient
+  // immédiat. Les performances, elles, portent toujours sur l'historique complet, la
+  // performance sur un an ne se déduisant pas d'une fenêtre d'une semaine.
+  async function obtenirHistoriqueCours(actifId, utilisateurId) {
+    try {
+      const points = await snapshotsCours.listerParActif(actifId, utilisateurId);
+      return { points, performances: calculerPerformances(points, 'cours_eur') };
+    } catch (erreur) {
+      // Un historique illisible ne prive pas l'utilisateur du reste de la fiche : le
+      // graphe affiche alors son état « pas assez de points ».
+      console.error("Lecture de l'historique de cours impossible :", erreur.message);
+      return { points: [], performances: calculerPerformances([], 'cours_eur') };
+    }
   }
 
   // Historique du portefeuille : les points de la plage demandée, et la performance de

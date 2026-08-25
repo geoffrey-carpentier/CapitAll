@@ -54,6 +54,16 @@ function snapshotsFactices() {
   };
 }
 
+// Historique de cours par position (D81). Vide par defaut : la plupart des cas ne
+// portent pas sur la tendance, et une serie vide est l'etat reel d'un compte neuf.
+function snapshotsCoursFactices(series = []) {
+  return {
+    enregistrerSiAbsent: vi.fn().mockResolvedValue([]),
+    listerParActif: vi.fn().mockResolvedValue(series),
+    listerRecentsParUtilisateur: vi.fn().mockResolvedValue(series),
+  };
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
@@ -69,6 +79,7 @@ describe('portefeuille consolidé', () => {
         { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
       ]),
       snapshots,
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -88,6 +99,7 @@ describe('portefeuille consolidé', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -106,6 +118,7 @@ describe('portefeuille consolidé', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([{ symbole: 'BTC', erreur: 'fournisseur injoignable' }]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -126,6 +139,7 @@ describe('portefeuille consolidé', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([{ symbole: 'BTC', erreur: 'injoignable' }]),
       snapshots,
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -149,6 +163,7 @@ describe('portefeuille consolidé', () => {
         { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
       ]),
       snapshots,
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -165,6 +180,7 @@ describe('portefeuille consolidé', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -187,7 +203,11 @@ describe('portefeuille consolidé', () => {
       { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
       { symbole: 'ETH', cours_eur: '10.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
     ]);
-    const service = creerServicePortefeuille({ serviceCours, snapshots: snapshotsFactices(), actifs, transactions });
+    const service = creerServicePortefeuille({ serviceCours, snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
+      actifs,
+      transactions,
+    });
 
     await service.obtenirPortefeuille(2);
 
@@ -215,6 +235,7 @@ describe('évaluation des alertes au chargement', () => {
         { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
       ]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
       alertes,
@@ -246,6 +267,7 @@ describe('évaluation des alertes au chargement', () => {
         { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
       ]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
       alertes,
@@ -270,6 +292,7 @@ describe('évaluation des alertes au chargement', () => {
         { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
       ]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
       alertes,
@@ -295,7 +318,11 @@ describe("détail d'un actif", () => {
       source: 'fournisseur',
     });
 
-    const service = creerServicePortefeuille({ serviceCours, snapshots: snapshotsFactices(), actifs, transactions });
+    const service = creerServicePortefeuille({ serviceCours, snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
+      actifs,
+      transactions,
+    });
     const detail = await service.obtenirDetailActif(1, 2);
 
     expect(detail.pru).toBe('100');
@@ -311,6 +338,7 @@ describe("détail d'un actif", () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([]),
       snapshots: snapshotsFactices(),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs,
       transactions,
     });
@@ -342,6 +370,7 @@ describe('historique du portefeuille', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([]),
       snapshots,
+      snapshotsCours: snapshotsCoursFactices(),
       actifs: depotActifs([]),
       transactions: depotTransactions([]),
       alertes: depotAlertes(),
@@ -362,6 +391,7 @@ describe('historique du portefeuille', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([]),
       snapshots,
+      snapshotsCours: snapshotsCoursFactices(),
       actifs: depotActifs([]),
       transactions: depotTransactions([]),
       alertes: depotAlertes(),
@@ -378,6 +408,7 @@ describe('historique du portefeuille', () => {
     const service = creerServicePortefeuille({
       serviceCours: serviceCoursFactice([]),
       snapshots: snapshotsAvecSerie([SERIE[0]]),
+      snapshotsCours: snapshotsCoursFactices(),
       actifs: depotActifs([]),
       transactions: depotTransactions([]),
       alertes: depotAlertes(),
@@ -387,5 +418,115 @@ describe('historique du portefeuille', () => {
 
     expect(historique.points).toHaveLength(1);
     expect(historique.performances.origine).toBeNull();
+  });
+});
+
+// Historique de cours par position (D81).
+//
+// L'alimentation reutilise l'ecriture paresseuse de D49 : aucune tache planifiee, le
+// meme point d'appel, les memes garanties d'effet de bord.
+describe('historique de cours par position', () => {
+  const SERIE_BTC = [
+    { actif_id: 1, date_snapshot: '2026-07-01', cours_eur: '100.00' },
+    { actif_id: 1, date_snapshot: '2026-07-15', cours_eur: '120.00' },
+    { actif_id: 1, date_snapshot: '2026-07-30', cours_eur: '150.00' },
+  ];
+
+  function service(snapshotsCours, cours = '150.00') {
+    return creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([
+        { symbole: 'BTC', cours_eur: cours, horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
+      ]),
+      snapshots: snapshotsFactices(),
+      snapshotsCours,
+      actifs: depotActifs([ACTIF_BTC], ACTIF_BTC),
+      transactions: depotTransactions(TRANSACTIONS_BTC),
+    });
+  }
+
+  it("historise les positions valorisees au meme point d'appel que le portefeuille", async () => {
+    const snapshotsCours = snapshotsCoursFactices();
+    await service(snapshotsCours).obtenirPortefeuille(2);
+
+    expect(snapshotsCours.enregistrerSiAbsent).toHaveBeenCalledTimes(1);
+    const [utilisateurId, positions] = snapshotsCours.enregistrerSiAbsent.mock.calls[0];
+    expect(utilisateurId).toBe(2);
+    expect(positions[0]).toMatchObject({ id: 1, cours_eur: '150.00', quantite_detenue: '1' });
+  });
+
+  // Meme regle que pour le snapshot de valorisation : l'historisation est un effet de
+  // bord, son echec ne prive pas l'utilisateur de son portefeuille.
+  it("rend le portefeuille meme si l'historisation des cours echoue", async () => {
+    const snapshotsCours = snapshotsCoursFactices();
+    snapshotsCours.enregistrerSiAbsent.mockRejectedValue(new Error('base indisponible'));
+
+    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+
+    expect(portefeuille.valeur_totale).toBe('150.00');
+  });
+
+  it('expose la tendance de chaque position sur la fenetre de trente jours', async () => {
+    const snapshotsCours = snapshotsCoursFactices(SERIE_BTC);
+    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+
+    expect(snapshotsCours.listerRecentsParUtilisateur).toHaveBeenCalledWith(2, 30);
+    // De 100 a 150, soit cinquante pour cent, verifiable de tete.
+    expect(portefeuille.actifs[0].tendance_30j.variation).toBe('50.00');
+    expect(portefeuille.actifs[0].tendance_30j.points).toEqual(['100.00', '120.00', '150.00']);
+  });
+
+  // Un point isole ne dit rien d'une evolution : la variation est absente, et
+  // l'interface affiche son etat << pas assez de points >> plutot qu'un zero.
+  it('ne fabrique aucune tendance sur un historique trop court', async () => {
+    const snapshotsCours = snapshotsCoursFactices([SERIE_BTC[0]]);
+    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+
+    expect(portefeuille.actifs[0].tendance_30j.variation).toBeNull();
+  });
+
+  it("rend une tendance absente lorsque la position n'a aucun historique", async () => {
+    const portefeuille = await service(snapshotsCoursFactices()).obtenirPortefeuille(2);
+
+    expect(portefeuille.actifs[0].tendance_30j).toBeNull();
+  });
+
+  // Une lecture d'historique en echec ne doit pas vider le portefeuille : la colonne
+  // de tendance se comporte alors comme pour un actif trop jeune.
+  it('rend le portefeuille meme si la lecture des tendances echoue', async () => {
+    const snapshotsCours = snapshotsCoursFactices();
+    snapshotsCours.listerRecentsParUtilisateur.mockRejectedValue(new Error('base indisponible'));
+
+    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+
+    expect(portefeuille.valeur_totale).toBe('150.00');
+    expect(portefeuille.actifs[0].tendance_30j).toBeNull();
+  });
+
+  it("joint au detail d'un actif sa serie de cours et la performance de chaque plage", async () => {
+    const snapshotsCours = snapshotsCoursFactices(SERIE_BTC);
+    const detail = await service(snapshotsCours).obtenirDetailActif(1, 2);
+
+    // Le cloisonnement passe par le SQL : le modele recoit toujours le proprietaire.
+    expect(snapshotsCours.listerParActif).toHaveBeenCalledWith(1, 2);
+    expect(detail.historique.points).toHaveLength(3);
+    expect(detail.historique.performances.origine).toBe('50.00');
+  });
+
+  it("rend un historique vide plutot qu'absent pour une position trop jeune", async () => {
+    const detail = await service(snapshotsCoursFactices()).obtenirDetailActif(1, 2);
+
+    expect(detail.historique.points).toEqual([]);
+    expect(detail.historique.performances.origine).toBeNull();
+  });
+
+  it("rend le detail meme si la lecture de l'historique echoue", async () => {
+    const snapshotsCours = snapshotsCoursFactices();
+    snapshotsCours.listerParActif.mockRejectedValue(new Error('base indisponible'));
+
+    const detail = await service(snapshotsCours).obtenirDetailActif(1, 2);
+
+    expect(detail.pru).toBe('100');
+    expect(detail.transactions).toHaveLength(1);
+    expect(detail.historique.points).toEqual([]);
   });
 });

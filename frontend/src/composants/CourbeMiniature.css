@@ -1,0 +1,22 @@
+.courbe-miniature {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.courbe-miniature__trace--hausse {
+  stroke: var(--couleur-positif);
+}
+
+.courbe-miniature__trace--baisse {
+  stroke: var(--couleur-negatif);
+}
+
+.courbe-miniature__trace--stable {
+  stroke: var(--couleur-texte-attenue);
+}
+
+.courbe-miniature--absente {
+  color: var(--couleur-texte-attenue);
+}

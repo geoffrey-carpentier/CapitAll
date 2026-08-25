@@ -45,8 +45,11 @@ Les migrations n'ont pas à être rejouées dans ce cas : `schema.sql` les intè
 
 ## Sur une base existante
 
+Les migrations s'appliquent dans l'ordre chronologique de leur nom :
+
 ```bash
 psql -d capitall -f backend/db/migrations/2026-08-06_activation-compte.sql
+psql -d capitall -f backend/db/migrations/2026-08-23_historique-cours-par-position.sql
 ```
 
 Un rôle propriétaire est nécessaire : le rôle applicatif `capitall_app` est volontairement

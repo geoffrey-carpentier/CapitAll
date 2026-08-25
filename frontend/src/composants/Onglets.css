@@ -1,0 +1,52 @@
+.onglets {
+  display: flex;
+  gap: var(--espace-1);
+  border-bottom: 1px solid var(--couleur-bordure);
+  margin-bottom: var(--espace-4);
+}
+
+.onglets__onglet {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-family: var(--police);
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-texte-attenue);
+  background: transparent;
+  border: 0;
+  /* La zone tactile atteint 44 px de haut sans que l'onglet ne grossisse visuellement
+     (D77) : c'est le remplissage qui s'étend, pas le libellé. */
+  padding: var(--espace-3) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  /* Le trait de sélection est réservé en permanence : sans cela, l'onglet actif
+     déplacerait ses voisins de deux pixels au changement. */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.onglets__onglet:hover {
+  color: var(--couleur-texte);
+}
+
+.onglets__onglet--actif {
+  color: var(--couleur-texte);
+  border-bottom-color: var(--couleur-accent);
+}
+
+.onglets__compteur {
+  font-size: var(--taille-legende);
+  font-variant-numeric: tabular-nums;
+  color: var(--couleur-texte-attenue);
+  background: var(--couleur-carte-haute);
+  border-radius: var(--rayon-pilule);
+  padding: 1px var(--espace-2);
+}
+
+@media (min-width: 768px) {
+  .onglets__onglet {
+    min-height: 0;
+    padding: var(--espace-2) var(--espace-3);
+  }
+}
