@@ -13,6 +13,10 @@ import { api, ErreurApi } from '../../services/api';
 // Les mouvements sont ceux que le serveur renvoie, déjà enrichis : aucune de ces valeurs
 // n'est recalculée par l'interface, et le jeu d'essai reproduit donc la forme exacte de
 // la réponse plutôt qu'une forme inventée.
+//
+// Les chiffres sont ceux que le moteur produit réellement sur ces trois mouvements :
+// (0,5 x 54 000 + 15 + 0,3 x 61 000 + 10) / 0,8 donne un prix de revient de 56 656,25,
+// et la vente de 0,2 à 63 500 dégage 1 360,75 une fois ses 8 de frais déduits.
 
 const MOUVEMENTS = [
   {
@@ -40,8 +44,8 @@ const MOUVEMENTS = [
     note: 'Renforcement',
     montant: '18300.00',
     pru_avant: '54030',
-    pru_apres: '56636.25',
-    effet_pru: '2606.25',
+    pru_apres: '56656.25',
+    effet_pru: '2626.25',
     quantite_apres: '0.8',
     plus_value_realisee: null,
   },
@@ -54,11 +58,11 @@ const MOUVEMENTS = [
     date_transaction: '2026-08-03T10:00:00.000Z',
     note: 'Prise de bénéfice partielle',
     montant: '12700.00',
-    pru_avant: '56636.25',
-    pru_apres: '56636.25',
+    pru_avant: '56656.25',
+    pru_apres: '56656.25',
     effet_pru: '0',
     quantite_apres: '0.6',
-    plus_value_realisee: '1364.75',
+    plus_value_realisee: '1360.75',
   },
 ];
 
@@ -73,12 +77,12 @@ const DETAIL = {
   source_cours: 'coinbase',
   horodatage_cours: '2026-08-23T08:00:00.000Z',
   quantite_detenue: '0.6',
-  pru: '56636.25',
-  cout_total: '33981.75',
+  pru: '56656.25',
+  cout_total: '33993.75',
   valeur: '36480.72',
-  plus_value_latente: '2498.97',
-  plus_value_realisee: '1364.75',
-  pourcentage_variation: '7.35',
+  plus_value_latente: '2486.97',
+  plus_value_realisee: '1360.75',
+  pourcentage_variation: '7.32',
   transactions: MOUVEMENTS,
   historique: { points: [], performances: {} },
   taux_affichage: {
@@ -437,3 +441,71 @@ describe('graphe de cours', () => {
     expect(plages.getAllByRole('tab')).toHaveLength(5);
   });
 });
+
+describe('saisie d’un mouvement', () => {
+  // La fiche ne connaît qu'une position : la feuille s'ouvre déjà réglée sur elle, le
+  // sélecteur n'ayant rien d'autre à proposer.
+  it('ouvre la feuille déjà réglée sur la position consultée', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Nouveau mouvement' }));
+
+    expect(screen.getByRole('dialog', { name: 'Nouveau mouvement' })).toBeTruthy();
+    expect(screen.getByLabelText(/^Actif/).value).toBe('1');
+    // Le cours de la fiche est proposé comme prix unitaire, sans requête de plus.
+    expect(screen.getByLabelText(/^Prix unitaire/).value).toBe('60801.20');
+  });
+
+  // La quantité détenue vient du serveur : la feuille la relaie, elle ne la recalcule pas.
+  it('borne la vente à la quantité que le serveur a rendue', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Nouveau mouvement' }));
+    await utilisateur.click(screen.getByRole('radio', { name: 'Vente' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Tout vendre' }));
+
+    expect(screen.getByLabelText(/^Quantité/).value).toBe('0.6');
+  });
+
+  it('recharge la fiche après un enregistrement', async () => {
+    vi.spyOn(api, 'simulerTransaction').mockResolvedValue({
+      sens: 'achat',
+      montant: '6080.12',
+      frais: '0',
+      quantite_detenue_avant: '0.6',
+      quantite_detenue_apres: '0.7',
+      pru_avant: '56656.25',
+      pru_apres: '57249.06',
+      effet_pru: '592.81',
+      plus_value_realisee: null,
+      cout_total_apres: '40074.34',
+    });
+    vi.spyOn(api, 'creerTransaction').mockResolvedValue({
+      id: 60,
+      actif_id: 1,
+      sens: 'achat',
+      quantite: '0.10000000',
+      prix_unitaire: '60801.20',
+      frais: '0',
+      date_transaction: '2026-08-25T10:00:00.000Z',
+      note: null,
+    });
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Nouveau mouvement' }));
+    await utilisateur.type(screen.getByLabelText(/^Quantité/), '0.1');
+    await screen.findByText(/57\s?249,06/);
+    await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText(/Achat de 0,1\sBTC enregistré/)).toBeTruthy();
+    expect(api.actif).toHaveBeenCalledTimes(2);
+  });
+});
+
