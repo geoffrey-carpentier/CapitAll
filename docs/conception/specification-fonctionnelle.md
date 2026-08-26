@@ -244,19 +244,23 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 **Informations affichées et hiérarchie.** Bascule achat ou vente en tête, colorée et explicite. Sélection de l'actif, avec création d'un actif inexistant dans le même geste. Quantité et prix unitaire. Date. Frais, facultatif. Puis, en bas et mis en évidence, le **récapitulatif recalculé en direct** : montant de l'opération, quantité détenue après, nouveau prix de revient et son écart. Pour une vente : plus-value réalisée par l'opération.
 
-**Composants.** `Feuille`, `Champ`, `JetonClasse`, `Bouton`, `Montant`, `MessageErreur`, sélecteur d'actif avec recherche.
+**Composants.** `Feuille`, `Champ`, `JetonClasse`, `Bouton`, `Montant`, `Variation`, `Message`, et un sélecteur d'actif. Celui-ci est une liste déroulante native, comme dans la maquette : elle se parcourt à la frappe, reste utilisable au clavier comme au doigt sans code à maintenir, et un portefeuille de quelques dizaines de positions ne justifie pas un champ de recherche.
 
 **Interactions.** Le prix unitaire est pré-rempli au cours du jour et reste modifiable, avec une mention explicite. Une vente ne propose jamais une quantité supérieure à la quantité détenue : le champ est borné et un raccourci « tout vendre » est proposé. La date ne peut pas être future. La validation est bloquée tant que le récapitulatif ne peut pas être calculé. À l'enregistrement, la feuille se ferme et l'écran d'origine se rafraîchit, avec confirmation brève.
 
 **Validations.** Quantité strictement positive, dans la précision de la classe. Prix unitaire positif. Date passée ou du jour. Frais positifs ou nuls. Les messages nomment le champ et la règle, jamais un code.
 
-**États particuliers.** *Actif nouveau* : les champs de classe et de symbole apparaissent, le symbole étant vérifié auprès du service de cours avant validation. *Cours indisponible* : le prix unitaire n'est pas pré-rempli, un message l'explique, la saisie manuelle reste possible. *Erreur 422* : les messages du serveur sont replacés sur les champs concernés, jamais affichés en bloc. *Enregistrement en cours* : bouton désactivé, formulaire verrouillé.
+**États particuliers.** *Actif nouveau* : les champs de classe, de symbole et de nom apparaissent, et l'actif est créé avant la saisie du mouvement. *Cours indisponible* : le prix unitaire n'est pas pré-rempli, un message l'explique, la saisie manuelle reste possible. *Erreur de validation* : le serveur répond 400 en nommant chaque champ fautif, et ces messages sont replacés sur les champs concernés, jamais affichés en bloc ; un refus de règle de gestion, qui ne nomme pas de champ, s'affiche tel quel. *Enregistrement en cours* : bouton désactivé, formulaire verrouillé.
 
 **Accessibilité.** La feuille est un dialogue modal : focus capturé, retour au déclencheur à la fermeture, fermeture par Échap. Le récapitulatif est une région `aria-live="polite"` : ses recalculs sont annoncés sans interrompre la saisie. Les champs numériques portent `inputmode="decimal"`. La bascule achat ou vente est un groupe de boutons radio, pas une paire de boutons.
 
-**Questions ouvertes.**
-1. Faut-il permettre la création d'un actif depuis ce formulaire, ou imposer un écran séparé ? Recommandation : dans le formulaire. Séparer impose deux parcours pour une même intention et double le nombre d'écrans.
-2. Le champ frais est-il utile au MVP ? Il entre dans le prix de revient et enrichit le calcul, mais allonge le formulaire. Recommandation : le conserver, replié derrière un lien « ajouter des frais », visible mais non imposé.
+**Questions tranchées.**
+1. La création d'un actif se fait **depuis le formulaire**, conformément à la recommandation. Elle y forme une étape distincte : l'actif est créé, puis le mouvement se saisit sur la position ainsi ouverte. Sans cela, le récapitulatif ne pourrait porter sur rien et la règle « pas de validation sans récapitulatif » tomberait précisément sur le premier achat, celui d'un portefeuille vide.
+2. Le champ frais est **conservé et visible**, apparié à la date comme dans la maquette validée, plutôt que replié derrière un lien. Il porte la mention « facultatif » et rappelle que les frais d'achat entrent dans le prix de revient.
+
+**Impacts API.** `POST /api/actifs/:id/transactions/simulation` rend l'effet du mouvement sur la position sans rien écrire : montant, quantité détenue avant et après, prix de revient avant et après, déplacement du prix de revient, et plus-value dégagée par une vente. Le récapitulatif est un état métier, il ne se reconstitue pas dans l'interface (D69).
+
+**Devise de saisie.** Le formulaire est en euros, devise de référence des calculs et du stockage. La bascule euro-dollar des écrans de restitution ne s'y applique pas : elle ne change que l'affichage, alors qu'un montant saisi est celui qui sera enregistré.
 
 ---
 

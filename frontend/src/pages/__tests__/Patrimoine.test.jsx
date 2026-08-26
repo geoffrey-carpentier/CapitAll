@@ -367,3 +367,79 @@ describe('accessibilité', () => {
     expect(courbe.getAttribute('aria-label')).toMatch(/2026-08-09/);
   });
 });
+
+describe('saisie d’un mouvement', () => {
+  const EFFET = {
+    sens: 'achat',
+    montant: '1000.00',
+    frais: '0',
+    quantite_detenue_avant: '0.5',
+    quantite_detenue_apres: '0.6',
+    pru_avant: '9000',
+    pru_apres: '9100',
+    effet_pru: '100',
+    plus_value_realisee: null,
+    cout_total_apres: '5460.00',
+  };
+
+  // La saisie n'est jamais une page : la feuille se pose par-dessus le patrimoine, qui
+  // reste affiché derrière elle.
+  it("ouvre la feuille depuis l'en-tête sans quitter l'écran", async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    await utilisateur.click(screen.getByRole('button', { name: '+ Mouvement' }));
+
+    expect(screen.getByRole('dialog', { name: 'Nouveau mouvement' })).toBeTruthy();
+    expect(screen.getByText('Valeur totale')).toBeTruthy();
+  });
+
+  // Sans cette porte d'entrée, un compte neuf n'aurait aucun moyen d'enregistrer son
+  // premier mouvement : c'est le premier pas du parcours de découverte.
+  it("ouvre la feuille depuis l'état vide", async () => {
+    const utilisateur = userEvent.setup();
+    api.portefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
+    rendre();
+
+    await utilisateur.click(
+      await screen.findByRole('button', { name: 'Ajouter votre première position' })
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Nouveau mouvement' })).toBeTruthy();
+  });
+
+  // Le mouvement change le patrimoine, le prix de revient et les plus-values : c'est le
+  // serveur qui les recalcule, l'écran se recharge plutôt que d'ajuster ses chiffres.
+  it('recharge le patrimoine et confirme après un enregistrement', async () => {
+    vi.spyOn(api, 'simulerTransaction').mockResolvedValue(EFFET);
+    vi.spyOn(api, 'creerTransaction').mockResolvedValue({
+      id: 51,
+      actif_id: 1,
+      sens: 'achat',
+      quantite: '0.10000000',
+      prix_unitaire: '10000.00',
+      frais: '0',
+      date_transaction: '2026-08-25T10:00:00.000Z',
+      note: null,
+    });
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByText(/12.480,65/);
+    const chargements = api.portefeuille.mock.calls.length;
+
+    await utilisateur.click(screen.getByRole('button', { name: '+ Mouvement' }));
+    await utilisateur.selectOptions(screen.getByLabelText(/^Actif/), '1');
+    await utilisateur.type(screen.getByLabelText(/^Quantité/), '0.1');
+    await utilisateur.type(screen.getByLabelText(/^Prix unitaire/), '10000');
+
+    // L'enregistrement n'est possible qu'une fois l'effet du mouvement obtenu.
+    await screen.findByText(/9\s?100/);
+    await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText(/Achat de 0,1\sBTC enregistré/)).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(api.portefeuille.mock.calls.length).toBeGreaterThan(chargements));
+  });
+});

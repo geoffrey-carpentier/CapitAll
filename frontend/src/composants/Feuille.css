@@ -1,0 +1,135 @@
+/*
+  Feuille glissante en mobile, dialogue centré en desktop. Le point de rupture est celui
+  du reste de l'application : au-delà, la place ne manque plus et une feuille ancrée en
+  bas d'un grand écran obligerait à parcourir toute la hauteur du regard.
+*/
+
+.feuille__voile {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(16, 20, 24, 0.72);
+}
+
+.feuille {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 92vh;
+  background: var(--couleur-carte);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: 18px 18px 0 0;
+  padding: var(--espace-3) var(--espace-4) var(--espace-4);
+}
+
+/* Le dialogue reçoit le focus à l'ouverture : sans cette règle, le navigateur en
+   dessinerait le contour sur toute la feuille, ce qui se lirait comme une erreur. Le
+   focus reste bien posé, et les contrôles gardent le leur. */
+.feuille:focus {
+  outline: none;
+}
+
+/* Poignée de préhension : elle annonce une feuille que l'on peut faire glisser, et
+   marque le haut du contenu. Purement décorative, donc masquée à la restitution. */
+.feuille__poignee {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  margin-bottom: var(--espace-3);
+  border-radius: var(--rayon-pilule);
+  background: var(--couleur-bordure);
+}
+
+.feuille__entete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-3);
+}
+
+.feuille__titre {
+  flex: 1;
+  margin: 0;
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+}
+
+/* Zone tactile de 44 px en mobile (D77), le glyphe restant plus petit. */
+.feuille__fermer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: var(--taille-corps);
+  color: var(--couleur-texte-attenue);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--rayon-carte);
+  cursor: pointer;
+}
+
+.feuille__fermer:hover:not(:disabled) {
+  color: var(--couleur-texte);
+  border-color: var(--couleur-bordure);
+}
+
+.feuille__fermer:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Le corps défile, l'en-tête et le pied restent visibles : le bouton d'enregistrement
+   ne doit pas se trouver hors de portée sur un petit écran. */
+.feuille__corps {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Actions de la feuille. Elles vivent dans le formulaire qu'elles valident, et non dans
+   un pied de dialogue : un bouton de soumission séparé de son formulaire ne serait plus
+   déclenché par la touche Entrée. L'inversion place l'annulation sous l'action
+   principale en mobile, là où le pouce arrive naturellement, sans changer pour autant
+   l'ordre du document ni celui de la tabulation. */
+.feuille__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--espace-3);
+  padding-top: var(--espace-4);
+  border-top: 1px solid var(--couleur-bordure);
+  margin-top: var(--espace-4);
+}
+
+@media (min-width: 720px) {
+  .feuille__voile {
+    align-items: center;
+    padding: var(--espace-6);
+  }
+
+  .feuille {
+    max-width: 520px;
+    max-height: 88vh;
+    border-radius: var(--rayon-carte);
+    padding: var(--espace-6);
+  }
+
+  .feuille__poignee {
+    display: none;
+  }
+
+  /* Au-dessus du point de rupture, les deux actions reprennent l'ordre du document et
+     s'alignent à droite, comme dans le dialogue de confirmation. */
+  .feuille__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .feuille__fermer {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}

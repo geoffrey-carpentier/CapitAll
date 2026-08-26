@@ -1,10 +1,13 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
+import { useMouvement } from '../hooks/useMouvement';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
+import Bouton from '../composants/Bouton';
 import Carte from '../composants/Carte';
+import FeuilleMouvement from '../composants/FeuilleMouvement';
 import Montant from '../composants/Montant';
 import Variation from '../composants/Variation';
 import SelecteurPeriode from '../composants/SelecteurPeriode';
@@ -72,6 +75,9 @@ export default function Patrimoine() {
   const [periode, setPeriode] = useState(PERIODE_PAR_DEFAUT);
   const [erreur, setErreur] = useState(null);
   const [chargement, setChargement] = useState(true);
+  const [confirmation, setConfirmation] = useState(null);
+
+  const mouvement = useMouvement();
 
   const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
   const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
@@ -135,8 +141,27 @@ export default function Patrimoine() {
   const sansCours = portefeuille?.cours_indisponibles ?? [];
   const seuilsFranchis = portefeuille?.alertes_declenchees ?? [];
 
+  // Le mouvement enregistré change le patrimoine, le prix de revient et les plus-values :
+  // c'est le serveur qui les recalcule, l'écran se recharge plutôt que d'ajuster ses
+  // chiffres de son côté.
+  function apresEnregistrement({ resume }) {
+    mouvement.fermer();
+    setConfirmation(resume);
+    charger(periode);
+  }
+
+  const feuille = mouvement.ouvert && (
+    <FeuilleMouvement
+      actifs={portefeuille?.actifs ?? []}
+      actifInitialId={mouvement.actifInitialId}
+      surFermeture={mouvement.fermer}
+      surEnregistrement={apresEnregistrement}
+    />
+  );
+
   const outils = (
     <div className="patrimoine__outils">
+      <Bouton onClick={() => mouvement.ouvrir()}>+ Mouvement</Bouton>
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
@@ -219,8 +244,9 @@ export default function Patrimoine() {
               : "Votre portefeuille ne contient aucune position. Enregistrez un achat pour voir apparaître votre patrimoine et son évolution."
           }
           libelleAction="Ajouter votre première position"
-          surAction={() => naviguer('/mouvement')}
+          surAction={() => mouvement.ouvrir()}
         />
+        {feuille}
       </div>
     );
   }
@@ -243,6 +269,10 @@ export default function Patrimoine() {
           className="patrimoine__incident"
         />
       )}
+
+      {/* Confirmation brève après un enregistrement. Elle n'est pas une alerte : elle
+          confirme ce qui vient d'être demandé, sans interrompre. */}
+      {confirmation && <Message>{confirmation}</Message>}
 
       {enRepli.length > 0 && (
         <Message variante="avertissement">
@@ -385,6 +415,8 @@ export default function Patrimoine() {
           </ul>
         </Carte>
       )}
+
+      {feuille}
     </div>
   );
 }

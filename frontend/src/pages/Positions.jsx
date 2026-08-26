@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
+import { useMouvement } from '../hooks/useMouvement';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
 import { comparerDecimales, CLASSES_QUANTITE } from '../utils/formatage';
 import Bouton from '../composants/Bouton';
+import FeuilleMouvement from '../composants/FeuilleMouvement';
 import TableauPositions from '../composants/TableauPositions';
 import FiltresClasse from '../composants/FiltresClasse';
 import BasculeDevise from '../composants/BasculeDevise';
@@ -78,6 +80,9 @@ export default function Positions() {
   const [portefeuille, setPortefeuille] = useState(null);
   const [erreur, setErreur] = useState(null);
   const [chargement, setChargement] = useState(true);
+  const [confirmation, setConfirmation] = useState(null);
+
+  const mouvement = useMouvement();
 
   const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
   const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
@@ -187,8 +192,29 @@ export default function Positions() {
     setParametres(suivants, { replace: true });
   }
 
+  // Le mouvement change la position, son prix de revient et sa valorisation : l'écran se
+  // recharge, le serveur restant seul à recalculer.
+  function apresEnregistrement({ resume }) {
+    mouvement.fermer();
+    setConfirmation(resume);
+    charger();
+  }
+
+  // La feuille reçoit les positions telles que le serveur les a rendues, en euros, et
+  // non celles converties pour l'affichage : la saisie se fait dans la devise de
+  // référence, et un prix pré-rempli en dollars serait enregistré comme des euros.
+  const feuille = mouvement.ouvert && (
+    <FeuilleMouvement
+      actifs={portefeuille?.actifs ?? []}
+      actifInitialId={mouvement.actifInitialId}
+      surFermeture={mouvement.fermer}
+      surEnregistrement={apresEnregistrement}
+    />
+  );
+
   const outils = (
     <div className="positions__outils">
+      <Bouton onClick={() => mouvement.ouvrir()}>+ Mouvement</Bouton>
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
@@ -250,8 +276,9 @@ export default function Positions() {
           titre="Aucune position"
           explication="Votre portefeuille ne contient aucune position. Enregistrez un achat pour la voir apparaître ici."
           libelleAction="Ajouter une position"
-          surAction={() => naviguer('/mouvement')}
+          surAction={() => mouvement.ouvrir()}
         />
+        {feuille}
       </div>
     );
   }
@@ -271,6 +298,8 @@ export default function Positions() {
       {erreur && (
         <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />
       )}
+
+      {confirmation && <Message>{confirmation}</Message>}
 
       {enRepli.length > 0 && (
         <Message variante="avertissement">
@@ -339,6 +368,8 @@ export default function Positions() {
           surTri={changerTri}
         />
       )}
+
+      {feuille}
     </div>
   );
 }

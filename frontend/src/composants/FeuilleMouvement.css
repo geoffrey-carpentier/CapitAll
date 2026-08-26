@@ -1,0 +1,209 @@
+/*
+  Formulaire de saisie d'un mouvement. La mise en forme suit la maquette : bascule de
+  sens en tête, champs par paires, récapitulatif détaché en bas.
+*/
+
+.mouvement {
+  display: flex;
+  flex-direction: column;
+}
+
+.mouvement__sens,
+.mouvement__creation {
+  margin: 0 0 var(--espace-4);
+  padding: 0;
+  border: none;
+}
+
+.mouvement__legende {
+  padding: 0;
+  margin-bottom: var(--espace-1);
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Bascule achat ou vente. Le choix retenu se distingue par sa couleur, mais aussi par
+   sa graisse et par son fond : la couleur ne porte jamais seule l'information, et un
+   bouton radio coché reste annoncé comme tel quoi qu'il arrive. */
+.mouvement__bascule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espace-1);
+  padding: var(--espace-1);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+}
+
+.mouvement__choix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--espace-2) var(--espace-3);
+  font-size: var(--taille-corps);
+  color: var(--couleur-texte-attenue);
+  border-radius: var(--rayon-carte);
+  cursor: pointer;
+}
+
+.mouvement__choix--actif {
+  font-weight: var(--graisse-forte);
+}
+
+.mouvement__choix--achat.mouvement__choix--actif {
+  color: var(--couleur-positif);
+  background: rgba(52, 199, 123, 0.16);
+}
+
+.mouvement__choix--vente.mouvement__choix--actif {
+  color: var(--couleur-negatif);
+  background: rgba(240, 86, 79, 0.16);
+}
+
+/* Le bouton radio est masqué visuellement, jamais retiré de l'ordre de tabulation :
+   c'est lui qui reçoit le focus, et le libellé qui le montre. */
+.mouvement__choix:focus-within {
+  outline: 2px solid var(--couleur-accent);
+  outline-offset: 2px;
+}
+
+.mouvement__paire {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espace-3);
+}
+
+/* Sous 360 px, deux champs côte à côte deviennent illisibles : ils s'empilent. */
+@media (max-width: 380px) {
+  .mouvement__paire {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.mouvement__quantite {
+  position: relative;
+}
+
+.mouvement__appoint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+/* Action secondaire présentée en lien : elle n'entre pas en concurrence visuelle avec
+   l'enregistrement. La zone tactile reste à 44 px de haut (D77). */
+.mouvement__lien {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  font-family: var(--police);
+  font-size: var(--taille-legende);
+  color: var(--couleur-accent);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.mouvement__lien:disabled {
+  color: var(--couleur-texte-attenue);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.mouvement__quantite .mouvement__lien {
+  margin-top: calc(var(--espace-4) * -1);
+  margin-bottom: var(--espace-4);
+}
+
+.mouvement__creation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+}
+
+.mouvement__aide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espace-1);
+  margin: 0 0 var(--espace-4);
+  padding: var(--espace-3);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  background: var(--couleur-fond);
+  border-radius: var(--rayon-carte);
+}
+
+/* Récapitulatif : niveau 2 de contenant, seul fond accentué admis par la palette (D70).
+   C'est le bloc que l'œil doit trouver en dernier, et sur lequel il doit s'arrêter. */
+.mouvement__recapitulatif {
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-carte-haute);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+}
+
+.mouvement__intitule {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mouvement__recapitulatif-absent {
+  margin: 0;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  line-height: 1.5;
+}
+
+.mouvement__effet {
+  margin: 0;
+}
+
+.mouvement__effet > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  padding: var(--espace-1) 0;
+  font-size: var(--taille-legende);
+}
+
+.mouvement__effet dt {
+  color: var(--couleur-texte-attenue);
+}
+
+.mouvement__effet dd {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espace-2);
+  margin: 0;
+  text-align: right;
+}
+
+.mouvement__effet-total {
+  margin-top: var(--espace-1);
+  padding-top: var(--espace-2);
+  border-top: 1px solid var(--couleur-bordure);
+}
+
+.mouvement__effet-total dt {
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-texte);
+}
+
+.mouvement__inchange {
+  color: var(--couleur-texte-attenue);
+}

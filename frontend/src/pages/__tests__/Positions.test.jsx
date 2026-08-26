@@ -408,3 +408,53 @@ describe('tendance sur trente jours', () => {
     expect(within(menu).queryByText(/30 jours/)).toBeNull();
   });
 });
+
+describe('saisie d’un mouvement', () => {
+  it("ouvre la feuille par-dessus la liste et l'inscrit dans l'adresse", async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('table');
+
+    await utilisateur.click(screen.getByRole('button', { name: '+ Mouvement' }));
+
+    expect(screen.getByRole('dialog', { name: 'Nouveau mouvement' })).toBeTruthy();
+    expect(adresse.search).toContain('mouvement=nouveau');
+  });
+
+  it("referme la feuille et retire le paramètre de l'adresse", async () => {
+    const utilisateur = userEvent.setup();
+    rendre('/positions?mouvement=nouveau');
+    await screen.findByRole('dialog');
+
+    await utilisateur.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(adresse.search).not.toContain('mouvement');
+  });
+
+  it('conserve les filtres en vigueur pendant la saisie', async () => {
+    const utilisateur = userEvent.setup();
+    rendre('/positions?classes=crypto');
+    await screen.findByRole('table');
+
+    await utilisateur.click(screen.getByRole('button', { name: '+ Mouvement' }));
+
+    expect(adresse.search).toContain('classes=crypto');
+    expect(adresse.search).toContain('mouvement=nouveau');
+  });
+
+  // La bascule euro-dollar ne change que l'affichage : la saisie, elle, se fait dans la
+  // devise de référence. Transmettre à la feuille des montants convertis enregistrerait
+  // des dollars dans une colonne d'euros.
+  it('propose un prix en euros même lorsque la liste est affichée en dollars', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('table');
+
+    await utilisateur.click(screen.getByLabelText('Afficher les montants en dollars'));
+    await utilisateur.click(screen.getByRole('button', { name: '+ Mouvement' }));
+    await utilisateur.selectOptions(screen.getByLabelText(/^Actif/), '1');
+
+    expect(screen.getByLabelText(/^Prix unitaire/).value).toBe('54890.12');
+  });
+});

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
+import { useMouvement } from '../hooks/useMouvement';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
@@ -15,6 +16,7 @@ import SelecteurPeriode from '../composants/SelecteurPeriode';
 import FriseMouvements from '../composants/FriseMouvements';
 import BarreProgression from '../composants/BarreProgression';
 import Confirmation from '../composants/Confirmation';
+import FeuilleMouvement from '../composants/FeuilleMouvement';
 import Bouton from '../composants/Bouton';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
@@ -83,6 +85,9 @@ export default function DetailPosition() {
   const [periode, setPeriode] = useState(PERIODE_PAR_DEFAUT);
   const [aSupprimer, setASupprimer] = useState(null);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
+
+  const mouvement = useMouvement();
 
   const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
   const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
@@ -279,6 +284,8 @@ export default function DetailPosition() {
         <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />
       )}
 
+      {confirmation && <Message>{confirmation}</Message>}
+
       {sansCours && (
         <Message variante="avertissement">
           Aucun cours disponible pour {position.symbole} : cette position n'est pas valorisée.
@@ -448,7 +455,9 @@ export default function DetailPosition() {
       </Carte>
 
       <div className="detail__actions">
-        <Bouton variante="secondaire" onClick={() => naviguer('/mouvement')}>
+        {/* La feuille s'ouvre déjà réglée sur cette position : elle est la seule que
+            l'écran connaisse, et le sélecteur n'aurait rien d'autre à proposer. */}
+        <Bouton variante="secondaire" onClick={() => mouvement.ouvrir(position.id)}>
           Nouveau mouvement
         </Bouton>
         <Bouton variante="danger" onClick={() => setASupprimer({ type: 'position' })}>
@@ -481,6 +490,23 @@ export default function DetailPosition() {
           enCours={suppressionEnCours}
           surConfirmation={confirmerSuppression}
           surAnnulation={() => setASupprimer(null)}
+        />
+      )}
+
+      {/* L'écran de détail ne connaît qu'une position : la feuille reçoit celle-ci et
+          elle seule, avec son cours et sa quantité détenue, sans requête de plus. Les
+          montants transmis sont ceux du serveur, en euros, et non ceux convertis pour
+          l'affichage : la saisie se fait dans la devise de référence. */}
+      {mouvement.ouvert && (
+        <FeuilleMouvement
+          actifs={[position]}
+          actifInitialId={position.id}
+          surFermeture={mouvement.fermer}
+          surEnregistrement={({ resume }) => {
+            mouvement.fermer();
+            setConfirmation(resume);
+            charger();
+          }}
         />
       )}
     </div>

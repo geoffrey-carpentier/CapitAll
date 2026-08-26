@@ -28,6 +28,14 @@ export default function App() {
             <Route path="/patrimoine" element={<Patrimoine />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<DetailPosition />} />
+
+            {/* La saisie d'un mouvement est une feuille posée sur l'écran d'origine, et
+                non une page : elle n'a pas de route à elle. L'adresse reste toutefois
+                atteignable, et ouvre la feuille par-dessus le patrimoine. */}
+            <Route
+              path="/mouvement"
+              element={<Navigate to="/patrimoine?mouvement=nouveau" replace />}
+            />
           </Route>
 
           <Route path="/" element={<Navigate to="/patrimoine" replace />} />

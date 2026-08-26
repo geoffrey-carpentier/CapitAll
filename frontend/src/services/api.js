@@ -100,7 +100,20 @@ export const api = {
   // ressource appartenant à un autre compte répond 404, jamais 403 (D52) : l'appelant
   // ne peut pas distinguer l'inexistant de ce qui ne lui appartient pas.
   actif: (jeton, id) => requete(`/actifs/${id}`, { jeton }),
+  creerActif: (jeton, donnees) => requete('/actifs', { methode: 'POST', corps: donnees, jeton }),
   supprimerActif: (jeton, id) => requete(`/actifs/${id}`, { methode: 'DELETE', jeton }),
+  creerTransaction: (jeton, actifId, donnees) =>
+    requete(`/actifs/${actifId}/transactions`, { methode: 'POST', corps: donnees, jeton }),
+  // Effet d'un mouvement avant son enregistrement : nouveau prix de revient, quantité
+  // détenue après, plus-value dégagée par une vente. Rien n'est écrit. Ces valeurs sont
+  // des états métier et viennent donc du moteur du serveur, jamais d'un calcul refait
+  // ici (D69).
+  simulerTransaction: (jeton, actifId, donnees) =>
+    requete(`/actifs/${actifId}/transactions/simulation`, {
+      methode: 'POST',
+      corps: donnees,
+      jeton,
+    }),
   supprimerTransaction: (jeton, actifId, transactionId) =>
     requete(`/actifs/${actifId}/transactions/${transactionId}`, { methode: 'DELETE', jeton }),
   alertes: (jeton) => requete('/alertes', { jeton }),
