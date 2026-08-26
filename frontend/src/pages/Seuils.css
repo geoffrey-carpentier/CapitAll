@@ -16,6 +16,12 @@
   font-size: var(--taille-titre);
 }
 
+.seuils__outils {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
 .seuils__groupe {
   display: flex;
   flex-direction: column;

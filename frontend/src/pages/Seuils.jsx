@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useSeuil } from '../hooks/useSeuil';
 import { api, ErreurApi } from '../services/api';
-import { formaterMontant } from '../utils/formatage';
+import { convertir } from '../utils/conversion';
+import { formaterMontant, symboleDevise } from '../utils/formatage';
+import { lirePreference, ecrirePreference, CLE_DEVISE, CLE_MASQUAGE } from '../utils/preferences';
 import Bouton from '../composants/Bouton';
 import Carte from '../composants/Carte';
 import JetonClasse from '../composants/JetonClasse';
@@ -15,6 +17,8 @@ import EtatVide from '../composants/EtatVide';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
 import Message from '../composants/Message';
+import BasculeDevise from '../composants/BasculeDevise';
+import MasquageMontants from '../composants/MasquageMontants';
 import './Seuils.css';
 
 // Écran Seuils.
@@ -31,6 +35,13 @@ import './Seuils.css';
 //
 // Un seuil désactivé ne surveille plus rien : comme dans l'onglet Seuils de l'écran de
 // détail, il disparaît de la liste après son retrait plutôt que d'y rester barré.
+//
+// La devise d'affichage et le masquage des montants sont des préférences globales,
+// déjà appliquées aux écrans Patrimoine, Positions et Détail d'une position : cet écran
+// reprend exactement le même mécanisme (D83), y compris dans le texte de confirmation
+// du retrait, qui masque le seuil au même titre que n'importe quel autre montant
+// affiché — rien ne justifie qu'un dialogue de confirmation échappe à une préférence
+// qui s'applique partout ailleurs.
 const STATUTS_AFFICHES = ['active', 'declenchee'];
 
 function natureDeLErreur(erreur) {
@@ -73,14 +84,18 @@ export default function Seuils() {
   const [aRetirer, setARetirer] = useState(null);
   const [retraitEnCours, setRetraitEnCours] = useState(false);
 
+  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
+  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+
   const charger = useCallback(async () => {
     setChargement(true);
     setErreur(null);
 
     try {
-      // Le portefeuille n'est demandé que pour la feuille de création, qui a besoin
-      // des cours et de la valeur totale : son échec ne doit donc pas priver l'écran
-      // de la liste des seuils, qui reste l'information principale.
+      // Le portefeuille sert à la fois à la feuille de création, qui a besoin des cours
+      // et de la valeur totale, et à la bascule euro/dollar, qui a besoin du taux
+      // d'affichage porté par cette même réponse (D69, D43) : son échec ne doit donc
+      // pas priver l'écran de la liste des seuils, qui reste l'information principale.
       const [alertes, portefeuilleCourant] = await Promise.all([
         api.alertes(jeton),
         api.portefeuille(jeton).catch(() => null),
@@ -114,6 +129,23 @@ export default function Seuils() {
     }
     return table;
   }, [portefeuille]);
+
+  const taux = portefeuille?.taux_affichage?.eur_vers_usd ?? null;
+
+  // Conversion à l'affichage seulement, comme sur les trois autres écrans : les
+  // montants restent en euros dans les données, seule la présentation change (D43).
+  const afficher = useCallback(
+    (montantEnEuros) => {
+      if (montantEnEuros === null || montantEnEuros === undefined) {
+        return null;
+      }
+      if (devise === 'EUR' || !taux) {
+        return montantEnEuros;
+      }
+      return convertir(montantEnEuros, taux);
+    },
+    [devise, taux]
+  );
 
   async function confirmerRetrait() {
     setRetraitEnCours(true);
@@ -193,7 +225,24 @@ export default function Seuils() {
     <div className="seuils">
       <div className="seuils__entete">
         <h1 className="seuils__titre">Seuils</h1>
-        <Bouton onClick={() => seuilFeuille.ouvrir()}>+ Seuil</Bouton>
+        <div className="seuils__outils">
+          <Bouton onClick={() => seuilFeuille.ouvrir()}>+ Seuil</Bouton>
+          <BasculeDevise
+            devise={devise}
+            indisponible={!taux}
+            surChangement={(choix) => {
+              setDevise(choix);
+              ecrirePreference(CLE_DEVISE, choix);
+            }}
+          />
+          <MasquageMontants
+            masque={masque}
+            surChangement={(valeur) => {
+              setMasque(valeur);
+              ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
+            }}
+          />
+        </div>
       </div>
 
       {erreur && <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />}
@@ -219,7 +268,11 @@ export default function Seuils() {
                         <p className="seuils__nom">
                           {nomCible(seuil)}{' '}
                           {seuil.sens_seuil === 'au_dessus' ? 'au-dessus de' : 'en dessous de'}{' '}
-                          <Montant valeur={seuil.valeur_seuil} />
+                          {masque ? (
+                            <span aria-label="Montant masqué">••••</span>
+                          ) : (
+                            <Montant valeur={afficher(seuil.valeur_seuil)} devise={devise} />
+                          )}
                         </p>
                         <p className="seuils__sous-texte">
                           {date ? `Franchi le ${date}` : 'Franchi'}
@@ -261,8 +314,15 @@ export default function Seuils() {
                         <p className="seuils__nom">
                           {nomCible(seuil)}{' '}
                           {seuil.sens_seuil === 'au_dessus' ? 'au-dessus de' : 'en dessous de'}{' '}
-                          <Montant valeur={seuil.valeur_seuil} />
+                          {masque ? (
+                            <span aria-label="Montant masqué">••••</span>
+                          ) : (
+                            <Montant valeur={afficher(seuil.valeur_seuil)} devise={devise} />
+                          )}
                         </p>
+                        {/* Un pourcentage, jamais converti ni masqué, au même titre que
+                            la performance ou la répartition ailleurs dans l'application :
+                            il ne représente pas un montant, seule une devise en porte. */}
                         {seuil.ecart_pourcentage !== null && (
                           <p className="seuils__sous-texte">
                             reste <Montant valeur={seuil.ecart_pourcentage} type="pourcentage" />
@@ -272,8 +332,10 @@ export default function Seuils() {
                     </div>
 
                     <BarreProgression
-                      valeur={seuil.valeur_observee}
-                      cible={seuil.valeur_seuil}
+                      valeur={afficher(seuil.valeur_observee)}
+                      cible={afficher(seuil.valeur_seuil)}
+                      devise={devise}
+                      masque={masque}
                       sens={seuil.sens_seuil}
                       libelle={`Progression vers le seuil, ${nomCible(seuil)}`}
                     />
@@ -299,7 +361,21 @@ export default function Seuils() {
       {aRetirer && (
         <Confirmation
           titre="Retirer ce seuil ?"
-          consequence={`Le seuil ${nomCible(aRetirer)} ${aRetirer.sens_seuil === 'au_dessus' ? 'au-dessus de' : 'en dessous de'} ${formaterMontant(aRetirer.valeur_seuil)} ne surveillera plus rien. Vous pourrez en recréer un si besoin.`}
+          // Le montant du seuil suit la même préférence de masquage que le reste de
+          // l'écran : rien ne justifie qu'un dialogue de confirmation échappe à une
+          // préférence qui s'applique partout ailleurs.
+          consequence={
+            <>
+              Le seuil {nomCible(aRetirer)}{' '}
+              {aRetirer.sens_seuil === 'au_dessus' ? 'au-dessus de' : 'en dessous de'}{' '}
+              {masque ? (
+                <span aria-label="Montant masqué">••••</span>
+              ) : (
+                formaterMontant(afficher(aRetirer.valeur_seuil), { symbole: symboleDevise(devise) })
+              )}{' '}
+              ne surveillera plus rien. Vous pourrez en recréer un si besoin.
+            </>
+          }
           libelleConfirmation="Retirer le seuil"
           enCours={retraitEnCours}
           surConfirmation={confirmerRetrait}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import Seuils from '../Seuils';
@@ -58,6 +58,24 @@ const SEUILS = [
     valeur_observee: null,
     ecart_pourcentage: null,
   },
+  // Seuil en cours dont le cours de la cible est indisponible : la barre l'annonce
+  // par une mention explicite plutôt qu'une progression à zéro, qui mentirait. Un
+  // actif distinct de l'or, pour ne pas interférer avec le seuil désactivé ci-dessus.
+  {
+    id: 4,
+    utilisateur_id: 2,
+    actif_id: 5,
+    type_cible: 'actif',
+    sens_seuil: 'au_dessus',
+    valeur_seuil: '200.00',
+    statut: 'active',
+    date_creation: '2026-08-10T10:00:00.000Z',
+    date_declenchement: null,
+    symbole: 'AAPL',
+    nom_actif: 'Apple',
+    valeur_observee: null,
+    ecart_pourcentage: null,
+  },
 ];
 
 const PORTEFEUILLE = {
@@ -65,7 +83,13 @@ const PORTEFEUILLE = {
   actifs: [
     { id: 1, type: 'crypto', symbole: 'BTC', nom: 'Bitcoin', cours_eur: '61240.00' },
     { id: 4, type: 'metal', symbole: 'XAU', nom: 'Or', cours_eur: null },
+    { id: 5, type: 'action', symbole: 'AAPL', nom: 'Apple', cours_eur: null },
   ],
+  taux_affichage: {
+    eur_vers_usd: '1.1699',
+    usd_vers_eur: '0.85477',
+    horodatage: '2026-08-26T00:00:00.000Z',
+  },
 };
 
 let adresse = null;
@@ -92,6 +116,10 @@ function rendre(entree = '/seuils') {
 beforeEach(() => {
   vi.spyOn(api, 'alertes').mockResolvedValue(SEUILS);
   vi.spyOn(api, 'portefeuille').mockResolvedValue(PORTEFEUILLE);
+  // Sans ce nettoyage, la préférence de masquage écrite par un test antérieur
+  // survivrait au montage suivant : sessionStorage n'est pas réinitialisé entre les
+  // tests d'un même fichier, seulement entre les fichiers.
+  window.sessionStorage.clear();
 });
 
 afterEach(() => {
@@ -139,6 +167,65 @@ describe('composition', () => {
 
     expect(await screen.findByText('Aucun seuil')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Créer un seuil' })).toBeTruthy();
+  });
+});
+
+describe('cours indisponible sur la cible', () => {
+  it("affiche la mention de progression indisponible plutôt qu'une barre à zéro", async () => {
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    expect(screen.getByText(/Cours indisponible : la progression/)).toBeTruthy();
+  });
+
+  it("n'affiche pas d'écart restant quand la valeur observée est nulle", async () => {
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    const carte = screen.getAllByText(/Apple/)[0].closest('li');
+    expect(within(carte).queryByText(/reste/)).toBeNull();
+  });
+});
+
+describe('préférences d’affichage globales (D83)', () => {
+  it('convertit les montants du seuil et de la barre sans nouvelle requête', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+    const appelsAvant = api.alertes.mock.calls.length + api.portefeuille.mock.calls.length;
+
+    await utilisateur.click(screen.getByLabelText('Afficher les montants en dollars'));
+
+    // 65 000 x 1,1699 = 76 043,5 : le seuil Bitcoin, converti à l'affichage. La valeur
+    // apparaît deux fois par ligne, dans l'intitulé et dans les repères de la barre.
+    expect((await screen.findAllByText(/76.043,5/)).length).toBeGreaterThan(0);
+    expect(api.alertes.mock.calls.length + api.portefeuille.mock.calls.length).toBe(appelsAvant);
+  });
+
+  it("remplace les montants par des points au masquage, sans toucher à l'écart en pourcentage", async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    await utilisateur.click(screen.getByLabelText('Masquer les montants'));
+
+    expect(screen.getAllByLabelText('Montant masqué').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/65.000/)).toBeNull();
+    // Un pourcentage n'est jamais masqué, au même titre que les autres écrans.
+    expect(screen.getByText(/reste/)).toBeTruthy();
+    expect(screen.getByText(/6,1/)).toBeTruthy();
+  });
+
+  it('masque également le montant du seuil dans le dialogue de retrait', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    await utilisateur.click(screen.getByLabelText('Masquer les montants'));
+    await utilisateur.click(screen.getAllByRole('button', { name: /Retirer/ })[0]);
+
+    const dialogue = screen.getByRole('dialog');
+    expect(within(dialogue).getByLabelText('Montant masqué')).toBeTruthy();
   });
 });
 

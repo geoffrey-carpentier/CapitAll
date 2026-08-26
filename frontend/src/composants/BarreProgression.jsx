@@ -20,6 +20,12 @@ import Montant from './Montant';
 //
 // Un cours indisponible ne donne pas une barre à zéro, qui se lirait comme « très
 // loin du seuil » : la barre disparaît au profit d'une mention explicite.
+//
+// Le masquage des montants, préférence globale de l'application, remplace les deux
+// repères par des points plutôt que de les taire : la barre continue de dire à quelle
+// distance on se trouve, sans jamais révéler le chiffre. Le pourcentage qu'annonce
+// aria-valuetext n'est pas masqué, aucun pourcentage ne l'étant ailleurs dans
+// l'application.
 // La barre dit toujours la même chose : à quelle distance du déclenchement on se
 // trouve, pleine au moment du franchissement. Un seuil bas se lit donc à l'envers d'un
 // seuil haut — s'en éloigner, pour lui, c'est monter. Rapporter les deux au même
@@ -43,6 +49,7 @@ export default function BarreProgression({
   libelle,
   sens = 'au_dessus',
   atteint = false,
+  masque = false,
 }) {
   const avancement =
     valeur === null || valeur === undefined ? null : fraction(valeur, cible, sens);
@@ -72,11 +79,19 @@ export default function BarreProgression({
         <span className="barre-progression__remplissage" style={{ width: `${pourcentage}%` }} />
       </div>
       <p className="barre-progression__reperes">
-        <Montant valeur={valeur} devise={devise} taille="legende" />
+        {masque ? (
+          <span aria-label="Montant masqué">••••</span>
+        ) : (
+          <Montant valeur={valeur} devise={devise} taille="legende" />
+        )}
         <span className="barre-progression__cible">
           <span aria-hidden="true">/</span>
           <span className="lecteur-ecran-seulement">sur un seuil de</span>
-          <Montant valeur={cible} devise={devise} taille="legende" />
+          {masque ? (
+            <span aria-label="Montant masqué">••••</span>
+          ) : (
+            <Montant valeur={cible} devise={devise} taille="legende" />
+          )}
         </span>
       </p>
     </div>
