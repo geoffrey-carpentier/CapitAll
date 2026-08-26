@@ -185,6 +185,15 @@ describe('écart restant avant franchissement (E6)', () => {
     expect(ecartRestant('au_dessus', undefined, '65000.00')).toBeNull();
   });
 
+  // Distinct du seuil à zéro testé plus haut : ici c'est la valeur OBSERVÉE qui vaut
+  // zéro. Le calcul divise par cette valeur (le pourcentage restant est rapporté au
+  // cours actuel) : la diviser par zéro serait indéfini, la fonction rend donc null
+  // plutôt qu'un résultat inventé.
+  it('rend null quand la valeur observée vaut zéro', () => {
+    expect(ecartRestant('au_dessus', '0', '65000.00')).toBeNull();
+    expect(ecartRestant('en_dessous', '0.00', '10.00')).toBeNull();
+  });
+
   // Deux décimales fixes, comme tout pourcentage rendu par le serveur (pourcentage_variation,
   // performances) : la valeur ne perd jamais ses zéros de fin, contrairement à un montant.
   it('reste exact sur des valeurs à décimales, à deux décimales fixes', () => {
