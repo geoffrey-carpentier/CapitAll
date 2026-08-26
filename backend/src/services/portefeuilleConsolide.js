@@ -314,7 +314,23 @@ function creerServicePortefeuille({
     return { points, performances: calculerPerformances(complet) };
   }
 
-  return { obtenirPortefeuille, obtenirDetailActif, obtenirHistorique };
+  // Valeurs actuelles observables, pour l'écran Seuils (E6) : le cours de chaque
+  // position et la valeur totale du patrimoine, sans les effets de bord de
+  // `obtenirPortefeuille` (pas d'historisation, pas d'évaluation ni de marquage des
+  // alertes, déjà faits au chargement du tableau de bord, D50). Un seuil ne fait que
+  // lire ces valeurs pour afficher son écart restant, il ne les fait pas exister.
+  async function obtenirValeursObservees(utilisateurId) {
+    const { positions } = await construirePositions(utilisateurId);
+    const totaux = consolider(positions);
+
+    const coursParActif = Object.fromEntries(
+      positions.filter((position) => position.cours_eur !== null).map((p) => [p.id, p.cours_eur])
+    );
+
+    return { capitalTotal: totaux.valeur_totale, coursParActif };
+  }
+
+  return { obtenirPortefeuille, obtenirDetailActif, obtenirHistorique, obtenirValeursObservees };
 }
 
 module.exports = { creerServicePortefeuille };

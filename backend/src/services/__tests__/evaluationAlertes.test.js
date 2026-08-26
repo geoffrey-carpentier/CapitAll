@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluerAlertes, estFranchi } from '../evaluationAlertes.js';
+import { evaluerAlertes, estFranchi, ecartRestant } from '../evaluationAlertes.js';
 
 function alerteActif(sensSeuil, valeurSeuil, { id = 1, actifId = 10, statut = 'active' } = {}) {
   return {
@@ -152,5 +152,35 @@ describe('évaluation des alertes', () => {
     expect(franchissement.valeur_seuil).toBe('45000.00');
     expect(franchissement.valeur_observee).toBe('58566.64');
     expect(franchissement.sens_seuil).toBe('au_dessus');
+  });
+});
+
+describe('écart restant avant franchissement (E6)', () => {
+  // 65 000 - 61 240 rapporté à 61 240 : la hausse qu'il reste à faire depuis le cours
+  // actuel, et non depuis le seuil.
+  it('rend la hausse restante pour un seuil haut pas encore atteint', () => {
+    expect(ecartRestant('au_dessus', '61240.00', '65000.00')).toBe('6.14');
+  });
+
+  it('rend la baisse restante pour un seuil bas pas encore atteint', () => {
+    expect(ecartRestant('en_dessous', '2627.32', '2200.00')).toBe('16.26');
+  });
+
+  // Une valeur déjà au-delà du seuil, dans le sens qui le franchit, rend 0 et non un
+  // nombre négatif, qui n'aurait pas de sens pour un écart restant.
+  it('rend zéro quand le seuil est déjà franchi', () => {
+    expect(ecartRestant('au_dessus', '70000.00', '65000.00')).toBe('0');
+    expect(ecartRestant('au_dessus', '65000.00', '65000.00')).toBe('0');
+  });
+
+  it('rend null quand la valeur observée est indisponible', () => {
+    expect(ecartRestant('au_dessus', null, '65000.00')).toBeNull();
+    expect(ecartRestant('au_dessus', undefined, '65000.00')).toBeNull();
+  });
+
+  // Deux décimales fixes, comme tout pourcentage rendu par le serveur (pourcentage_variation,
+  // performances) : la valeur ne perd jamais ses zéros de fin, contrairement à un montant.
+  it('reste exact sur des valeurs à décimales, à deux décimales fixes', () => {
+    expect(ecartRestant('au_dessus', '0.3', '0.33')).toBe('10.00');
   });
 });

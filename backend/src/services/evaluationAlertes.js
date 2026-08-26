@@ -6,7 +6,14 @@
 // Aucune tâche de fond n'évalue les alertes (D50) : l'évaluation a lieu au chargement
 // du tableau de bord, quand les valeurs viennent d'être calculées.
 
-const { ECHELLE_PRU, versUnites, comparer } = require('../utils/decimal');
+const {
+  ECHELLE_PRU,
+  ECHELLE_MONTANT,
+  versUnites,
+  comparer,
+  diviser,
+  formater,
+} = require('../utils/decimal');
 
 // Franchissement inclusif (D56) : un seuil « au-dessus » de 70 000 se déclenche
 // lorsque la valeur atteint 70 000, pas seulement lorsqu'elle le dépasse. C'est ce
@@ -32,6 +39,39 @@ function valeurObservee(alerte, contexte) {
   }
 
   return contexte.coursParActif?.[alerte.actif_id] ?? null;
+}
+
+// Écart restant avant franchissement, en pourcentage de la valeur observée (E6).
+//
+// C'est la variation relative que la valeur observée doit encore parcourir pour
+// atteindre le seuil : un seuil haut à 65 000 avec un cours à 61 240 rend 6,14 %, la
+// hausse qu'il reste à faire depuis le cours actuel. Une valeur déjà au-delà du seuil,
+// dans le sens qui le franchit, rend 0 plutôt qu'un nombre négatif, qui n'aurait pas de
+// sens pour un écart restant.
+//
+// Valeur dérivée d'un montant, donc calculée ici et non côté interface (D69) : c'est
+// exactement le cas que la règle nomme, « franchissement de seuil ».
+// Le second paramètre porte un nom distinct de la fonction valeurObservee ci-dessus,
+// bien qu'il en reçoive le résultat : les deux ne doivent pas se confondre à la lecture.
+function ecartRestant(sensSeuil, valeurConstatee, valeurSeuil) {
+  if (valeurConstatee === null || valeurConstatee === undefined || valeurConstatee === '') {
+    return null;
+  }
+
+  const observee = versUnites(valeurConstatee, ECHELLE_PRU);
+  if (observee === 0n) {
+    return null;
+  }
+  const seuil = versUnites(valeurSeuil, ECHELLE_PRU);
+
+  if (estFranchi(sensSeuil, valeurConstatee, valeurSeuil)) {
+    return '0';
+  }
+
+  const ecart = seuil > observee ? seuil - observee : observee - seuil;
+  const pourcentage = diviser(ecart * 100n, observee, ECHELLE_PRU);
+
+  return formater(pourcentage, ECHELLE_PRU, ECHELLE_MONTANT);
 }
 
 function evaluerAlertes(alertesActives, contexte) {
@@ -68,4 +108,4 @@ function evaluerAlertes(alertesActives, contexte) {
   return franchissements;
 }
 
-module.exports = { evaluerAlertes, estFranchi };
+module.exports = { evaluerAlertes, estFranchi, valeurObservee, ecartRestant };
