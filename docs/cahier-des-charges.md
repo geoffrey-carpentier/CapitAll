@@ -284,7 +284,7 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 | DELETE | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | suppression d'une transaction | 204, 401, 404 |
 | GET | `/api/portefeuille` | authentifié | consolidation : valeur totale, coût de revient, plus-values, répartition, taux de change, alertes franchies | 200, 401 |
 | GET | `/api/portefeuille/historique` | authentifié | instantanés de valorisation | 200, 401 |
-| GET | `/api/alertes` | authentifié | liste des alertes | 200, 401 |
+| GET | `/api/alertes` | authentifié | liste des alertes, chacune enrichie de la valeur actuellement observée sur sa cible et de l'écart restant avant franchissement en pourcentage | 200, 401 |
 | POST | `/api/alertes` | authentifié | création d'une alerte | 201, 400, 401, 404 |
 | PATCH | `/api/alertes/:id` | propriétaire | désactivation | 200, 400, 401, 404 |
 | GET | `/api/annonces` | authentifié | liste des annonces, épinglées en tête | 200, 401 |

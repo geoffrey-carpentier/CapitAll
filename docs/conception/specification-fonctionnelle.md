@@ -282,8 +282,10 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 **Accessibilité.** La barre de progression porte `role="progressbar"` avec ses valeurs. Le pourcentage restant est toujours écrit en toutes lettres à côté : la barre seule ne porte jamais l'information. Le groupe des seuils franchis est annoncé par un titre de section, pas seulement par une couleur.
 
-**Questions ouvertes.**
-1. Un seuil franchi doit-il pouvoir être réarmé ? Le modèle prévoit trois statuts dont `desactivee`, mais pas de retour à `active`. Recommandation : ne pas réarmer au MVP ; l'utilisateur recrée un seuil, ce qui est plus clair et ne demande aucune évolution.
+**Questions tranchées.**
+1. Un seuil franchi n'est **pas réarmable** au MVP, conformément à la recommandation : l'API n'expose que la désactivation, jamais un retour au statut `active`. Un utilisateur qui veut à nouveau surveiller la même cible recrée un seuil.
+
+**Impacts API.** L'écran ne demande aucune route nouvelle. Chaque alerte rendue par `GET /api/alertes` porte deux champs additifs, `valeur_observee` et `ecart_pourcentage` : la valeur actuellement constatée sur la cible et l'écart relatif qu'il lui reste à parcourir avant franchissement, tous deux calculés côté serveur (D69). Un cours indisponible sur la cible rend les deux champs nuls, l'écran affichant alors la mention prévue plutôt qu'une barre à zéro.
 
 ---
 
