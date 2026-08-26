@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FeuilleSeuil from '../FeuilleSeuil';
 import * as contexte from '../../contexte/contexteAuthentification';
@@ -15,7 +15,13 @@ const ACTIFS = [
   { id: 4, type: 'metal', symbole: 'XAU', nom: 'Or', cours_eur: null },
 ];
 
-function Harnais({ actifs = ACTIFS, capitalTotal = '58566.64', cibleInitiale, surEnregistrement = () => {} }) {
+function Harnais({
+  actifs = ACTIFS,
+  capitalTotal = '58566.64',
+  cibleInitiale,
+  permettrePatrimoineTotal,
+  surEnregistrement = () => {},
+}) {
   const [ouverte, setOuverte] = useState(false);
 
   return (
@@ -28,6 +34,7 @@ function Harnais({ actifs = ACTIFS, capitalTotal = '58566.64', cibleInitiale, su
           actifs={actifs}
           capitalTotal={capitalTotal}
           cibleInitiale={cibleInitiale}
+          permettrePatrimoineTotal={permettrePatrimoineTotal}
           surFermeture={() => setOuverte(false)}
           surEnregistrement={surEnregistrement}
         />
@@ -94,6 +101,38 @@ describe('forme et accessibilité', () => {
     await ouvrir();
     expect(screen.getByLabelText('Cible').value).toBe('capital_total');
     expect(screen.getByText(/58.566,64/)).toBeTruthy();
+  });
+});
+
+describe('cible initiale (E4, ouverture depuis l’écran de détail)', () => {
+  it('se règle sur l’actif désigné par cibleInitiale', async () => {
+    await ouvrir({ cibleInitiale: 1 });
+
+    expect(screen.getByLabelText('Cible').value).toBe('actif:1');
+    // Le cours de l'actif présélectionné est repris comme valeur actuelle.
+    expect(screen.getByText(/61.240/)).toBeTruthy();
+  });
+
+  it('retombe sur le patrimoine total quand la cible ne correspond à aucun actif connu', async () => {
+    await ouvrir({ cibleInitiale: 999 });
+
+    expect(screen.getByLabelText('Cible').value).toBe('capital_total');
+  });
+
+  it('retire le patrimoine total du sélecteur quand permettrePatrimoineTotal est faux', async () => {
+    await ouvrir({ cibleInitiale: 1, permettrePatrimoineTotal: false });
+
+    const options = within(screen.getByLabelText('Cible')).getAllByRole('option');
+    expect(options.map((option) => option.value)).not.toContain('capital_total');
+    expect(screen.getByLabelText('Cible').value).toBe('actif:1');
+  });
+
+  // Cas défensif : si la cible ne correspondait à aucun actif, la feuille ne doit pas
+  // se rabattre sur une option absente du sélecteur.
+  it('se rabat sur le premier actif quand la cible est invalide et le patrimoine total exclu', async () => {
+    await ouvrir({ cibleInitiale: 999, permettrePatrimoineTotal: false });
+
+    expect(screen.getByLabelText('Cible').value).toBe('actif:1');
   });
 });
 

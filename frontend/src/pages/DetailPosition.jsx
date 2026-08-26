@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
+import { useSeuil } from '../hooks/useSeuil';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
@@ -17,6 +18,7 @@ import FriseMouvements from '../composants/FriseMouvements';
 import BarreProgression from '../composants/BarreProgression';
 import Confirmation from '../composants/Confirmation';
 import FeuilleMouvement from '../composants/FeuilleMouvement';
+import FeuilleSeuil from '../composants/FeuilleSeuil';
 import Bouton from '../composants/Bouton';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
@@ -88,6 +90,7 @@ export default function DetailPosition() {
   const [confirmation, setConfirmation] = useState(null);
 
   const mouvement = useMouvement();
+  const seuilFeuille = useSeuil();
 
   const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
   const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
@@ -422,34 +425,49 @@ export default function DetailPosition() {
               masque={masque}
               surSuppression={(mouvement) => setASupprimer({ type: 'mouvement', mouvement })}
             />
-          ) : seuils.length === 0 ? (
-            <p className="detail__sans-seuil">
-              Aucun seuil ne surveille cette position.
-            </p>
           ) : (
-            <ul className="detail__seuils">
-              {seuils.map((seuil) => (
-                <li key={seuil.id}>
-                  <p className="detail__seuil-intitule">
-                    {/* Valeurs contraintes par le schéma : 'au_dessus' ou 'en_dessous'.
-                        Elles se lisent dans backend/db/schema.sql. */}
-                    {seuil.sens_seuil === 'au_dessus' ? 'Au-dessus de' : 'En dessous de'}{' '}
-                    <Montant valeur={afficher(seuil.valeur_seuil)} devise={devise} />
-                    {seuil.statut === 'declenchee' && (
-                      <span className="detail__seuil-franchi">franchi</span>
-                    )}
-                  </p>
-                  <BarreProgression
-                    valeur={afficher(position.cours_eur)}
-                    cible={afficher(seuil.valeur_seuil)}
-                    devise={devise}
-                    sens={seuil.sens_seuil}
-                    atteint={seuil.statut === 'declenchee'}
-                    libelle={`Progression vers le seuil de ${position.symbole}`}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <div className="detail__seuils-outils">
+                <Bouton variante="secondaire" onClick={() => seuilFeuille.ouvrir(position.id)}>
+                  + Seuil
+                </Bouton>
+              </div>
+
+              {seuils.length === 0 ? (
+                <p className="detail__sans-seuil">
+                  Aucun seuil ne surveille cette position.
+                </p>
+              ) : (
+                <ul className="detail__seuils">
+                  {seuils.map((seuil) => (
+                    <li key={seuil.id}>
+                      <p className="detail__seuil-intitule">
+                        {/* Valeurs contraintes par le schéma : 'au_dessus' ou 'en_dessous'.
+                            Elles se lisent dans backend/db/schema.sql. */}
+                        {seuil.sens_seuil === 'au_dessus' ? 'Au-dessus de' : 'En dessous de'}{' '}
+                        {masque ? (
+                          <span aria-label="Montant masqué">••••</span>
+                        ) : (
+                          <Montant valeur={afficher(seuil.valeur_seuil)} devise={devise} />
+                        )}
+                        {seuil.statut === 'declenchee' && (
+                          <span className="detail__seuil-franchi">franchi</span>
+                        )}
+                      </p>
+                      <BarreProgression
+                        valeur={afficher(position.cours_eur)}
+                        cible={afficher(seuil.valeur_seuil)}
+                        devise={devise}
+                        masque={masque}
+                        sens={seuil.sens_seuil}
+                        atteint={seuil.statut === 'declenchee'}
+                        libelle={`Progression vers le seuil de ${position.symbole}`}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </div>
       </Carte>
@@ -504,6 +522,25 @@ export default function DetailPosition() {
           surFermeture={mouvement.fermer}
           surEnregistrement={({ resume }) => {
             mouvement.fermer();
+            setConfirmation(resume);
+            charger();
+          }}
+        />
+      )}
+
+      {/* Même principe que la feuille de mouvement ci-dessus : l'écran de détail ne
+          connaît qu'une position, donc qu'une cible possible. Le sélecteur de
+          patrimoine total est retiré (spécification E4, « Création d'un seuil
+          pré-réglée sur cet actif ») plutôt que de charger la valeur totale du
+          patrimoine pour cette seule occasion. */}
+      {seuilFeuille.ouvert && (
+        <FeuilleSeuil
+          actifs={[position]}
+          permettrePatrimoineTotal={false}
+          cibleInitiale={seuilFeuille.cibleInitiale}
+          surFermeture={seuilFeuille.fermer}
+          surEnregistrement={({ resume }) => {
+            seuilFeuille.fermer();
             setConfirmation(resume);
             charger();
           }}

@@ -83,16 +83,26 @@ export default function FeuilleSeuil({
   actifs = [],
   capitalTotal = '0',
   cibleInitiale = 'capital_total',
+  // Faux depuis l'écran de détail d'une position (E4) : celui-ci ne connaît qu'un
+  // actif et ne charge pas la valeur totale du patrimoine. Retirer l'option évite
+  // d'afficher une valeur actuelle trompeuse (zéro) si elle était sélectionnée, sans
+  // pour autant obliger l'écran de détail à charger le portefeuille pour cette seule
+  // occasion.
+  permettrePatrimoineTotal = true,
   surFermeture,
   surEnregistrement,
 }) {
   const { jeton } = useAuthentification();
   const identifiant = useId();
 
-  const cibleInitialeValide =
+  const cibleCorrespondACetActif =
     cibleInitiale !== 'capital_total' &&
-    actifs.some((position) => String(position.id) === String(cibleInitiale))
-      ? `actif:${cibleInitiale}`
+    actifs.some((position) => String(position.id) === String(cibleInitiale));
+
+  const cibleInitialeValide = cibleCorrespondACetActif
+    ? `actif:${cibleInitiale}`
+    : !permettrePatrimoineTotal && actifs.length > 0
+      ? `actif:${actifs[0].id}`
       : 'capital_total';
 
   const [cible, setCible] = useState(cibleInitialeValide);
@@ -185,7 +195,9 @@ export default function FeuilleSeuil({
             onChange={(evenement) => setCible(evenement.target.value)}
             disabled={envoi}
           >
-            <option value="capital_total">Patrimoine total</option>
+            {permettrePatrimoineTotal && (
+              <option value="capital_total">Patrimoine total</option>
+            )}
             {actifs.map((position) => (
               <option key={position.id} value={`actif:${position.id}`}>
                 {position.nom} — {position.symbole} ({LIBELLES_CLASSE[position.type]})
