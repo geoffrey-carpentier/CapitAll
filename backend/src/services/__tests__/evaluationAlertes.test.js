@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluerAlertes, estFranchi, ecartRestant } from '../evaluationAlertes.js';
+import { evaluerAlertes, estFranchi, ecartRestant, valeurObservee } from '../evaluationAlertes.js';
 
 function alerteActif(sensSeuil, valeurSeuil, { id = 1, actifId = 10, statut = 'active' } = {}) {
   return {
@@ -173,6 +173,13 @@ describe('écart restant avant franchissement (E6)', () => {
     expect(ecartRestant('au_dessus', '65000.00', '65000.00')).toBe('0');
   });
 
+  // Même règle côté seuil bas : la revue a signalé que seul le sens au-dessus était
+  // couvert par le cas précédent.
+  it('rend zéro quand un seuil bas est déjà franchi', () => {
+    expect(ecartRestant('en_dessous', '45000.00', '50000.00')).toBe('0');
+    expect(ecartRestant('en_dessous', '50000.00', '50000.00')).toBe('0');
+  });
+
   it('rend null quand la valeur observée est indisponible', () => {
     expect(ecartRestant('au_dessus', null, '65000.00')).toBeNull();
     expect(ecartRestant('au_dessus', undefined, '65000.00')).toBeNull();
@@ -182,5 +189,44 @@ describe('écart restant avant franchissement (E6)', () => {
   // performances) : la valeur ne perd jamais ses zéros de fin, contrairement à un montant.
   it('reste exact sur des valeurs à décimales, à deux décimales fixes', () => {
     expect(ecartRestant('au_dessus', '0.3', '0.33')).toBe('10.00');
+  });
+
+  // Un seuil à 0 est impossible en pratique (le schéma Zod exige une valeur strictement
+  // positive à la création), mais la fonction ne doit pas se comporter n'importe comment
+  // si elle en reçoit un malgré tout. La division porte sur la valeur observée, jamais
+  // sur le seuil : aucune division par zéro ne peut se produire de ce côté-là.
+  it('reste défini sur un seuil à zéro, sans franchissement au sens bas', () => {
+    expect(ecartRestant('en_dessous', '100.00', '0')).toBe('100.00');
+  });
+});
+
+describe('valeur observée (E6)', () => {
+  it('rend le capital total pour une alerte sur le capital total', () => {
+    const alerte = { type_cible: 'capital_total' };
+    expect(valeurObservee(alerte, { capitalTotal: '58566.64', coursParActif: {} })).toBe(
+      '58566.64'
+    );
+  });
+
+  it('rend le cours de la cible pour une alerte sur un actif', () => {
+    const alerte = { type_cible: 'actif', actif_id: 10 };
+    expect(
+      valeurObservee(alerte, { capitalTotal: '0', coursParActif: { 10: '70000.00' } })
+    ).toBe('70000.00');
+  });
+
+  // Le cours indisponible est le cas normal d'un actif sans fournisseur joignable :
+  // la valeur observée est alors absente, jamais une valeur inventée.
+  it("rend null quand l'actif est absent de la table des cours", () => {
+    const alerte = { type_cible: 'actif', actif_id: 99 };
+    expect(valeurObservee(alerte, { capitalTotal: '0', coursParActif: {} })).toBeNull();
+  });
+
+  // Distinct du cas précédent : ici la clé existe mais porte une chaîne vide. `??` ne
+  // la remplace pas, contrairement à `undefined` ; c'est `ecartRestant`, en aval, qui
+  // traite cette chaîne vide comme une valeur indisponible.
+  it("rend la chaîne vide telle quelle quand le cours de l'actif est vide", () => {
+    const alerte = { type_cible: 'actif', actif_id: 10 };
+    expect(valeurObservee(alerte, { capitalTotal: '0', coursParActif: { 10: '' } })).toBe('');
   });
 });
