@@ -132,6 +132,12 @@ export default function Seuils() {
 
   const taux = portefeuille?.taux_affichage?.eur_vers_usd ?? null;
 
+  // Sans taux, afficher() rend déjà la valeur en euros (garde ci-dessous) : le symbole
+  // montré doit retomber sur l'euro lui aussi, pour ne jamais écrire un montant en
+  // euros avec un symbole dollar. Cas étroit (échec du taux avec une préférence déjà
+  // en dollars) mais propre à cet écran, seul à survivre à l'échec du portefeuille.
+  const deviseAffichee = taux ? devise : 'EUR';
+
   // Conversion à l'affichage seulement, comme sur les trois autres écrans : les
   // montants restent en euros dans les données, seule la présentation change (D43).
   const afficher = useCallback(
@@ -271,7 +277,7 @@ export default function Seuils() {
                           {masque ? (
                             <span aria-label="Montant masqué">••••</span>
                           ) : (
-                            <Montant valeur={afficher(seuil.valeur_seuil)} devise={devise} />
+                            <Montant valeur={afficher(seuil.valeur_seuil)} devise={deviseAffichee} />
                           )}
                         </p>
                         <p className="seuils__sous-texte">
@@ -317,7 +323,7 @@ export default function Seuils() {
                           {masque ? (
                             <span aria-label="Montant masqué">••••</span>
                           ) : (
-                            <Montant valeur={afficher(seuil.valeur_seuil)} devise={devise} />
+                            <Montant valeur={afficher(seuil.valeur_seuil)} devise={deviseAffichee} />
                           )}
                         </p>
                         {/* Un pourcentage, jamais converti ni masqué, au même titre que
@@ -334,7 +340,7 @@ export default function Seuils() {
                     <BarreProgression
                       valeur={afficher(seuil.valeur_observee)}
                       cible={afficher(seuil.valeur_seuil)}
-                      devise={devise}
+                      devise={deviseAffichee}
                       masque={masque}
                       sens={seuil.sens_seuil}
                       libelle={`Progression vers le seuil, ${nomCible(seuil)}`}
@@ -371,7 +377,7 @@ export default function Seuils() {
               {masque ? (
                 <span aria-label="Montant masqué">••••</span>
               ) : (
-                formaterMontant(afficher(aRetirer.valeur_seuil), { symbole: symboleDevise(devise) })
+                formaterMontant(afficher(aRetirer.valeur_seuil), { symbole: symboleDevise(deviseAffichee) })
               )}{' '}
               ne surveillera plus rien. Vous pourrez en recréer un si besoin.
             </>

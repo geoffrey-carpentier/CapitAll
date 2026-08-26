@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import Seuils from '../Seuils';
 import * as contexte from '../../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../../services/api';
+import { CLE_DEVISE } from '../../utils/preferences';
 
 // L'écran est testé sur ses règles de comportement : les deux groupes, l'écart restant
 // affiché en toutes lettres et non seulement par la barre, le retrait, et l'ouverture de
@@ -214,6 +215,21 @@ describe('préférences d’affichage globales (D83)', () => {
     // Un pourcentage n'est jamais masqué, au même titre que les autres écrans.
     expect(screen.getByText(/reste/)).toBeTruthy();
     expect(screen.getByText(/6,1/)).toBeTruthy();
+  });
+
+  // Cas signalé en revue : le taux peut manquer (échec du chargement du portefeuille)
+  // alors qu'une préférence en dollars a été mémorisée sur un autre écran. afficher()
+  // rend déjà la valeur en euros dans ce cas ; c'est le symbole qui doit suivre, sous
+  // peine d'écrire un montant en euros avec un signe dollar.
+  it("retombe sur l'euro quand le taux est indisponible, même préféré en dollars", async () => {
+    window.sessionStorage.setItem(CLE_DEVISE, 'USD');
+    api.portefeuille.mockRejectedValue(new Error('indisponible'));
+
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    expect((await screen.findAllByText(/65.000 €/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/76.043,5/)).toBeNull();
   });
 
   it('masque également le montant du seuil dans le dialogue de retrait', async () => {
