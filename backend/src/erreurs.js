@@ -11,9 +11,16 @@ class ErreurMetier extends Error {
 }
 
 // Règle de gestion non respectée, au-delà de la simple forme des données.
+//
+// Le second paramètre, facultatif, rattache l'erreur à un ou plusieurs champs du
+// formulaire, au format exact que produit déjà le middleware de validation :
+// [{ champ, message }]. Il sert aux règles qu'un schéma ne peut pas trancher seul
+// parce qu'elles demandent la base — un ancien mot de passe à comparer, par exemple.
+// Sans lui, l'interface ne saurait que signaler l'erreur en tête de formulaire.
 class ErreurValidation extends ErreurMetier {
-  constructor(message) {
+  constructor(message, champs = null) {
     super(message, 400);
+    this.champs = champs;
   }
 }
 

@@ -22,6 +22,25 @@ async function listerParActifEtUtilisateur(actifId, utilisateurId) {
   return rows;
 }
 
+// Tous les mouvements d'un compte, actifs confondus, pour l'export. Le symbole et la
+// classe de l'actif sont joints ici plutôt que rapportés ensuite : la jointure est déjà
+// nécessaire au cloisonnement, et les demander à part multiplierait les requêtes.
+//
+// Ordre chronologique ascendant, à la différence de la lecture par actif ci-dessus qui
+// sert une frise antéchronologique. C'est l'ordre du domaine, celui de la règle 6 de
+// D54 : les mouvements se lisent dans l'ordre où ils ont produit leurs effets.
+async function listerParUtilisateur(utilisateurId) {
+  const { rows } = await query(
+    `SELECT ${CHAMPS}, a.symbole, a.type AS classe
+     FROM transaction t
+     JOIN actif a ON a.id = t.actif_id
+     WHERE a.utilisateur_id = $1
+     ORDER BY t.date_transaction ASC, t.id ASC`,
+    [utilisateurId]
+  );
+  return rows;
+}
+
 // L'insertion est filtrée de la même façon : le SELECT qui alimente l'INSERT ne rend
 // une ligne que si l'actif appartient bien au demandeur. Si ce n'est pas le cas,
 // aucune ligne n'est insérée et la fonction rend null.
@@ -50,4 +69,4 @@ async function supprimer(id, actifId, utilisateurId) {
   return rowCount > 0;
 }
 
-module.exports = { listerParActifEtUtilisateur, creer, supprimer };
+module.exports = { listerParActifEtUtilisateur, listerParUtilisateur, creer, supprimer };

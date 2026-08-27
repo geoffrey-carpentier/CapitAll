@@ -102,6 +102,10 @@ const service = creerServiceAuthentification();
 
 module.exports = {
   creerServiceAuthentification,
+  // Le coût de hachage est exporté pour que le changement de mot de passe applique
+  // exactement le même que l'inscription : deux valeurs distinctes produiraient des
+  // hachages de robustesse inégale selon la façon dont le compte a été créé.
+  COUT_HACHAGE,
   inscrire: service.inscrire,
   connecter: service.connecter,
 };
