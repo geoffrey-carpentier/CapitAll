@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluerAlertes, estFranchi } from '../evaluationAlertes.js';
+import { evaluerAlertes, estFranchi, ecartRestant, valeurObservee } from '../evaluationAlertes.js';
 
 function alerteActif(sensSeuil, valeurSeuil, { id = 1, actifId = 10, statut = 'active' } = {}) {
   return {
@@ -152,5 +152,90 @@ describe('évaluation des alertes', () => {
     expect(franchissement.valeur_seuil).toBe('45000.00');
     expect(franchissement.valeur_observee).toBe('58566.64');
     expect(franchissement.sens_seuil).toBe('au_dessus');
+  });
+});
+
+describe('écart restant avant franchissement (E6)', () => {
+  // 65 000 - 61 240 rapporté à 61 240 : la hausse qu'il reste à faire depuis le cours
+  // actuel, et non depuis le seuil.
+  it('rend la hausse restante pour un seuil haut pas encore atteint', () => {
+    expect(ecartRestant('au_dessus', '61240.00', '65000.00')).toBe('6.14');
+  });
+
+  it('rend la baisse restante pour un seuil bas pas encore atteint', () => {
+    expect(ecartRestant('en_dessous', '2627.32', '2200.00')).toBe('16.26');
+  });
+
+  // Une valeur déjà au-delà du seuil, dans le sens qui le franchit, rend 0 et non un
+  // nombre négatif, qui n'aurait pas de sens pour un écart restant.
+  it('rend zéro quand le seuil est déjà franchi', () => {
+    expect(ecartRestant('au_dessus', '70000.00', '65000.00')).toBe('0');
+    expect(ecartRestant('au_dessus', '65000.00', '65000.00')).toBe('0');
+  });
+
+  // Même règle côté seuil bas : la revue a signalé que seul le sens au-dessus était
+  // couvert par le cas précédent.
+  it('rend zéro quand un seuil bas est déjà franchi', () => {
+    expect(ecartRestant('en_dessous', '45000.00', '50000.00')).toBe('0');
+    expect(ecartRestant('en_dessous', '50000.00', '50000.00')).toBe('0');
+  });
+
+  it('rend null quand la valeur observée est indisponible', () => {
+    expect(ecartRestant('au_dessus', null, '65000.00')).toBeNull();
+    expect(ecartRestant('au_dessus', undefined, '65000.00')).toBeNull();
+  });
+
+  // Distinct du seuil à zéro testé plus haut : ici c'est la valeur OBSERVÉE qui vaut
+  // zéro. Le calcul divise par cette valeur (le pourcentage restant est rapporté au
+  // cours actuel) : la diviser par zéro serait indéfini, la fonction rend donc null
+  // plutôt qu'un résultat inventé.
+  it('rend null quand la valeur observée vaut zéro', () => {
+    expect(ecartRestant('au_dessus', '0', '65000.00')).toBeNull();
+    expect(ecartRestant('en_dessous', '0.00', '10.00')).toBeNull();
+  });
+
+  // Deux décimales fixes, comme tout pourcentage rendu par le serveur (pourcentage_variation,
+  // performances) : la valeur ne perd jamais ses zéros de fin, contrairement à un montant.
+  it('reste exact sur des valeurs à décimales, à deux décimales fixes', () => {
+    expect(ecartRestant('au_dessus', '0.3', '0.33')).toBe('10.00');
+  });
+
+  // Un seuil à 0 est impossible en pratique (le schéma Zod exige une valeur strictement
+  // positive à la création), mais la fonction ne doit pas se comporter n'importe comment
+  // si elle en reçoit un malgré tout. La division porte sur la valeur observée, jamais
+  // sur le seuil : aucune division par zéro ne peut se produire de ce côté-là.
+  it('reste défini sur un seuil à zéro, sans franchissement au sens bas', () => {
+    expect(ecartRestant('en_dessous', '100.00', '0')).toBe('100.00');
+  });
+});
+
+describe('valeur observée (E6)', () => {
+  it('rend le capital total pour une alerte sur le capital total', () => {
+    const alerte = { type_cible: 'capital_total' };
+    expect(valeurObservee(alerte, { capitalTotal: '58566.64', coursParActif: {} })).toBe(
+      '58566.64'
+    );
+  });
+
+  it('rend le cours de la cible pour une alerte sur un actif', () => {
+    const alerte = { type_cible: 'actif', actif_id: 10 };
+    expect(
+      valeurObservee(alerte, { capitalTotal: '0', coursParActif: { 10: '70000.00' } })
+    ).toBe('70000.00');
+  });
+
+  // Le cours indisponible est le cas normal d'un actif sans fournisseur joignable :
+  // la valeur observée est alors absente, jamais une valeur inventée.
+  it("rend null quand l'actif est absent de la table des cours", () => {
+    const alerte = { type_cible: 'actif', actif_id: 99 };
+    expect(valeurObservee(alerte, { capitalTotal: '0', coursParActif: {} })).toBeNull();
+  });
+
+  // Distinct du cas précédent : ici la clé existe mais porte une chaîne vide. `??` ne
+  // la remplace pas, contrairement à `undefined` ; c'est `ecartRestant`, en aval, qui
+  // traite cette chaîne vide comme une valeur indisponible.
+  it("rend la chaîne vide telle quelle quand le cours de l'actif est vide", () => {
+    const alerte = { type_cible: 'actif', actif_id: 10 };
+    expect(valeurObservee(alerte, { capitalTotal: '0', coursParActif: { 10: '' } })).toBe('');
   });
 });

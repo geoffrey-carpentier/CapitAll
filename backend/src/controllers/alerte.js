@@ -1,7 +1,9 @@
 // Contrôleurs des alertes. Le propriétaire vient toujours du jeton : aucune de ces
 // routes n'accepte d'identifiant d'utilisateur en entrée.
 
-const serviceAlerte = require('../services/alerte');
+const { creerServiceAlerte } = require('../services/alerte');
+
+const serviceAlerte = creerServiceAlerte();
 
 async function lister(req, res, next) {
   try {

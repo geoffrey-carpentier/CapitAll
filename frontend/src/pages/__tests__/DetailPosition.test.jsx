@@ -509,3 +509,67 @@ describe('saisie d’un mouvement', () => {
   });
 });
 
+// Spécification E4, section Interactions : « Création d'un seuil pré-réglée sur cet
+// actif. » L'écran de détail ne connaît qu'une position : la feuille s'ouvre restreinte
+// à elle, sans proposer le patrimoine total, dont la valeur n'est pas chargée ici (D83).
+describe('saisie d’un seuil depuis l’onglet Seuils', () => {
+  async function ouvrirOngletSeuils(utilisateur) {
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+    await utilisateur.click(screen.getByRole('tab', { name: /Seuils/ }));
+  }
+
+  it('propose la création même quand des seuils existent déjà', async () => {
+    const utilisateur = userEvent.setup();
+    await ouvrirOngletSeuils(utilisateur);
+
+    expect(screen.getByRole('button', { name: '+ Seuil' })).toBeTruthy();
+  });
+
+  it('propose la création sur une position sans aucun seuil', async () => {
+    api.alertes.mockResolvedValue([]);
+    const utilisateur = userEvent.setup();
+    await ouvrirOngletSeuils(utilisateur);
+
+    expect(screen.getByText('Aucun seuil ne surveille cette position.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '+ Seuil' })).toBeTruthy();
+  });
+
+  it('ouvre la feuille déjà réglée sur la position, sans option de patrimoine total', async () => {
+    const utilisateur = userEvent.setup();
+    await ouvrirOngletSeuils(utilisateur);
+
+    await utilisateur.click(screen.getByRole('button', { name: '+ Seuil' }));
+
+    expect(screen.getByRole('dialog', { name: 'Nouveau seuil — Bitcoin (BTC)' })).toBeTruthy();
+    expect(screen.getByLabelText('Cible').value).toBe('actif:1');
+    const options = within(screen.getByLabelText('Cible')).getAllByRole('option');
+    expect(options.map((option) => option.value)).not.toContain('capital_total');
+  });
+
+  it('recharge la fiche et confirme après la création du seuil', async () => {
+    vi.spyOn(api, 'creerAlerte').mockResolvedValue({
+      id: 12,
+      utilisateur_id: 2,
+      actif_id: 1,
+      type_cible: 'actif',
+      sens_seuil: 'au_dessus',
+      valeur_seuil: '75000.00',
+      statut: 'active',
+      date_creation: '2026-08-26T10:00:00.000Z',
+      date_declenchement: null,
+    });
+
+    const utilisateur = userEvent.setup();
+    await ouvrirOngletSeuils(utilisateur);
+
+    await utilisateur.click(screen.getByRole('button', { name: '+ Seuil' }));
+    await utilisateur.type(screen.getByLabelText(/^Seuil de déclenchement/), '75000');
+    await utilisateur.click(screen.getByRole('button', { name: 'Créer le seuil' }));
+
+    expect(await screen.findByText(/Seuil créé pour Bitcoin \(BTC\)/)).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(api.actif).toHaveBeenCalledTimes(2);
+  });
+});
+

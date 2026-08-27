@@ -132,6 +132,12 @@
   padding: var(--espace-4) var(--espace-4) var(--espace-6);
 }
 
+.detail__seuils-outils {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--espace-3);
+}
+
 .detail__seuils {
   list-style: none;
   margin: 0;

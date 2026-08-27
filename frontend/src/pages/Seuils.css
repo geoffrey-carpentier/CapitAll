@@ -1,0 +1,111 @@
+.seuils {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-6);
+}
+
+.seuils__entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+}
+
+.seuils__titre {
+  margin: 0;
+  font-size: var(--taille-titre);
+}
+
+.seuils__outils {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.seuils__groupe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+/* Le groupe des seuils franchis est annoncé par un titre de section, pas seulement par
+   une couleur : la structure porte l'information autant que la teinte. */
+.seuils__titre-groupe {
+  margin: 0;
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.seuils__liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seuils__carte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+/* La progression justifie une frontière visuelle propre (spécification E6) : le
+   contour reprend la couleur d'avertissement, déjà réservée par D70 à un état qui
+   demande un regard. */
+.seuils__carte--franchi {
+  border-color: var(--couleur-avertissement);
+}
+
+.seuils__ligne {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-3);
+}
+
+.seuils__intitule {
+  flex: 1;
+  min-width: 0;
+}
+
+.seuils__nom {
+  margin: 0;
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-forte);
+}
+
+.seuils__sous-texte {
+  margin: var(--espace-1) 0 0;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.seuils__puce-franchi {
+  flex: none;
+  padding: var(--espace-1) var(--espace-2);
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  color: var(--couleur-avertissement);
+  background: rgba(227, 179, 65, 0.16);
+  border-radius: var(--rayon-pilule);
+}
+
+.seuils__retrait {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 var(--espace-2);
+  font-family: var(--police);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.seuils__retrait:hover {
+  color: var(--couleur-negatif);
+}

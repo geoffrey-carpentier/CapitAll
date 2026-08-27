@@ -18,7 +18,7 @@ import './Coquille.css';
 const ENTREES = [
   { chemin: '/patrimoine', libelle: 'Patrimoine', symbole: '◫', disponible: true },
   { chemin: '/positions', libelle: 'Positions', symbole: '◈', disponible: true },
-  { chemin: '/seuils', libelle: 'Seuils', symbole: '△', disponible: false },
+  { chemin: '/seuils', libelle: 'Seuils', symbole: '△', disponible: true },
   { chemin: '/compte', libelle: 'Compte', symbole: '◉', disponible: false },
 ];
 

@@ -116,5 +116,13 @@ export const api = {
     }),
   supprimerTransaction: (jeton, actifId, transactionId) =>
     requete(`/actifs/${actifId}/transactions/${transactionId}`, { methode: 'DELETE', jeton }),
+  // Chaque alerte revient enrichie de la valeur actuellement observée sur sa cible et
+  // de l'écart restant avant franchissement, en pourcentage : deux valeurs dérivées
+  // d'un montant, calculées par le serveur et non recalculées ici (D69).
   alertes: (jeton) => requete('/alertes', { jeton }),
+  creerAlerte: (jeton, donnees) => requete('/alertes', { methode: 'POST', corps: donnees, jeton }),
+  // Seule la désactivation est exposée par le contrat : c'est la seule mutation de
+  // statut qu'accepte le schéma de validation du serveur.
+  desactiverAlerte: (jeton, id) =>
+    requete(`/alertes/${id}`, { methode: 'PATCH', corps: { statut: 'desactivee' }, jeton }),
 };
