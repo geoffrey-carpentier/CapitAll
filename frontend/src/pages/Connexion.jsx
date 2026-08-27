@@ -19,6 +19,11 @@ export default function Connexion() {
   // Route demandée avant la redirection vers la connexion, le cas échéant.
   const destination = emplacement.state?.depuis ?? '/patrimoine';
 
+  // Message laissé par l'écran d'où l'on vient, aujourd'hui la suppression du compte :
+  // sans lui, la disparition du compte se solderait par un retour silencieux au
+  // formulaire, impossible à distinguer d'une déconnexion ordinaire.
+  const messageArrivee = emplacement.state?.message ?? null;
+
   if (estConnecte) {
     return <Navigate to={destination} replace />;
   }
@@ -49,7 +54,8 @@ export default function Connexion() {
 
         {/* Le jeton ne vit qu'en mémoire : une session expirée ramène ici. Le dire
             explicitement évite que la reconnexion passe pour une anomalie. */}
-        {sessionExpiree && !erreur && (
+        {messageArrivee && <Message variante="information">{messageArrivee}</Message>}
+        {sessionExpiree && !erreur && !messageArrivee && (
           <Message variante="information">
             Votre session a expiré. Reconnectez-vous pour retrouver vos données.
           </Message>

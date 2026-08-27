@@ -44,4 +44,6 @@ const schemaConnexion = z
   })
   .strict();
 
-module.exports = { schemaInscription, schemaConnexion };
+// motDePasse est exporté pour que le changement de mot de passe (validation/compte.js)
+// applique exactement la même règle de longueur qu'à l'inscription, sans la recopier.
+module.exports = { schemaInscription, schemaConnexion, motDePasse };

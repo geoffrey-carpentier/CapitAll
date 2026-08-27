@@ -96,7 +96,8 @@ Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
 - En tant qu'utilisateur inscrit, je veux me connecter, afin de retrouver mon portefeuille. Contraintes : message d'échec strictement générique, ne révélant jamais si c'est l'adresse ou le mot de passe qui est en cause ; soumission verrouillée pendant l'appel réseau.
 - En tant qu'utilisateur connecté, je veux consulter les informations de mon compte, afin de vérifier mon identité applicative.
 - En tant qu'utilisateur connecté, je veux changer mon mot de passe, afin de préserver la sécurité de mon compte. Contraintes : l'ancien mot de passe est exigé, le nouveau respecte les mêmes règles qu'à l'inscription, la session en cours n'est pas invalidée.
-- En tant qu'utilisateur connecté, je veux supprimer mon compte, afin d'exercer mon droit à l'effacement. Contraintes : confirmation par le mot de passe, suppression en cascade des actifs, transactions, alertes et instantanés, opération irréversible et annoncée comme telle.
+- En tant qu'utilisateur connecté, je veux supprimer mon compte, afin d'exercer mon droit à l'effacement. Contraintes : confirmation par le mot de passe, vérifiée par le serveur et non par la seule interface, suppression en cascade des actifs, transactions, alertes et instantanés, opération irréversible et annoncée comme telle.
+- En tant qu'utilisateur connecté, je veux exporter mes mouvements dans un fichier, afin de les conserver ou de les exploiter hors de l'application. Contraintes : la totalité des mouvements du compte, format CSV lisible par un tableur, valeurs brutes sans mise en forme, aucun mouvement d'un autre compte accessible. Il ne s'agit pas d'un export fiscal, qui reste hors périmètre.
 - En tant qu'utilisateur connecté, je veux choisir la devise d'affichage et masquer les montants, afin d'adapter la consultation à mon contexte.
 
 ### 4.2 Gestion des actifs
@@ -272,7 +273,8 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 | POST | `/api/auth/inscription` | public | création de compte | 201, 400, 409 |
 | POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401, 403 |
 | PATCH | `/api/compte/mot-de-passe` | authentifié | changement de mot de passe, ancien exigé | 204, 400, 401 |
-| DELETE | `/api/compte` | authentifié | suppression du compte et de ses données | 204, 401 |
+| DELETE | `/api/compte` | authentifié | suppression du compte et de ses données, mot de passe de confirmation exigé | 204, 400, 401 |
+| GET | `/api/compte/export-mouvements` | authentifié | export CSV de tous les mouvements du compte (D84) | 200, 401 |
 | GET | `/api/auth/moi` | authentifié | informations du compte courant | 200, 401 |
 | GET | `/api/actifs` | authentifié | liste des actifs suivis | 200, 401 |
 | POST | `/api/actifs` | authentifié | création d'un actif suivi | 201, 400, 401, 409 |
@@ -296,7 +298,7 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 
 Les routes d'administration renvoient 403 et non 404 : contrairement au cloisonnement entre utilisateurs, il n'y a ici aucun intérêt à masquer l'existence de la ressource, et un refus explicite est plus clair.
 
-**Statut à la date de cette version.** Les routes d'authentification, d'actifs, de transactions, de portefeuille et d'alertes sont développées et vérifiées. Les six routes d'annonces et d'administration constituent des engagements du présent cahier des charges, non encore développés à la date de la version 2.0. Ce tableau décrit la cible contractuelle du produit, l'état d'avancement relevant du suivi de projet.
+**Statut à la date de cette version.** Les routes d'authentification, de compte, d'actifs, de transactions, de portefeuille et d'alertes sont développées et vérifiées. Les six routes d'annonces et d'administration constituent des engagements du présent cahier des charges, non encore développés à la date de la version 2.0. Ce tableau décrit la cible contractuelle du produit, l'état d'avancement relevant du suivi de projet.
 
 Les structures de données échangées par chaque point d'entrée seront documentées dans une collection d'appels rejouable, constituée au fil du développement et versionnée avec le projet.
 
