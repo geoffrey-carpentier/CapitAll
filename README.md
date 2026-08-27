@@ -65,20 +65,23 @@ Description détaillée : [architecture](docs/conception/architecture.md).
 | Brique | Choix | Version |
 |---|---|---|
 | Interface | React, Vite, React Router | React 18 |
-| Serveur | Node.js, Express | Node 20 |
+| Serveur | Node.js, Express | Node 20 ou plus en local, Node 22 dans l'image |
 | Base de données | PostgreSQL | 16 |
 | Cache | Redis | 7 |
 | Authentification | jsonwebtoken, bcrypt | jeton HS256, validité 2 h |
 | Validation | Zod | schémas partagés serveur et interface |
 | Graphiques | Recharts | anneau et courbe d'aire |
 | Tests | Vitest | tests unitaires des services, adaptateurs et validations |
-| Conteneurisation | Docker, Docker Compose | services de développement |
+| Conteneurisation | Docker, Docker Compose | services de développement et pile complète |
+| Service des fichiers | Nginx | 1.27, image de l'interface |
 
 ## Structure du dépôt
 
 ```
 backend/
-  db/            schéma SQL et jeu de données de démonstration
+  Dockerfile     image de l'API
+  db/            schéma SQL, migrations et jeu de données de démonstration
+    docker/      script d'initialisation joué par le conteneur PostgreSQL
   src/
     adaptateurs/ fournisseurs de cours, derrière une interface commune
     cache/       client Redis résilient
@@ -92,11 +95,19 @@ backend/
     utils/       arithmétique décimale exacte
     validation/  schémas d'entrée
 frontend/        application React
-docs/            cadrage, cahier des charges, conception, planning, conventions
-docker-compose.yml
+  Dockerfile     image de l'interface : compilation Vite, service par Nginx
+  nginx.conf     service des fichiers et relais des appels d'API
+docs/            cadrage, cahier des charges, conception, déploiement, planning, conventions
+docker-compose.yml             services de développement : PostgreSQL et Redis
+docker-compose.production.yml  pile complète : interface, API, PostgreSQL, Redis
 ```
 
 ## Démarrage rapide
+
+Deux façons de faire tourner l'application. Celle-ci monte l'environnement de
+développement, avec rechargement à chaud : la base et le cache sont en conteneur, l'API
+et l'interface tournent sur le poste. Pour faire tourner l'application entière en
+conteneurs, sans rien installer d'autre que Docker, voir la section suivante.
 
 **Prérequis** : Node.js 20 ou supérieur, Docker et Docker Compose.
 
@@ -125,19 +136,57 @@ Le port de PostgreSQL est paramétrable par `POSTGRES_PORT` dans le fichier `.en
 
 Le script de création exige un rôle propriétaire : il installe une extension et crée le rôle applicatif à moindre privilège utilisé ensuite par l'API.
 
+## Déploiement en conteneurs
+
+L'application entière — interface, API, base et cache — se monte par un second fichier de
+composition. Rien n'est installé sur la machine hôte en dehors de Docker.
+
+```bash
+cp .env.example .env
+# renseigner POSTGRES_PASSWORD, CAPITALL_APP_PASSWORD et JWT_SECRET
+
+docker compose -f docker-compose.production.yml up -d --build
+docker compose -f docker-compose.production.yml ps    # les quatre services "healthy"
+```
+
+L'application répond alors sur `http://localhost:8080`. C'est le seul port ouvert : la
+base, le cache et l'API ne sont joignables que depuis le réseau interne de la pile, et
+les appels du navigateur vers `/api` sont relayés vers l'API par le Nginx qui sert
+l'interface.
+
+Le premier démarrage crée la base et y joue le schéma puis le jeu de démonstration. Les
+démarrages suivants ne les rejouent pas : les données sont conservées dans un volume.
+
+```bash
+docker compose -f docker-compose.production.yml down      # arrête, conserve les données
+docker compose -f docker-compose.production.yml down -v   # arrête et supprime les données
+```
+
+Les deux piles portent des noms de projet distincts et peuvent tourner en même temps :
+démarrer celle-ci ne touche pas la base de développement.
+
+Procédure complète, redéploiement, migrations, sauvegarde et diagnostic :
+[déploiement](docs/deploiement.md).
+
 ## Configuration
 
 Deux fichiers d'environnement distincts, aucun n'étant versionné. Chacun dispose d'un modèle commenté.
 
-**`.env`** à la racine, consommé par Docker Compose :
+**`.env`** à la racine, consommé par Docker Compose. Les cinq premières valent pour les
+deux piles, les suivantes ne concernent que celle qui est indiquée :
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `POSTGRES_USER` | utilisateur de la base | aucun |
-| `POSTGRES_PASSWORD` | mot de passe | aucun |
-| `POSTGRES_DB` | nom de la base | aucun |
-| `POSTGRES_PORT` | port publié sur le poste | 5432 |
-| `REDIS_PORT` | port publié sur le poste | 6379 |
+| `POSTGRES_USER` | propriétaire de la base | aucun |
+| `POSTGRES_PASSWORD` | son mot de passe | aucun |
+| `POSTGRES_DB` | nom de la base, à laisser à `capitall` | aucun |
+| `POSTGRES_PORT` | port publié sur le poste (développement) | 5432 |
+| `REDIS_PORT` | port publié sur le poste (développement) | 6379 |
+| `CAPITALL_APP_PASSWORD` | mot de passe du rôle applicatif (pile complète) | aucun |
+| `JWT_SECRET` | secret de signature des jetons (pile complète) | aucun |
+| `JWT_EXPIRATION` | durée de validité des jetons (pile complète) | 2h |
+| `PORT_APPLICATION` | port publié sur le poste (pile complète) | 8080 |
+| `ORIGINE_AUTORISEE` | origine admise par l'API (pile complète) | http://localhost:8080 |
 
 **`backend/.env`**, consommé par l'API :
 
@@ -204,6 +253,7 @@ Tableau complet avec les codes de statut : [cahier des charges, section 8](docs/
 | [Cas d'utilisation](docs/conception/cas-utilisation.md) | acteurs et cas d'utilisation |
 | [Direction artistique](docs/conception/direction-artistique.md) | palette, typographie, écrans |
 | [Jeu d'essai](docs/jeu-essai-calculs.md) | déroulé détaillé du calcul du prix de revient et des plus-values |
+| [Déploiement](docs/deploiement.md) | mise en service en conteneurs, redéploiement, migrations, sauvegarde |
 | [Planning](docs/planning.md) | calendrier et jalons |
 | [Convention de commits](docs/convention-commits.md) | format des messages et flux de contribution |
 
