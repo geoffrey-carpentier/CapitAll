@@ -295,7 +295,7 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 **Cas d'utilisation.** Changer son mot de passe ; se déconnecter ; supprimer son compte ; régler l'affichage ; savoir d'où viennent les cours.
 
-**Structure.** Un seul écran, quatre sections, sans sous-navigation.
+**Structure.** Un seul écran, cinq sections, sans sous-navigation.
 
 *Compte.* Adresse électronique, pseudonyme, date d'inscription, rôle. Lecture seule au MVP.
 
@@ -303,15 +303,17 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 *Affichage.* Devise d'affichage euro ou dollar. Masquage des montants par défaut.
 
+*Données.* Export de la totalité des mouvements du compte au format CSV (D84). Portée intégrale, tous actifs confondus, sans filtre de période ni d'actif. Huit colonnes, dans cet ordre : `date`, `type`, `actif`, `classe`, `quantite`, `prix_unitaire`, `frais`, `montant`. La colonne `actif` porte le symbole, unique par compte, et non le nom. La colonne `montant` est la quantité multipliée par le prix unitaire, **frais exclus**, ceux-ci occupant leur propre colonne ; elle reprend la valeur produite par le moteur de calcul et n'est pas recalculée pour l'export (D69). Fichier UTF-8 avec marque d'ordre des octets, séparateur point-virgule, fin de ligne CRLF, dates en ISO 8601, nombres décimaux bruts à point, sans mise en forme : un fichier d'échange n'est pas un affichage. Lignes en ordre chronologique ascendant, tous actifs confondus, celui de la règle 6 de D54. Nom du fichier `capitall-mouvements-AAAA-MM-JJ.csv`.
+
 *À propos.* Version de l'application, sources de cours utilisées et leur fréquence de rafraîchissement, mention explicite que l'application ne fournit aucun conseil en investissement.
 
-**Composants.** `Champ`, `Bouton`, `BasculeDevise`, `MasquageMontants`, `Confirmation`, `MessageErreur`.
+**Composants.** `Champ`, `Bouton`, `Carte`, `BasculeDevise`, `MasquageMontants`, `Confirmation`, `Message`, `MessageErreur`.
 
-**Interactions.** Le changement de mot de passe exige l'ancien et n'invalide pas la session en cours. La suppression du compte demande une confirmation par saisie du mot de passe et énonce sans ambiguïté ce qui sera supprimé, positions, mouvements et seuils compris, et que l'opération est irréversible.
+**Interactions.** Le changement de mot de passe exige l'ancien et n'invalide pas la session en cours, le jeton étant signé sur l'identifiant et le rôle et jamais sur le mot de passe. La suppression du compte demande une confirmation par saisie du mot de passe et énonce sans ambiguïté ce qui sera supprimé, positions, mouvements et seuils compris, et que l'opération est irréversible. **Ce mot de passe est vérifié par le serveur** : contrôlé par la seule interface, il ne protégerait pas d'un appel direct porteur d'un jeton dérobé. L'export est obtenu par un appel authentifié puis remis à l'utilisateur depuis la page ; il ne peut pas être un simple lien, le jeton ne vivant qu'en mémoire (D57) et n'accompagnant pas une navigation du navigateur.
 
-**Impacts API, à créer.** `PATCH /api/compte/mot-de-passe` et `DELETE /api/compte`. Les données du compte proviennent de `GET /api/auth/moi`, déjà disponible.
+**Impacts API, à créer.** `PATCH /api/compte/mot-de-passe`, `DELETE /api/compte` (le mot de passe de confirmation est transmis dans le corps) et `GET /api/compte/export-mouvements`, seule route du service à ne pas répondre en JSON. Les données du compte proviennent de `GET /api/auth/moi`, déjà disponible.
 
-**États particuliers.** *Ancien mot de passe incorrect* : erreur sur le champ concerné, sans indication de tentatives restantes. *Suppression en cours* : formulaire verrouillé, puis déconnexion et retour à la connexion avec message de confirmation.
+**États particuliers.** *Ancien mot de passe incorrect* : erreur sur le champ concerné, sans indication de tentatives restantes. *Suppression en cours* : formulaire verrouillé, puis déconnexion et retour à la connexion avec message de confirmation. *Mot de passe de suppression incorrect* : erreur sur le champ du dialogue, le compte restant intact. *Compte sans aucun mouvement* : l'export produit un fichier réduit à sa ligne d'en-tête, un fichier vide laissant croire à un échec. *Export en échec* : message dans la section Données, sans quitter l'écran.
 
 **Accessibilité.** Les sections sont des `section` avec titre. Le dialogue de suppression capture le focus et ne présélectionne jamais le bouton destructeur. Les réglages d'affichage sont des interrupteurs à `aria-checked`, avec un libellé qui décrit l'état et non l'action.
 
