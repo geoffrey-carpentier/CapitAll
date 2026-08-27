@@ -8,6 +8,7 @@ import Patrimoine from './pages/Patrimoine';
 import Positions from './pages/Positions';
 import DetailPosition from './pages/DetailPosition';
 import Seuils from './pages/Seuils';
+import Compte from './pages/Compte';
 import Introuvable from './pages/Introuvable';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<DetailPosition />} />
             <Route path="/seuils" element={<Seuils />} />
+            <Route path="/compte" element={<Compte />} />
 
             {/* La saisie d'un mouvement est une feuille posée sur l'écran d'origine, et
                 non une page : elle n'a pas de route à elle. L'adresse reste toutefois

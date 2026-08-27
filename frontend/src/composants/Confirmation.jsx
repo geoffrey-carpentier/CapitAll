@@ -22,9 +22,13 @@ import Bouton from './Bouton';
 //
 // Échap annule. C'est le geste attendu de tout dialogue, et il doit rester la sortie la
 // moins coûteuse.
+// Certaines suppressions demandent une saisie avant d'être confirmées, la suppression
+// du compte au premier chef. Ce contenu se place après la conséquence, hors du
+// paragraphe qui la porte : un champ de formulaire n'a rien à faire dans un <p>.
 export default function Confirmation({
   titre,
   consequence,
+  children,
   libelleConfirmation = 'Supprimer',
   enCours = false,
   surConfirmation,
@@ -37,9 +41,10 @@ export default function Confirmation({
     // L'élément actif au moment de l'ouverture est le bouton qui a demandé la
     // suppression : c'est là que le focus doit revenir.
     declencheur.current = document.activeElement;
-    // Le premier bouton du dialogue est celui d'annulation : le focus y entre, et
-    // jamais sur le bouton destructeur.
-    dialogue.current?.querySelector('button')?.focus();
+    // Quand le dialogue porte une saisie, c'est elle qui reçoit le focus, l'utilisateur
+    // ayant quelque chose à taper. Sinon, c'est le premier bouton, celui d'annulation.
+    // Dans les deux cas le bouton destructeur, placé en dernier, ne le reçoit jamais.
+    dialogue.current?.querySelector('input, button')?.focus();
 
     return () => {
       declencheur.current?.focus?.();
@@ -59,7 +64,9 @@ export default function Confirmation({
 
     // Piège à focus : la tabulation boucle entre le premier et le dernier élément
     // atteignable du dialogue.
-    const atteignables = dialogue.current?.querySelectorAll('button:not([disabled])');
+    const atteignables = dialogue.current?.querySelectorAll(
+      'input:not([disabled]), button:not([disabled])'
+    );
     if (!atteignables || atteignables.length === 0) {
       return;
     }
@@ -96,6 +103,7 @@ export default function Confirmation({
         <p id="consequence-confirmation" className="confirmation__consequence">
           {consequence}
         </p>
+        {children}
         <div className="confirmation__actions">
           <Bouton variante="secondaire" onClick={surAnnulation} desactive={enCours}>
             Annuler

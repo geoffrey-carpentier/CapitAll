@@ -84,6 +84,49 @@ export async function requete(chemin, { methode = 'GET', corps, jeton } = {}) {
   );
 }
 
+// Le nom du fichier est porté par l'en-tête Content-Disposition. Il est produit par le
+// serveur à partir d'une date, jamais d'une saisie : il n'y a rien à assainir ici, mais
+// un repli reste prévu si l'en-tête venait à ne pas être lisible.
+function nomDeFichier(reponse, repli) {
+  const entete = reponse.headers.get('Content-Disposition') ?? '';
+  const trouve = entete.match(/filename="([^"]+)"/);
+  return trouve ? trouve[1] : repli;
+}
+
+// Récupération d'un fichier, là où requete() attend du JSON. Les deux partagent l'en-tête
+// d'autorisation, le traitement de la session perdue et la forme des erreurs ; seule la
+// lecture du corps diffère.
+//
+// Un simple lien vers l'adresse ne conviendrait pas : le jeton vit en mémoire (D57) et
+// n'accompagne pas une navigation du navigateur. Le fichier est donc demandé comme
+// n'importe quel appel authentifié, puis remis à l'utilisateur depuis la page.
+export async function requeteFichier(chemin, { jeton, nomParDefaut = 'export.csv' } = {}) {
+  let reponse;
+  try {
+    reponse = await fetch(`${BASE}${chemin}`, {
+      headers: jeton ? { Authorization: `Bearer ${jeton}` } : {},
+    });
+  } catch {
+    throw new ErreurApi('Le serveur est injoignable. Vérifiez votre connexion.', 0);
+  }
+
+  if (!reponse.ok) {
+    if (reponse.status === 401) {
+      surSessionPerdue?.();
+    }
+    // Un échec renvoie du JSON, même sur une route qui rend un fichier en cas de succès.
+    let donnees = null;
+    try {
+      donnees = await reponse.json();
+    } catch {
+      donnees = null;
+    }
+    throw new ErreurApi(donnees?.erreur ?? 'Une erreur est survenue.', reponse.status);
+  }
+
+  return { blob: await reponse.blob(), nomFichier: nomDeFichier(reponse, nomParDefaut) };
+}
+
 export const api = {
   inscription: (donnees) => requete('/auth/inscription', { methode: 'POST', corps: donnees }),
   connexion: (donnees) => requete('/auth/connexion', { methode: 'POST', corps: donnees }),
@@ -125,4 +168,13 @@ export const api = {
   // statut qu'accepte le schéma de validation du serveur.
   desactiverAlerte: (jeton, id) =>
     requete(`/alertes/${id}`, { methode: 'PATCH', corps: { statut: 'desactivee' }, jeton }),
+  // Le compte agit toujours sur le porteur du jeton : aucune de ces trois routes ne
+  // reçoit d'identifiant d'utilisateur, il n'y en a donc aucun à transmettre.
+  changerMotDePasse: (jeton, donnees) =>
+    requete('/compte/mot-de-passe', { methode: 'PATCH', corps: donnees, jeton }),
+  // Le mot de passe accompagne la suppression : c'est le serveur qui le vérifie, la
+  // confirmation devant résister à un appel direct et pas seulement au dialogue.
+  supprimerCompte: (jeton, donnees) => requete('/compte', { methode: 'DELETE', corps: donnees, jeton }),
+  exporterMouvements: (jeton) =>
+    requeteFichier('/compte/export-mouvements', { jeton, nomParDefaut: 'capitall-mouvements.csv' }),
 };
