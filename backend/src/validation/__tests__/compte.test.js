@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { schemaChangementMotDePasse } from '../compte.js';
+import { schemaChangementMotDePasse, schemaSuppressionCompte } from '../compte.js';
 
 function valider(donnees) {
   return schemaChangementMotDePasse.safeParse(donnees);
@@ -42,5 +42,34 @@ describe('changement de mot de passe (E7)', () => {
   // .strict() ferme la porte à toute clé inconnue, role compris (D23).
   it('rejette une clé inconnue', () => {
     expect(valider({ ...VALIDE, role: 'admin' }).success).toBe(false);
+  });
+});
+
+describe('suppression du compte (E7)', () => {
+  it('accepte un mot de passe de confirmation', () => {
+    expect(schemaSuppressionCompte.safeParse({ motDePasse: 'peu-importe' }).success).toBe(true);
+  });
+
+  it('refuse une suppression sans mot de passe', () => {
+    expect(schemaSuppressionCompte.safeParse({}).success).toBe(false);
+    expect(schemaSuppressionCompte.safeParse({ motDePasse: '' }).success).toBe(false);
+  });
+
+  it('rejette une clé inconnue', () => {
+    expect(
+      schemaSuppressionCompte.safeParse({ motDePasse: 'x', utilisateur_id: 1 }).success
+    ).toBe(false);
+  });
+});
+
+describe('messages en français', () => {
+  // Sans message explicite sur z.string, une clé absente produirait le libellé anglais
+  // par défaut de la bibliothèque, qui remonterait tel quel jusqu'à l'écran.
+  it('nomme en français une clé absente', () => {
+    const suppression = schemaSuppressionCompte.safeParse({});
+    expect(suppression.error.issues[0].message).toBe('Le mot de passe est obligatoire.');
+
+    const changement = schemaChangementMotDePasse.safeParse({ nouveauMotDePasse: 'assez-long-ok' });
+    expect(changement.error.issues[0].message).toBe("L'ancien mot de passe est obligatoire.");
   });
 });

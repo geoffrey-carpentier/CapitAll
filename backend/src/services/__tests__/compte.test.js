@@ -122,19 +122,43 @@ describe('changement de mot de passe (E7)', () => {
 });
 
 describe('suppression du compte (E7)', () => {
-  it('supprime le compte du porteur du jeton', async () => {
+  it('supprime le compte du porteur du jeton quand le mot de passe est confirmé', async () => {
     const { service, utilisateurs } = monter();
 
-    await service.supprimer({ utilisateurId: 7 });
+    await service.supprimer({ utilisateurId: 7, motDePasse: MOT_DE_PASSE });
 
     expect(utilisateurs.supprimer).toHaveBeenCalledWith(7);
     expect(utilisateurs.supprimer).toHaveBeenCalledTimes(1);
   });
 
+  // La confirmation par mot de passe est une barrière, pas un ornement d'interface :
+  // vérifiée ici, elle résiste à un appel direct porteur d'un jeton dérobé.
+  it('refuse la suppression et n’efface rien quand le mot de passe est faux', async () => {
+    const { service, utilisateurs } = monter();
+
+    const echec = await service
+      .supprimer({ utilisateurId: 7, motDePasse: 'ce-n-est-pas-le-bon' })
+      .catch((erreur) => erreur);
+
+    expect(echec.statut).toBe(400);
+    expect(echec.champs).toEqual([{ champ: 'motDePasse', message: 'Mot de passe incorrect.' }]);
+    expect(utilisateurs.supprimer).not.toHaveBeenCalled();
+  });
+
   it('rend 404 quand aucune ligne n’a été supprimée', async () => {
     const { service } = monter({ supprime: false });
 
-    await expect(service.supprimer({ utilisateurId: 7 })).rejects.toMatchObject({ statut: 404 });
+    await expect(
+      service.supprimer({ utilisateurId: 7, motDePasse: MOT_DE_PASSE })
+    ).rejects.toMatchObject({ statut: 404 });
+  });
+
+  it('rend 404 quand le porteur du jeton n’a plus de compte', async () => {
+    const { service } = monter({ utilisateur: null });
+
+    await expect(
+      service.supprimer({ utilisateurId: 7, motDePasse: MOT_DE_PASSE })
+    ).rejects.toMatchObject({ statut: 404 });
   });
 });
 

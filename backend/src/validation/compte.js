@@ -12,7 +12,11 @@ const { motDePasse } = require('./utilisateur');
 // changer précisément le mot de passe devenu trop court.
 const schemaChangementMotDePasse = z
   .object({
-    ancienMotDePasse: z.string().min(1, "L'ancien mot de passe est obligatoire."),
+    // Le message est donné à z.string autant qu'à min : sans lui, une clé absente
+    // produirait le message anglais par défaut de la bibliothèque.
+    ancienMotDePasse: z
+      .string("L'ancien mot de passe est obligatoire.")
+      .min(1, "L'ancien mot de passe est obligatoire."),
     nouveauMotDePasse: motDePasse,
   })
   .strict()
@@ -21,4 +25,15 @@ const schemaChangementMotDePasse = z
     path: ['nouveauMotDePasse'],
   });
 
-module.exports = { schemaChangementMotDePasse };
+// La suppression exige le mot de passe, et c'est le serveur qui le vérifie. Contrôlée
+// côté interface seulement, la confirmation ne protégerait de rien : un jeton dérobé
+// suffirait à supprimer le compte sans jamais connaître le mot de passe.
+const schemaSuppressionCompte = z
+  .object({
+    motDePasse: z
+      .string('Le mot de passe est obligatoire.')
+      .min(1, 'Le mot de passe est obligatoire.'),
+  })
+  .strict();
+
+module.exports = { schemaChangementMotDePasse, schemaSuppressionCompte };

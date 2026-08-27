@@ -19,7 +19,10 @@ async function changerMotDePasse(req, res, next) {
 
 async function supprimer(req, res, next) {
   try {
-    await serviceCompte.supprimer({ utilisateurId: req.utilisateur.id });
+    await serviceCompte.supprimer({
+      utilisateurId: req.utilisateur.id,
+      motDePasse: req.body.motDePasse,
+    });
     res.status(204).end();
   } catch (erreur) {
     next(erreur);

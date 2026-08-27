@@ -89,7 +89,24 @@ function creerServiceCompte({
     // changement, comme la spécification l'exige, sans traitement particulier.
   }
 
-  async function supprimer({ utilisateurId }) {
+  async function supprimer({ utilisateurId, motDePasse }) {
+    const utilisateur = await utilisateurs.trouverAvecHachageParId(utilisateurId);
+
+    if (!utilisateur) {
+      throw new ErreurIntrouvable('Utilisateur introuvable.');
+    }
+
+    // La confirmation par mot de passe est vérifiée ici, et non par l'interface : elle
+    // est la dernière barrière avant une suppression irréversible, et un jeton dérobé
+    // ne doit pas suffire à la franchir.
+    const valide = await bcrypt.compare(motDePasse, utilisateur.mot_de_passe_hache);
+
+    if (!valide) {
+      throw new ErreurValidation('Mot de passe incorrect.', [
+        { champ: 'motDePasse', message: 'Mot de passe incorrect.' },
+      ]);
+    }
+
     const supprime = await utilisateurs.supprimer(utilisateurId);
 
     if (!supprime) {
