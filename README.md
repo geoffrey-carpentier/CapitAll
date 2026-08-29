@@ -141,6 +141,13 @@ Le script de création exige un rôle propriétaire : il installe une extension 
 L'application entière — interface, API, base et cache — se monte par un second fichier de
 composition. Rien n'est installé sur la machine hôte en dehors de Docker.
 
+C'est une **pile de démonstration**, pas une mise en production réelle : elle joue
+`backend/db/seed.sql` à la création de la base, et la peuple donc du jeu de données de
+démonstration et de ses comptes, dont les identifiants figurent en clair dans le dépôt.
+Un déploiement destiné à de vrais utilisateurs ne monterait pas ce script et tirerait ses
+secrets d'un magasin d'exploitation plutôt que d'un fichier `.env`. Tout le reste est
+identique.
+
 ```bash
 cp .env.example .env
 # renseigner POSTGRES_PASSWORD, CAPITALL_APP_PASSWORD et JWT_SECRET
@@ -220,6 +227,7 @@ Les tests portent sur ce qui contient de la logique : validation des entrées, i
 
 | Domaine | Routes |
 |---|---|
+| Santé | `GET /api/sante`, sans authentification, interrogée par le contrôle de santé du conteneur |
 | Authentification | `POST /api/auth/inscription`, `POST /api/auth/connexion`, `GET /api/auth/moi` |
 | Actifs | `GET POST /api/actifs`, `GET PATCH DELETE /api/actifs/:id` |
 | Transactions | `POST /api/actifs/:id/transactions`, `DELETE /api/actifs/:id/transactions/:idTransaction` |

@@ -7,6 +7,24 @@ constaté sur la pile décrite par `docker-compose.production.yml`, vérifiée l
 Pour l'installation de l'environnement de développement, où l'API et l'interface tournent
 directement sur le poste, voir le README à la racine.
 
+## Portée de cette pile
+
+C'est une **pile de démonstration**, pas une mise en production réelle. Elle sert à faire
+tourner l'application entière en conteneurs, sur un poste ou une machine de présentation,
+et à appuyer la compétence de déploiement du titre.
+
+Ce qui l'en distingue tient à un point : elle monte `backend/db/seed.sql` parmi ses
+scripts d'initialisation. La base créée porte donc le jeu de données de démonstration et
+ses trois comptes, dont les identifiants sont écrits en clair en tête du fichier et
+publiés dans le dépôt. C'est exactement ce que l'on veut pour une démonstration ; ce
+serait inacceptable ailleurs.
+
+Un déploiement destiné à de vrais utilisateurs reprendrait la même pile en deux points :
+ne pas monter `02-seed.sql`, et tirer `POSTGRES_PASSWORD`, `CAPITALL_APP_PASSWORD` et
+`JWT_SECRET` d'un magasin de secrets d'exploitation plutôt que d'un fichier `.env` posé
+à côté du dépôt. Tout le reste — images, réseau, ports, rôle applicatif, ordre de
+démarrage, persistance — vaut dans les deux cas.
+
 ## Ce que la pile contient
 
 Quatre services sur un même réseau interne, créé par Docker Compose.
@@ -180,6 +198,13 @@ docker compose -f docker-compose.production.yml exec -T db \
     psql -U capitall -d capitall < sauvegarde.sql
 ```
 
+La restauration vise une base **neuve ou vidée au préalable** : le fichier produit par
+`pg_dump` sans option ne contient que des créations et des insertions, il ne supprime
+rien. L'appliquer sur une base déjà peuplée échoue sur les objets existants et duplique
+les lignes. Repartir d'un volume neuf (`down -v` puis `up -d`), ou produire la
+sauvegarde avec `pg_dump --clean --if-exists`, qui la fait commencer par la suppression
+des objets qu'elle recrée.
+
 ## Journaux et diagnostic
 
 ```bash
@@ -212,10 +237,19 @@ services. Les deux piles portent des noms de projet distincts, `capitall` et
 `capitall-production` : elles ont leurs propres conteneurs et leur propre volume, peuvent
 tourner en même temps, et démarrer la seconde ne touche jamais la base de développement.
 
-**Images en deux étapes.** L'image de l'API compile `bcrypt`, un module natif, dans une
-première étape munie d'une chaîne de compilation, et n'embarque dans la seconde que le
-résultat. L'image de l'interface compile avec Vite puis ne conserve que les fichiers
-produits : elle ne contient ni Node ni la moindre dépendance de développement.
+**Images en deux étapes.** L'image de l'API installe ses dépendances de production dans
+une première étape et n'embarque dans la seconde que le résultat, sans cache npm ni
+trace d'installation. Aucune chaîne de compilation n'y figure, bien que `bcrypt` soit un
+module natif : le paquet embarque ses propres binaires précompilés, dont celui de la
+bibliothèque C d'Alpine. L'image de l'interface compile avec Vite puis ne conserve que
+les fichiers produits : elle ne contient ni Node ni la moindre dépendance de
+développement.
+
+**Le relais vers l'API passe par une variable.** Nginx ne résout qu'une seule fois, au
+démarrage, un nom d'hôte écrit directement dans `proxy_pass`. Recréer le conteneur de
+l'API seul lui donnerait une nouvelle adresse que le relais ignorerait jusqu'au
+redémarrage de l'interface. Le nom passe donc par une variable, ce qui impose une
+résolution à chaque requête auprès du résolveur interne de Docker.
 
 **Un serveur statique pour l'interface.** Les fichiers produits par Vite sont statiques.
 Nginx les sert et relaie `/api`, ce qui suffit et évite un second processus Node en

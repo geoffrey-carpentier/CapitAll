@@ -1,13 +1,13 @@
 # Image de l'API CapitAll.
 #
-# Deux étapes. La première installe les dépendances de production, ce qui suppose de
-# compiler bcrypt : le module est natif et npm n'en trouve pas de version précompilée
-# pour la bibliothèque C d'Alpine. La seconde ne reprend que le résultat de cette
-# compilation, sans la chaîne d'outils qui a servi à la produire.
+# Deux étapes. La première installe les dépendances de production, la seconde n'en
+# reprend que le résultat : ni cache npm, ni trace d'installation dans l'image finale.
+#
+# Aucune chaîne de compilation n'est nécessaire, bien que bcrypt soit un module natif :
+# le paquet embarque ses propres binaires précompilés, dont celui de la bibliothèque C
+# d'Alpine, et node-gyp-build choisit le bon au chargement.
 
 FROM node:22-alpine AS dependances
-
-RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 

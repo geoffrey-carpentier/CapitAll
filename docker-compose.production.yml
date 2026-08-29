@@ -5,6 +5,12 @@
 # Ici, rien n'est installé sur la machine hôte : Docker suffit à faire tourner
 # l'application.
 #
+# Pile de DÉMONSTRATION. Elle sert à montrer l'application entière en conteneurs et à
+# appuyer la compétence de déploiement du titre. Elle monte 02-seed.sql, donc le jeu de
+# données de démonstration et ses comptes aux identifiants publics, écrits en tête de
+# backend/db/seed.sql. Un déploiement réel ne monterait pas ce script et tirerait ses
+# secrets d'un magasin d'exploitation, hors du dépôt.
+#
 #   docker compose -f docker-compose.production.yml up -d --build
 #
 # Les deux piles portent des noms de projet différents. Elles peuvent donc cohabiter,

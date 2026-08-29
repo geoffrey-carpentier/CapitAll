@@ -1,7 +1,15 @@
 # Environnement de développement : base de données et cache uniquement.
 # Le front et l'API tournent sur le poste (npm run dev) et se connectent à ces deux
 # services. La mise en conteneurs des images applicatives relève du déploiement et
-# sera traitée avec les Dockerfile.
+# sera traitée avec les Dockerfile. La pile complète vit dans
+# docker-compose.production.yml, sous un autre nom de projet : les deux cohabitent sans
+# partager ni conteneurs ni volume.
+#
+# Le nom de projet est fixé explicitement plutôt que déduit du nom du dossier, qui
+# varierait d'un poste à l'autre : les conteneurs et le volume gardent le même nom
+# quel que soit l'emplacement du dépôt.
+
+name: capitall
 
 services:
   db:
