@@ -1,0 +1,16 @@
+# Ce qui ne doit jamais entrer dans l'image, pour des raisons de taille ou de secret.
+
+node_modules
+.env
+.env.*
+
+# Les tests et les scripts d'exploitation n'ont rien à faire dans une image de service.
+**/__tests__
+scripts
+
+# Le schéma et le jeu de démonstration sont joués par le conteneur PostgreSQL, qui les
+# lit depuis le dépôt : l'API n'en a pas besoin.
+db
+
+*.log
+coverage
