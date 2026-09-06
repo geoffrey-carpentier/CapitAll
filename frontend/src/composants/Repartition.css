@@ -1,4 +1,47 @@
+/*
+  L'anneau et sa légende. En dessous de 480 px ils s'empilent, au-dessus l'anneau prend
+  la gauche et la liste occupe le reste : c'est la seule mise en page qui garde les deux
+  colonnes de chiffres alignées quelle que soit la largeur.
+*/
 .repartition {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-6);
+}
+
+.repartition__anneau {
+  flex: none;
+  width: 132px;
+  height: 132px;
+}
+
+/*
+  Les quatre teintes de classe (D98). Elles ne sont posées qu'ici et sur le jeton : aucun
+  autre élément de l'interface ne les emploie, et aucune n'est un jeton sémantique.
+*/
+.repartition__segment {
+  stroke: var(--couleur-accent);
+}
+
+.repartition__segment--crypto {
+  stroke: var(--couleur-classe-crypto);
+}
+
+.repartition__segment--metal {
+  stroke: var(--couleur-classe-metal);
+}
+
+.repartition__segment--devise {
+  stroke: var(--couleur-classe-devise);
+}
+
+.repartition__segment--action {
+  stroke: var(--couleur-classe-action);
+}
+
+.repartition__liste {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   /* 12 px entre éléments liés, selon le rythme vertical de la grammaire visuelle. */
@@ -32,4 +75,18 @@
   min-width: 8ch;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Sur les écrans les plus étroits, l'anneau et la liste ne tiennent pas côte à côte
+   sans écraser les montants : l'anneau passe au-dessus, centré. */
+@media (max-width: 479px) {
+  .repartition {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--espace-4);
+  }
+
+  .repartition__anneau {
+    align-self: center;
+  }
 }

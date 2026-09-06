@@ -214,8 +214,9 @@ export default function Patrimoine() {
     </div>
   );
 
-  // Le squelette reprend la composition de l'écran : un grand bloc, une zone de graphe,
-  // trois lignes, un cercle. Le contenu remplace la forme sans rien déplacer.
+  // Le squelette reprend la composition de l'écran : le bloc de patrimoine et la
+  // répartition côte à côte, le graphe sur toute la largeur, puis les trois chiffres de
+  // contexte. Le contenu remplace la forme sans rien déplacer.
   if (chargement && !portefeuille) {
     return (
       <div className="patrimoine" aria-busy="true">
@@ -226,19 +227,19 @@ export default function Patrimoine() {
         <div className="patrimoine__principal">
           <Squelette forme="bloc" />
           <Carte>
-            <Squelette forme="graphe" />
+            <Squelette forme="ligne" />
+            <Squelette forme="ligne" />
+            <Squelette forme="ligne" />
           </Carte>
         </div>
+        <Carte>
+          <Squelette forme="graphe" />
+        </Carte>
         <div className="patrimoine__contexte">
           <Squelette forme="ligne" />
           <Squelette forme="ligne" />
           <Squelette forme="ligne" />
         </div>
-        <Carte>
-          <Squelette forme="ligne" />
-          <Squelette forme="ligne" />
-          <Squelette forme="ligne" />
-        </Carte>
       </div>
     );
   }
@@ -360,41 +361,48 @@ export default function Patrimoine() {
           </p>
         </section>
 
-        <Carte className="patrimoine__evolution">
-          <SelecteurPeriode
-            periode={periode}
-            performances={historique?.performances ?? {}}
-            surChangement={setPeriode}
-            identifiantPanneau="panneau-evolution"
-          />
-          <div id="panneau-evolution" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
-            {/* Une courbe à un seul point ne trace rien et laisse croire à une perte de
-                données : un message prend sa place tant que le suivi est trop jeune. */}
-            {points.length < 2 ? (
-              <p className="patrimoine__evolution-absente">
-                L'évolution s'affichera après quelques jours de suivi.
-              </p>
-            ) : (
-              <Suspense fallback={<Squelette forme="graphe" />}>
-                <Courbe points={points} devise={devise} masque={masque} sens={sens} />
-              </Suspense>
-            )}
-          </div>
-
-          {/* Le pas de la courbe n'est pas régulier, et le taire serait mentir sur un
-              chiffre. Le point du jour est relevé à la première actualisation de la
-              journée : deux points voisins peuvent être distants de trente-huit heures
-              autant que de vingt-quatre. Un relevé à heure fixe demanderait un processus
-              de fond, que D49 écarte du périmètre ; l'annoncer ne coûte rien. */}
-          {points.length >= 2 && (
-            <p className="patrimoine__legende">
-              Relevé quotidien, pris à l'heure de votre consultation : l'écart entre deux
-              points n'est pas exactement d'un jour.
-              {dernierReleve && ` Dernier relevé le ${dernierReleve}.`}
-            </p>
-          )}
-        </Carte>
+        {/* Une répartition n'a de sens qu'à partir de deux positions. */}
+        {actifs.length > 1 && portefeuille.repartition.length > 0 && (
+          <Carte titre="Répartition" className="patrimoine__repartition">
+            <Repartition repartition={portefeuille.repartition} devise={devise} masque={masque} />
+          </Carte>
+        )}
       </div>
+
+      <Carte className="patrimoine__evolution">
+        <SelecteurPeriode
+          periode={periode}
+          performances={historique?.performances ?? {}}
+          surChangement={setPeriode}
+          identifiantPanneau="panneau-evolution"
+        />
+        <div id="panneau-evolution" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
+          {/* Une courbe à un seul point ne trace rien et laisse croire à une perte de
+              données : un message prend sa place tant que le suivi est trop jeune. */}
+          {points.length < 2 ? (
+            <p className="patrimoine__evolution-absente">
+              L'évolution s'affichera après quelques jours de suivi.
+            </p>
+          ) : (
+            <Suspense fallback={<Squelette forme="graphe" />}>
+              <Courbe points={points} devise={devise} masque={masque} sens={sens} />
+            </Suspense>
+          )}
+        </div>
+
+        {/* Le pas de la courbe n'est pas régulier, et le taire serait mentir sur un
+            chiffre. Le point du jour est relevé à la première actualisation de la
+            journée : deux points voisins peuvent être distants de trente-huit heures
+            autant que de vingt-quatre. Un relevé à heure fixe demanderait un processus
+            de fond, que D49 écarte du périmètre ; l'annoncer ne coûte rien. */}
+        {points.length >= 2 && (
+          <p className="patrimoine__legende">
+            Relevé quotidien, pris à l'heure de votre consultation : l'écart entre deux
+            points n'est pas exactement d'un jour.
+            {dernierReleve && ` Dernier relevé le ${dernierReleve}.`}
+          </p>
+        )}
+      </Carte>
 
       <dl className="patrimoine__contexte">
         <div className="patrimoine__ligne">
@@ -437,13 +445,6 @@ export default function Patrimoine() {
           </dd>
         </div>
       </dl>
-
-      {/* Une répartition n'a de sens qu'à partir de deux positions. */}
-      {actifs.length > 1 && portefeuille.repartition.length > 0 && (
-        <Carte titre="Répartition">
-          <Repartition repartition={portefeuille.repartition} devise={devise} masque={masque} />
-        </Carte>
-      )}
 
       {/* Le bloc disparaît entièrement lorsqu'aucun seuil n'est franchi : une carte
           vide intitulée « Seuils franchis » inquiéterait pour rien. */}

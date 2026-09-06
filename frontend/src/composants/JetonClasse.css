@@ -10,10 +10,10 @@
   width: 12px;
   height: 12px;
   /*
-    La direction artistique fixe une forme par classe mais aucune couleur par classe :
-    le jeton reprend donc l'accent de l'interface, la distinction restant portée par la
-    géométrie. Le jour où des couleurs de classe seront arbitrées, elles s'ajouteront
-    ici sans toucher au composant.
+    La forme reste le repère principal : elle survit au niveau de gris comme au
+    daltonisme, ce que la couleur seule ne fait pas. La couleur de classe s'y ajoute
+    depuis D98, pour que la pastille de la légende et le segment de l'anneau se
+    reconnaissent au premier regard. Repli sur l'accent si la classe est inconnue.
   */
   background-color: var(--couleur-accent);
 }
@@ -38,18 +38,22 @@
 .jeton-classe__forme--action.jeton-classe__forme--actif { background: #e8ecf1; }
 
 .jeton-classe__forme--crypto {
+  background-color: var(--couleur-classe-crypto);
   border-radius: 50%;
 }
 
 .jeton-classe__forme--metal {
+  background-color: var(--couleur-classe-metal);
   border-radius: 3px;
 }
 
 .jeton-classe__forme--devise {
+  background-color: var(--couleur-classe-devise);
   transform: rotate(45deg);
 }
 
 .jeton-classe__forme--action {
+  background-color: var(--couleur-classe-action);
   clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
 }
 

@@ -48,6 +48,27 @@
   --couleur-carte-haute: #212a33;
   --couleur-avertissement: #e3b341;
 
+  /*
+    Couleurs de classe d'actif (D98), pour l'anneau de répartition.
+
+    D74 avait retiré l'anneau faute d'une quatrième teinte : la solution d'alors
+    réemployait --couleur-avertissement pour les métaux et --couleur-negatif pour la
+    quatrième classe, ce qui faisait dire « donnée douteuse » à une classe et « perte »
+    à une autre. Le repli par niveaux d'opacité d'accent ne distinguait les segments
+    qu'à 1,46:1. Ces quatre teintes-ci sont dédiées : aucune n'est un jeton sémantique,
+    et aucune ne sert ailleurs dans l'interface.
+
+    Mesurées ensemble sur le fond de carte #1a2027, toutes paires confrontées :
+    contraste minimal 3,04:1 (seuil 3), écart de teinte minimal 16,8 en vision normale
+    (plancher 15) et 8,2 sous simulation de protanopie (cible 8). L'information ne
+    repose de toute façon pas sur elles : la légende chiffrée sous l'anneau porte le
+    libellé, la part et le montant de chaque classe, et le jeton garde sa forme (D76).
+  */
+  --couleur-classe-crypto: #3987e5;
+  --couleur-classe-metal: #d95926;
+  --couleur-classe-devise: #199e70;
+  --couleur-classe-action: #ce6bb0;
+
   /* Espacements */
   --espace-1: 4px;
   --espace-2: 8px;
