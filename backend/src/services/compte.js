@@ -5,15 +5,32 @@
 const bcrypt = require('bcrypt');
 const modeleUtilisateur = require('../models/utilisateur');
 const modeleTransaction = require('../models/transaction');
-const { COUT_HACHAGE } = require('./authentification');
+const { COUT_HACHAGE, emettreJeton } = require('./authentification');
 const { derouler, trierChronologiquement } = require('./calculPortefeuille');
 const { construire } = require('../utils/csv');
 const { ErreurValidation, ErreurIntrouvable } = require('../erreurs');
 
 // Colonnes de l'export, dans l'ordre du fichier (D84).
-const ENTETES = ['date', 'type', 'actif', 'classe', 'quantite', 'prix_unitaire', 'frais', 'montant'];
+//
+// frais_montant et frais_unite encadrent la contre-valeur en euros plutôt que d'être
+// rejetés en fin de ligne : les trois colonnes disent une seule chose, et les séparer
+// obligerait à parcourir la ligne pour savoir en quoi les frais ont été prélevés.
+// La colonne type porte désormais trois valeurs, sortie_non_marchande comprise : un
+// transfert n'y apparaît jamais sous l'étiquette vente (D89).
+const ENTETES = [
+  'date',
+  'type',
+  'actif',
+  'classe',
+  'quantite',
+  'prix_unitaire',
+  'frais',
+  'frais_montant',
+  'frais_unite',
+  'montant',
+];
 
-const PREFIXE_FICHIER = 'capitall-mouvements';
+const PREFIXE_FICHIER = 'walletwatch-mouvements';
 
 function jourCourant() {
   return new Date().toISOString().slice(0, 10);
@@ -84,9 +101,16 @@ function creerServiceCompte({
       throw new ErreurIntrouvable('Utilisateur introuvable.');
     }
 
-    // Rien n'est renvoyé, et le jeton en cours reste valable : il est signé sur
-    // l'identifiant et le rôle, jamais sur le mot de passe. La session survit donc au
-    // changement, comme la spécification l'exige, sans traitement particulier.
+    // Le changement pose une borne de révocation : tous les jetons émis avant tombent.
+    // C'est l'effet attendu de « je change mon mot de passe parce que je le crois
+    // compromis » — sans elle, une session dérobée survivait jusqu'à deux heures.
+    //
+    // Mais la spécification veut que la session en cours survive au changement, et
+    // celle-ci porte justement un jeton antérieur. Un jeton neuf est donc remis à
+    // l'appelant : ses autres sessions tombent, la sienne continue. Il est rendu ici et
+    // non signé par le contrôleur, pour que la borne et la réémission restent
+    // indissociables.
+    return { token: emettreJeton({ id: utilisateur.id, role: utilisateur.role }) };
   }
 
   async function supprimer({ utilisateurId, motDePasse }) {
@@ -131,6 +155,8 @@ function creerServiceCompte({
       mouvement.quantite,
       mouvement.prix_unitaire,
       mouvement.frais,
+      mouvement.frais_montant ?? mouvement.frais,
+      mouvement.frais_unite ?? 'EUR',
       mouvement.montant,
     ]);
 

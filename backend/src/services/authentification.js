@@ -22,6 +22,21 @@ const HACHAGE_FACTICE = bcrypt.hashSync('comparaison-a-temps-constant', COUT_HAC
 
 const MESSAGE_ECHEC = 'Email ou mot de passe incorrect.';
 
+// Émission d'un jeton, à un seul endroit.
+//
+// Deux chemins en émettent : la connexion, et le changement de mot de passe, qui pose
+// une borne de révocation invalidant tous les jetons antérieurs — y compris celui avec
+// lequel la demande a été faite. Sans réémission, l'utilisateur serait déconnecté par
+// l'opération qu'il vient de réussir, alors que la spécification veut que sa session
+// survive. Les autres sessions ouvertes, elles, tombent : c'est précisément l'effet
+// attendu de « je change mon mot de passe parce que je le crois compromis ».
+function emettreJeton(utilisateur) {
+  return jwt.sign({ sub: utilisateur.id, role: utilisateur.role }, config.jwtSecret, {
+    algorithm: 'HS256',
+    expiresIn: config.jwtExpiration,
+  });
+}
+
 // Le pseudo est facultatif à l'inscription alors que la colonne est obligatoire :
 // à défaut, on reprend la partie locale de l'email.
 function pseudoParDefaut(email) {
@@ -78,10 +93,7 @@ function creerServiceAuthentification({ utilisateurs = modeleUtilisateur } = {})
       throw new ErreurAutorisation('Ce compte a été désactivé.');
     }
 
-    const token = jwt.sign({ sub: utilisateur.id, role: utilisateur.role }, config.jwtSecret, {
-      algorithm: 'HS256',
-      expiresIn: config.jwtExpiration,
-    });
+    const token = emettreJeton(utilisateur);
 
     return {
       token,
@@ -106,6 +118,7 @@ module.exports = {
   // exactement le même que l'inscription : deux valeurs distinctes produiraient des
   // hachages de robustesse inégale selon la façon dont le compte a été créé.
   COUT_HACHAGE,
+  emettreJeton,
   inscrire: service.inscrire,
   connecter: service.connecter,
 };
