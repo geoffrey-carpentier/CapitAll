@@ -16,10 +16,14 @@
   gap: var(--espace-8);
 }
 
+/* L'en-tête se replie plutôt que de pousser la page au débordement. Le bouton
+   d'actualisation, désormais affiché en mobile, portait la barre d'outils à 378 px : en
+   deçà de cette largeur, c'est la page entière qui défilait latéralement. */
 .patrimoine__entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--espace-4);
 }
 
@@ -31,7 +35,22 @@
 .patrimoine__outils {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--espace-2);
+}
+
+/* La borne suit celle de la navigation, pas celle du passage en tableau : le bouton
+   central de la barre basse reste affiché jusqu'à 899 px, et l'action ne doit exister
+   qu'une fois à l'écran. En deçà de 900 px, l'en-tête laisse donc faire la barre.
+
+   La règle vise le seul bouton de saisie, désigné par sa classe. Elle portait sur la
+   classe générique des boutons : le bouton d'actualisation, ajouté ensuite dans la même
+   barre, disparaissait avec lui en mobile — sur une application pensée pour le mobile,
+   la commande n'existait donc que sur grand écran. */
+@media (max-width: 899px) {
+  .patrimoine__outils > .patrimoine__ajout {
+    display: none;
+  }
 }
 
 .patrimoine__principal {
@@ -93,6 +112,14 @@
   text-align: center;
   color: var(--couleur-texte-attenue);
   font-size: var(--taille-corps);
+}
+
+/* Légende du graphe : elle qualifie la courbe sans lui disputer l'attention. */
+.patrimoine__legende {
+  margin: var(--espace-2) 0 0;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-legende);
+  line-height: 1.4;
 }
 
 /* Chiffres de contexte : à plat, séparés par des filets. */
@@ -171,5 +198,60 @@
     /* Le filet devient vertical : il sépare toujours, sans découper la page en
        cartes. */
     border-left: 1px solid var(--couleur-bordure);
+  }
+}
+
+/*
+  Toute la bande où les deux colonnes sont demandées sans que la place y soit.
+
+  La composition réclame 747 px de contenu : 214 px pour le bloc du patrimoine, 24 px de
+  gouttière et 509 px pour la carte de courbe. Ces 509 px ne sont pas un choix, c'est le
+  minimum intrinsèque de la carte, et il vient du sélecteur de plages : cinq onglets à
+  68 px de plancher, chacun portant une pastille de variation plus large que son libellé.
+  Avec le rail latéral (220 px), les marges (2 × 32 px) et une barre de défilement
+  verticale, il faut donc atteindre 1046 px pour que le compte y soit ; juste au-dessus
+  du point de rupture, où le rail n'existe pas encore, il manque également une dizaine de
+  pixels dès qu'une barre de défilement apparaît.
+
+  Sur toute cette bande, c'est la carte de courbe qui se resserre, jamais la page qui
+  déborde : les cinq plages restent affichées d'un seul tenant, la courbe garde ses deux
+  axes, et la piste de gauche peut se réduire puisque son minimum intrinsèque ne s'impose
+  plus. Le patrimoine y redevient d'ailleurs la colonne dominante, ce que la carte à
+  509 px empêchait.
+*/
+@media (min-width: 768px) and (max-width: 1045px) {
+  .patrimoine__principal {
+    grid-template-columns: minmax(0, 2fr) 1fr;
+  }
+
+  .patrimoine__evolution {
+    padding: var(--espace-4);
+  }
+
+  .patrimoine__evolution .selecteur-periode__onglet {
+    min-width: 0;
+    padding: var(--espace-2) 4px;
+    font-size: 11px;
+  }
+
+  .patrimoine__evolution .selecteur-periode .variation {
+    gap: 1px;
+    font-size: 10px;
+  }
+
+  /* Pour la même raison qu'en dessous de 480 px : la pastille pleine est plus large que
+     la colonne qui l'accueille. La flèche et le signe restent, l'information ne repose
+     donc pas sur la seule couleur. */
+  .patrimoine__evolution .selecteur-periode .variation--forte {
+    padding: 0;
+    background-color: transparent;
+  }
+
+  .patrimoine__evolution .selecteur-periode .variation--forte.variation--hausse {
+    color: var(--couleur-positif);
+  }
+
+  .patrimoine__evolution .selecteur-periode .variation--forte.variation--baisse {
+    color: var(--couleur-negatif);
   }
 }

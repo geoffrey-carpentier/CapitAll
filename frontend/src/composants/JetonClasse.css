@@ -18,6 +18,25 @@
   background-color: var(--couleur-accent);
 }
 
+.jeton-classe__forme--actif {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #101418;
+  font-size: 12px;
+  font-weight: var(--graisse-forte);
+  line-height: 1;
+}
+
+/* Couleurs d'identité des actifs, distinctes des couleurs sémantiques de gain/perte. */
+.jeton-classe__forme--actif[data-symbole='BTC'] { background: #f7931a; }
+.jeton-classe__forme--actif[data-symbole='ETH'] { background: #8c9bc2; }
+.jeton-classe__forme--actif[data-symbole='XAU'] { background: #e3b341; }
+.jeton-classe__forme--actif[data-symbole='XAG'] { background: #c7d0da; }
+.jeton-classe__forme--devise.jeton-classe__forme--actif { background: #b7c2ce; }
+.jeton-classe__forme--action.jeton-classe__forme--actif { background: #e8ecf1; }
+
 .jeton-classe__forme--crypto {
   border-radius: 50%;
 }

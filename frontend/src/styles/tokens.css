@@ -13,11 +13,31 @@
   --couleur-fond: #101418;
   --couleur-carte: #1a2027;
   --couleur-bordure: #2d3640;
+  /*
+    Contour des commandes : bordure d'un contrôle qu'on ne reconnaîtrait pas sans elle
+    — bouton secondaire, bascule euro/dollar, bouton de masquage.
+
+    Un jeton distinct, et non le relèvement de --couleur-bordure. La règle de contraste
+    des éléments non textuels ne porte que sur ce qui permet d'identifier un contrôle :
+    l'appliquer aussi aux filets décoratifs des cartes tracerait une grille sur des
+    écrans déjà denses, sans rien rendre plus lisible.
+
+    #667789 et non #9aa7b4, qui aurait passé plus largement (5,93 contre 3,16 au pire
+    des trois fonds). #9aa7b4 est la couleur du texte atténué : la reprendre donnerait
+    à un contour le poids d'un texte secondaire, et inverserait la hiérarchie — un
+    contour soutient la lecture, il ne la porte pas. Les deux rôles resteraient de plus
+    liés, et retoucher le texte atténué déplacerait toutes les bordures.
+
+    Mesuré au navigateur : 4,02 sur le fond, 3,57 sur une carte, 3,16 sur la carte
+    haute. Le seuil applicable est 3.
+  */
+  --couleur-contour-controle: #667789;
   --couleur-texte: #e8ecf1;
   --couleur-texte-attenue: #9aa7b4;
   --couleur-accent: #4c9aff;
   --couleur-positif: #34c77b;
-  --couleur-negatif: #f0564f;
+  /* Ajusté de #F0564F à #F8645D : 4,83:1 sur la carte haute #212A33. */
+  --couleur-negatif: #f8645d;
 
   /*
     Deux dérivés fonctionnels (D70), à l'emploi strictement borné. La carte haute est

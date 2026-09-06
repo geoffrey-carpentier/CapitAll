@@ -11,7 +11,9 @@
   /* Zone tactile de 44 px en mobile (D77) ; le pointeur du desktop se contente de 24. */
   min-height: 44px;
   padding: var(--espace-2) var(--espace-3);
-  border: 1px solid var(--couleur-bordure);
+  /* Le filtre n'a pas de fond : sa bordure est la seule chose qui le désigne comme une
+     commande, elle relève donc du contour des contrôles et non du filet décoratif. */
+  border: 1px solid var(--couleur-contour-controle);
   border-radius: var(--rayon-pilule);
   background: transparent;
   color: var(--couleur-texte-attenue);

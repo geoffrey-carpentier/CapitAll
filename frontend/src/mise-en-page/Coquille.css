@@ -48,6 +48,48 @@
   text-decoration: none;
 }
 
+.coquille__icone {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.coquille__action-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Même apparence que le bouton soit un lien, quand il conduit au Patrimoine, ou un
+   bouton, quand il ouvre la saisie sur l'écran courant : la remise à zéro des styles
+   propres au bouton natif évite que la barre change d'aspect d'un écran à l'autre. */
+.coquille__ajout {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-top: -14px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--couleur-accent);
+  color: #0b1015;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(76, 154, 255, 0.3);
+}
+
+.coquille__ajout-symbole {
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 1;
+}
+
 .coquille__lien--actif {
   color: var(--couleur-accent);
 }
@@ -66,6 +108,11 @@
 
 .coquille__contenu {
   flex: 1;
+  /* Sans cette ligne, le contenu garde la largeur minimale de ce qu'il porte : un
+     élément de conteneur flexible vaut min-width: auto par défaut, et refuse donc de
+     se réduire sous la largeur intrinsèque d'un tableau large. La page se mettait alors
+     à déborder horizontalement au lieu de laisser le tableau défiler chez lui. */
+  min-width: 0;
   padding: var(--espace-4);
   padding-bottom: 88px;
   max-width: 1440px;
@@ -92,14 +139,40 @@
   }
 
   .coquille__marque {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: var(--espace-3);
     font-size: var(--taille-titre);
     font-weight: var(--graisse-forte);
   }
 
+  .coquille__marque > span {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--rayon-carte);
+    background: var(--couleur-accent);
+    /* La même encre sombre que le bouton flottant, sur le même fond accentué. La
+       couleur de texte ordinaire n'y atteignait que 2,40:1, mesuré au navigateur : la
+       lettre était illisible, même si son aria-hidden la met hors du champ formel de
+       la règle. */
+    color: #0b1015;
+    font-size: var(--taille-corps);
+  }
+
   .coquille__liste {
+    flex: none;
     flex-direction: column;
     gap: var(--espace-1);
+  }
+
+  .coquille__liste > li {
+    flex: none;
+  }
+
+  .coquille__action-mobile {
+    display: none;
   }
 
   .coquille__lien {
@@ -120,6 +193,11 @@
     flex-direction: column;
     gap: var(--espace-2);
     margin-top: auto;
+  }
+
+  .coquille__icone {
+    width: 20px;
+    height: 20px;
   }
 
   .coquille__pseudo {

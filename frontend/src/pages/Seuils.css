@@ -4,10 +4,14 @@
   gap: var(--espace-6);
 }
 
+/* L'en-tête se replie plutôt que de comprimer ses commandes. Sans le repli, à 320 px,
+   la bascule euro/dollar était rognée de six pixels : son overflow: hidden masquait le
+   choix « $ » sans barre de défilement, donc sans que rien ne l'annonce. */
 .seuils__entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--espace-4);
 }
 
@@ -19,6 +23,7 @@
 .seuils__outils {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--espace-2);
 }
 

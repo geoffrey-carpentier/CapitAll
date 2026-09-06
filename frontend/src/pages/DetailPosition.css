@@ -37,6 +37,40 @@
   font-weight: var(--graisse-forte);
 }
 
+/* Le titre et sa commande de renommage, puis le formulaire qui prend leur place. Les
+   éléments passent à la ligne plutôt que de rétrécir : un nom long ne doit pas repousser
+   le bouton hors de l'écran en mobile. */
+.detail__nom-ligne {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+}
+
+.detail__renommer {
+  font-family: var(--police);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  /* Zone tactile de 44 px en mobile (D77), obtenue par le remplissage. */
+  padding: var(--espace-3) 0;
+  min-height: 44px;
+}
+
+.detail__renommer:hover {
+  color: var(--couleur-accent);
+}
+
+@media (min-width: 768px) {
+  .detail__renommer {
+    min-height: 0;
+    padding: 0;
+  }
+}
+
 .detail__signalement {
   display: flex;
   align-items: center;
