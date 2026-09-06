@@ -208,6 +208,8 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 *En-tête.* Jeton, nom, symbole, classe, source du cours et sa fraîcheur.
 
+*En-tête.* Nom, symbole et classe. Le **nom est modifiable sur place** : c'est celui que l'utilisateur a saisi, pas celui du fournisseur. Le symbole et la classe ne le sont pas — ils identifient l'actif, et en changer ferait porter à des mouvements déjà enregistrés une nature qu'ils n'ont pas eue. Le nom affiché après validation est celui que la base rend, jamais le texte saisi : le serveur découpe les espaces de bord, et afficher la saisie brute laisserait croire qu'un nom se termine par une espace.
+
 *Priorité 1.* Valorisation de la position et plus-value latente, absolue et relative.
 
 *Priorité 2.* Trio quantité détenue, cours actuel, prix de revient.
@@ -216,7 +218,11 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 *Priorité 4, en onglets.* Mouvements ; Seuils. L'onglet « Analyse » présent dans les maquettes est supprimé : il ne contenait rien de défini.
 
-*Onglet Mouvements.* Frise chronologique : type, date, quantité signée, montant, prix unitaire, frais, et **effet sur le prix de revient**. Une vente affiche en outre la plus-value réalisée.
+*Onglet Mouvements.* Chaque événement porte deux commandes, **Corriger** puis **Supprimer**, dans cet ordre : le geste réparateur précède le geste destructeur, et c'est le premier qu'une saisie fautive appelle. Corriger rouvre la feuille de saisie sur le mouvement, préremplie, sans détacher celui-ci de sa position — l'actif n'y est pas modifiable.
+
+Frise chronologique : type, date, quantité signée, montant, prix unitaire, frais, et **effet sur le prix de revient**. Une vente affiche en outre la plus-value réalisée. Des frais prélevés en nature rappellent entre parenthèses le montant réellement retenu derrière leur contre-valeur en euros.
+
+Une **sortie non marchande** est étiquetée « Sortie » et n'affiche ni prix ni montant : les deux valent zéro en base, et les rendre visibles ferait lire un transfert comme une vente sans contrepartie. Elle affiche à leur place la valeur sortie du portefeuille, au prix de revient, qui n'est jamais une plus-value.
 
 *Onglet Seuils.* Seuils posés sur cet actif, avec progression vers le franchissement.
 
@@ -257,8 +263,11 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 **Questions tranchées.**
 1. La création d'un actif se fait **depuis le formulaire**, conformément à la recommandation. Elle y forme une étape distincte : l'actif est créé, puis le mouvement se saisit sur la position ainsi ouverte. Sans cela, le récapitulatif ne pourrait porter sur rien et la règle « pas de validation sans récapitulatif » tomberait précisément sur le premier achat, celui d'un portefeuille vide.
 2. Le champ frais est **conservé et visible**, apparié à la date comme dans la maquette validée, plutôt que replié derrière un lien. Il porte la mention « facultatif » et rappelle que les frais d'achat entrent dans le prix de revient.
+3. L'**unité de prélèvement des frais** n'apparaît qu'une fois un montant saisi (D89). Trois valeurs : euros, l'actif de l'opération, ou un autre actif. Le troisième cas fait apparaître deux champs de plus, le symbole et la contre-valeur en euros, parce qu'aucun taux ne se lit alors dans le mouvement. Poser ces champs d'emblée aurait alourdi un formulaire où la grande majorité des mouvements n'a pas de frais en nature.
+4. Le **champ symbole suit la couverture de la classe** (D27). Une classe dont l'application connaît la liste — actions, métaux — propose un choix ; une classe dont seul le fournisseur sait garde une saisie libre et annonce d'où viendra la réponse. L'aide sous le champ porte la provenance et la date de la couverture : une liste sans date est une liste dont personne ne peut dire si elle est encore vraie. Le catalogue est un confort et non une condition : s'il n'arrive pas, le champ redevient libre et le serveur reste seul juge.
+5. Le **sens** offre une troisième valeur, « Sortie », pour un transfert ou un retrait. Elle retire le champ de prix unitaire au lieu de le laisser à zéro : un prix saisi puis masqué partirait quand même dans la requête, et c'est ce prix qui ferait lire le mouvement comme une vente. Le raccourci « Tout vendre » devient « Tout sortir ».
 
-**Impacts API.** `POST /api/actifs/:id/transactions/simulation` rend l'effet du mouvement sur la position sans rien écrire : montant, quantité détenue avant et après, prix de revient avant et après, déplacement du prix de revient, et plus-value dégagée par une vente. Le récapitulatif est un état métier, il ne se reconstitue pas dans l'interface (D69).
+**Impacts API.** `POST /api/actifs/:id/transactions/simulation` rend l'effet du mouvement sur la position sans rien écrire : montant, frais et leur unité de prélèvement, quantité détenue avant et après, prix de revient avant et après, déplacement du prix de revient, plus-value dégagée par une vente, et valeur sortie du portefeuille sur une sortie non marchande. La conversion des frais est ainsi annoncée avant validation, seul moment où l'utilisateur peut encore corriger le prix d'opération dont elle dépend. Le récapitulatif est un état métier, il ne se reconstitue pas dans l'interface (D69).
 
 **Devise de saisie.** Le formulaire est en euros, devise de référence des calculs et du stockage. La bascule euro-dollar des écrans de restitution ne s'y applique pas : elle ne change que l'affichage, alors qu'un montant saisi est celui qui sera enregistré.
 
@@ -303,7 +312,7 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 *Affichage.* Devise d'affichage euro ou dollar. Masquage des montants par défaut.
 
-*Données.* Export de la totalité des mouvements du compte au format CSV (D84). Portée intégrale, tous actifs confondus, sans filtre de période ni d'actif. Huit colonnes, dans cet ordre : `date`, `type`, `actif`, `classe`, `quantite`, `prix_unitaire`, `frais`, `montant`. La colonne `actif` porte le symbole, unique par compte, et non le nom. La colonne `montant` est la quantité multipliée par le prix unitaire, **frais exclus**, ceux-ci occupant leur propre colonne ; elle reprend la valeur produite par le moteur de calcul et n'est pas recalculée pour l'export (D69). Fichier UTF-8 avec marque d'ordre des octets, séparateur point-virgule, fin de ligne CRLF, dates en ISO 8601, nombres décimaux bruts à point, sans mise en forme : un fichier d'échange n'est pas un affichage. Lignes en ordre chronologique ascendant, tous actifs confondus, celui de la règle 6 de D54. Nom du fichier `capitall-mouvements-AAAA-MM-JJ.csv`.
+*Données.* Export de la totalité des mouvements du compte au format CSV (D84). Portée intégrale, tous actifs confondus, sans filtre de période ni d'actif. Dix colonnes, dans cet ordre : `date`, `type`, `actif`, `classe`, `quantite`, `prix_unitaire`, `frais`, `frais_montant`, `frais_unite`, `montant`. Les deux colonnes de frais en nature encadrent la contre-valeur en euros plutôt que d'être rejetées en fin de ligne : les trois disent une seule chose. La colonne `type` porte trois valeurs, `sortie_non_marchande` comprise : un transfert n'y apparaît jamais sous l'étiquette `vente`. La colonne `actif` porte le symbole, unique par compte, et non le nom. La colonne `montant` est la quantité multipliée par le prix unitaire, **frais exclus**, ceux-ci occupant leur propre colonne ; elle reprend la valeur produite par le moteur de calcul et n'est pas recalculée pour l'export (D69). Fichier UTF-8 avec marque d'ordre des octets, séparateur point-virgule, fin de ligne CRLF, dates en ISO 8601, nombres décimaux bruts à point, sans mise en forme : un fichier d'échange n'est pas un affichage. Lignes en ordre chronologique ascendant, tous actifs confondus, celui de la règle 6 de D54. Nom du fichier `walletwatch-mouvements-AAAA-MM-JJ.csv`.
 
 *À propos.* Version de l'application, sources de cours utilisées et leur fréquence de rafraîchissement, mention explicite que l'application ne fournit aucun conseil en investissement.
 
@@ -311,7 +320,10 @@ En desktop, tableau à colonnes : Actif, Quantité, Cours, Prix de revient, Valo
 
 **Interactions.** Le changement de mot de passe exige l'ancien et n'invalide pas la session en cours, le jeton étant signé sur l'identifiant et le rôle et jamais sur le mot de passe. La suppression du compte demande une confirmation par saisie du mot de passe et énonce sans ambiguïté ce qui sera supprimé, positions, mouvements et seuils compris, et que l'opération est irréversible. **Ce mot de passe est vérifié par le serveur** : contrôlé par la seule interface, il ne protégerait pas d'un appel direct porteur d'un jeton dérobé. L'export est obtenu par un appel authentifié puis remis à l'utilisateur depuis la page ; il ne peut pas être un simple lien, le jeton ne vivant qu'en mémoire (D57) et n'accompagnant pas une navigation du navigateur.
 
-**Impacts API, à créer.** `PATCH /api/compte/mot-de-passe`, `DELETE /api/compte` (le mot de passe de confirmation est transmis dans le corps) et `GET /api/compte/export-mouvements`, seule route du service à ne pas répondre en JSON. Les données du compte proviennent de `GET /api/auth/moi`, déjà disponible.
+**Impacts API livrés.** `PATCH /api/compte/mot-de-passe`, `DELETE /api/compte`
+(le mot de passe de confirmation est transmis dans le corps) et
+`GET /api/compte/export-mouvements`, seule route du service à ne pas répondre en
+JSON. Les données du compte proviennent de `GET /api/auth/moi`.
 
 **États particuliers.** *Ancien mot de passe incorrect* : erreur sur le champ concerné, sans indication de tentatives restantes. *Suppression en cours* : formulaire verrouillé, puis déconnexion et retour à la connexion avec message de confirmation. *Mot de passe de suppression incorrect* : erreur sur le champ du dialogue, le compte restant intact. *Compte sans aucun mouvement* : l'export produit un fichier réduit à sa ligne d'en-tête, un fichier vide laissant croire à un échec. *Export en échec* : message dans la section Données, sans quitter l'écran.
 
@@ -347,6 +359,40 @@ Ces règles sont énoncées à l'écran, en français, pour que le comportement 
 
 ## Points de vigilance identifiés
 
-1. Deux routes restent à créer pour E7.
-2. L'écran d'administration prévu au périmètre n'est pas spécifié ici : il relève d'un parcours distinct et d'un rôle distinct.
-3. Le formatage des valeurs doit passer sans exception par le module dédié, sous peine de divergence entre écrans.
+1. Le formatage des valeurs doit passer sans exception par le module dédié, sous
+   peine de divergence entre écrans.
+2. Les annonces et l'administration ne sont pas des parcours du MVP ; elles sont
+   reportées en version 2 (D85).
+
+---
+
+## Accès, session et récupération (L4)
+
+**Session durable, révision de D57.** Le jeton passe du seul état React au **stockage de
+session** : il survit au rechargement et à la navigation, il ne survit pas à la fermeture
+de l'onglet. Le motif de D57 — un jeton conservé par le navigateur est lisible par tout
+script injecté — est traité par deux mécanismes qui n'existaient pas alors : la page est
+servie sous une politique de sécurité du contenu qui interdit tout script en ligne, et un
+jeton dérobé n'est plus valable jusqu'à son expiration, une borne de révocation
+l'invalidant dans la seconde. Le stockage local reste écarté : rien ne doit rester derrière
+l'utilisateur sur un poste partagé.
+
+**Écrans publics ajoutés.** « Mot de passe oublié » demande une clé ; « Nouveau mot de
+passe » l'échange contre un mot de passe. Le premier affiche le même message que l'adresse
+corresponde ou non à un compte, et **retire son formulaire après l'envoi** : le laisser en
+place inviterait à réessayer une autre adresse pour comparer les réponses, ce que le
+message neutre veut précisément empêcher.
+
+Le second ne connecte pas. Celui qui vient de poser un mot de passe s'en sert pour se
+connecter, ce qui vérifie qu'il l'a bien enregistré. Ses deux contrôles de forme se posent
+sous leur champ ; le bandeau en tête ne sert qu'au champ resté vide, sur lequel il n'y a
+pas encore de saisie à commenter, et à ce que rend le serveur.
+
+**Changement de mot de passe.** La confirmation ne dit plus « votre session reste ouverte »
+mais « cette session reste ouverte ; vos autres sessions ont été fermées ». Le serveur remet
+un jeton neuf, que l'interface substitue au précédent.
+
+**Clé de démonstration.** Le projet n'envoie pas de courriel. Quand la commodité est
+ouverte, la clé s'affiche dans un cadre qui la signale comme telle. La mention n'est pas
+décorative : une clé qui n'apparaît que si l'adresse existe révèle l'existence du compte, et
+l'écran doit le dire plutôt que le laisser découvrir.

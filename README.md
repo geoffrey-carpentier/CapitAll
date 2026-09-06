@@ -33,13 +33,16 @@ Projet réalisé dans le cadre du titre professionnel Développeur Web et Web Mo
 
 - alertes de seuil sur le cours d'un actif ou sur le capital total, évaluées automatiquement
 - historique de valorisation journalier, alimenté à la première consultation de chaque jour
-- fil d'annonces internes publiées par l'administration
+- historique journalier du cours et de la quantité de chaque position
 
 **Sécurité**
 
 - authentification par jeton, mots de passe hachés
 - cloisonnement strict des données par utilisateur, appliqué au niveau des requêtes de base de données
-- trois niveaux de contrôle d'accès : authentification, propriété de la ressource, rôle
+- authentification et contrôle de propriété au niveau des requêtes SQL
+
+La publication d'annonces et l'espace d'administration sont conservés comme pistes de
+version 2 ; aucune route ni interface ne les annonce comme livrés dans le MVP.
 
 ## Architecture
 
@@ -70,7 +73,7 @@ Description détaillée : [architecture](docs/conception/architecture.md).
 | Cache | Redis | 7 |
 | Authentification | jsonwebtoken, bcrypt | jeton HS256, validité 2 h |
 | Validation | Zod | schémas partagés serveur et interface |
-| Graphiques | Recharts | anneau et courbe d'aire |
+| Graphiques | Recharts | courbes d'aire et courbes miniatures |
 | Tests | Vitest | tests unitaires des services, adaptateurs et validations |
 | Conteneurisation | Docker, Docker Compose | services de développement et pile complète |
 | Service des fichiers | Nginx | 1.27, image de l'interface |
@@ -205,20 +208,31 @@ deux piles, les suivantes ne concernent que celle qui est indiquée :
 | `REDIS_URL` | adresse du cache | non |
 | `PORT` | port d'écoute de l'API | non, 5000 |
 | `NODE_ENV` | environnement d'exécution | non, development |
+| `FMP_API_KEY` | cours d'actions, fournisseur principal | non |
+| `FINNHUB_API_KEY` | cours d'actions, premier repli | non |
+| `ALPHA_VANTAGE_API_KEY` | cours d'actions, second repli | non |
 
 Les variables obligatoires sont contrôlées au démarrage. Si l'une manque, le serveur s'arrête immédiatement en indiquant l'ensemble des variables manquantes, et non la première rencontrée. L'absence de `REDIS_URL` n'empêche pas le démarrage : le cache est une optimisation, pas une dépendance dure.
 
 ## Jeu de données de démonstration
 
-Le script `backend/db/seed.sql` crée deux comptes, un portefeuille couvrant les quatre classes d'actifs, douze transactions, deux alertes, trois annonces et quatre-vingt-dix jours d'historique de valorisation.
+Le script `backend/db/seed.sql` crée trois comptes, six actifs, douze transactions,
+deux alertes, trois annonces, quatre-vingt-dix jours d'historique de valorisation et
+cinq cent quarante relevés de cours par position, répartis dans sept tables.
 
-Il est idempotent : il vide les tables avant de réinsérer, et peut donc être rejoué autant que nécessaire pour repartir d'un état propre. Les identifiants de démonstration figurent en tête du fichier.
+Il **réinitialise entièrement** une base de démonstration avec `TRUNCATE ... CASCADE`
+avant de réinsérer les données. Il est déterministe et rejouable pour repartir d'un
+état propre, mais destructif : il ne doit jamais être appliqué à une base à préserver.
+Les identifiants de démonstration figurent en tête du fichier.
 
 ## Tests
 
 ```bash
 npm test --prefix backend        # exécution unique
 npm run test:watch --prefix backend
+npm test --prefix frontend       # suite de l'interface
+npm run lint --prefix frontend
+npm run build --prefix frontend
 ```
 
 Les tests portent sur ce qui contient de la logique : validation des entrées, intergiciels, arithmétique décimale, moteur de calcul, adaptateurs de cours, stratégie de cache et évaluation des alertes. Les services métier reçoivent leurs dépendances en paramètre, ce qui permet de les tester sans base de données, sans réseau et sans cache.
@@ -230,13 +244,15 @@ Les tests portent sur ce qui contient de la logique : validation des entrées, i
 | Santé | `GET /api/sante`, sans authentification, interrogée par le contrôle de santé du conteneur |
 | Authentification | `POST /api/auth/inscription`, `POST /api/auth/connexion`, `GET /api/auth/moi` |
 | Actifs | `GET POST /api/actifs`, `GET PATCH DELETE /api/actifs/:id` |
-| Transactions | `POST /api/actifs/:id/transactions`, `DELETE /api/actifs/:id/transactions/:idTransaction` |
+| Transactions | `POST /api/actifs/:id/transactions`, `POST /api/actifs/:id/transactions/simulation`, `DELETE /api/actifs/:id/transactions/:idTransaction` |
 | Portefeuille | `GET /api/portefeuille`, `GET /api/portefeuille/historique` |
 | Alertes | `GET POST /api/alertes`, `PATCH /api/alertes/:id` |
+| Compte | `PATCH /api/compte/mot-de-passe`, `GET /api/compte/export-mouvements`, `DELETE /api/compte` |
 
 Toutes les routes privées attendent le jeton dans l'en-tête `Authorization: Bearer`. Une ressource inexistante et une ressource appartenant à un autre utilisateur renvoient toutes deux un code 404, afin de ne pas confirmer l'existence d'un identifiant.
 
-Tableau complet avec les codes de statut : [cahier des charges, section 8](docs/cahier-des-charges.md).
+Référence minimale des vingt routes et collection exécutable :
+[documentation API](docs/api/README.md).
 
 ## Quelques partis pris
 
@@ -246,7 +262,10 @@ Tableau complet avec les codes de statut : [cahier des charges, section 8](docs/
 
 **Le prix de revient n'est jamais stocké.** C'est une valeur dérivée des transactions, recalculée à chaque demande. La conserver en base créerait un risque d'incohérence permanent, toute correction d'une transaction ancienne rendant la valeur stockée fausse sans que rien ne le signale.
 
-**L'historique de valorisation, en revanche, est stocké.** Il déroge volontairement à la règle précédente, parce qu'il n'est pas reconstituable après coup : retrouver la valeur du portefeuille à une date passée exigerait des cours qui ne sont pas conservés.
+**Les historiques, en revanche, sont stockés.** La valeur totale du portefeuille et le
+cours de chaque position sont relevés au plus une fois par jour. Ils dérogent
+volontairement à la règle précédente, car ces faits datés ne sont pas reconstituables
+après coup à partir des seuls mouvements.
 
 **Le cache n'est jamais une dépendance dure.** Si Redis est arrêté, l'application démarre et fonctionne, les cours étant demandés directement aux fournisseurs. Si un fournisseur tombe, le dernier cours connu est renvoyé, explicitement signalé comme tel.
 
@@ -262,6 +281,7 @@ Tableau complet avec les codes de statut : [cahier des charges, section 8](docs/
 | [Direction artistique](docs/conception/direction-artistique.md) | palette, typographie, écrans |
 | [Jeu d'essai](docs/jeu-essai-calculs.md) | déroulé détaillé du calcul du prix de revient et des plus-values |
 | [Déploiement](docs/deploiement.md) | mise en service en conteneurs, redéploiement, migrations, sauvegarde |
+| [API](docs/api/README.md) | routes réellement montées, contrats essentiels et collection d'appels |
 | [Planning](docs/planning.md) | calendrier et jalons |
 | [Convention de commits](docs/convention-commits.md) | format des messages et flux de contribution |
 

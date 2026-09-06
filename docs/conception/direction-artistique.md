@@ -13,7 +13,7 @@ Direction retenue : interface sombre, sobre, inspirée des applications de suivi
 | Texte secondaire | gris clair | #9AA7B4 |
 | Accent (actions, liens) | bleu | #4C9AFF |
 | Plus-value positive | vert | #34C77B |
-| Plus-value négative | rouge | #F0564F |
+| Plus-value négative | rouge | #F8645D |
 
 Deux dérivés fonctionnels s'y ajoutent (D70), à l'emploi strictement borné :
 
