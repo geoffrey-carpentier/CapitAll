@@ -6,12 +6,34 @@ describe("schéma de création d'un actif", () => {
 
   it('accepte les quatre types du schéma de base', () => {
     for (const type of ['crypto', 'devise', 'metal', 'action']) {
-      expect(creationActif.safeParse({ ...actifValide, type }).success).toBe(true);
+      const symbole = type === 'action' ? 'AAPL' : actifValide.symbole;
+      expect(creationActif.safeParse({ ...actifValide, type, symbole }).success).toBe(true);
     }
   });
 
   it('rejette un type hors liste', () => {
     expect(creationActif.safeParse({ ...actifValide, type: 'obligation' }).success).toBe(false);
+  });
+
+  it("accepte une action de la liste blanche et normalise son symbole", () => {
+    const resultat = creationActif.parse({ type: 'action', symbole: ' aapl ', nom: 'Apple' });
+    expect(resultat.symbole).toBe('AAPL');
+  });
+
+  it("rejette une action absente de la liste blanche avant tout appel fournisseur", () => {
+    const resultat = creationActif.safeParse({
+      type: 'action',
+      symbole: 'INCONNU',
+      nom: 'Action inconnue',
+    });
+    expect(resultat.success).toBe(false);
+    expect(resultat.error.issues[0].path).toEqual(['symbole']);
+  });
+
+  it("n'applique pas la liste blanche des actions aux autres classes", () => {
+    expect(
+      creationActif.safeParse({ type: 'crypto', symbole: 'SOL', nom: 'Solana' }).success
+    ).toBe(true);
   });
 
   it('normalise le symbole en majuscules et retire les espaces', () => {

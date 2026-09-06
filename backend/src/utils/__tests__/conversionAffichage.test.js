@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ECHELLE_MONTANT,
-  ECHELLE_PRU,
+  ECHELLE_TAUX,
   versUnites,
   multiplier,
   formater,
@@ -23,16 +23,31 @@ const JEU_ESSAI = JSON.parse(
   readFileSync(resolve(process.cwd(), '../fixtures/conversion-affichage.json'), 'utf8')
 );
 
-// Même opération que côté interface : un montant à deux décimales multiplié par un taux,
-// arrondi au centime au plus proche, les demis s'écartant de zéro.
+// Même opération que côté interface : un montant multiplié par un taux, arrondi au plus
+// proche, les demis s'écartant de zéro.
+//
+// Le résultat porte autant de décimales que le montant reçu, avec un plancher au
+// centime. La règle vient de ce que la même fonction sert deux natures de valeurs : les
+// montants du patrimoine, réglés au centime, et les cours, qui descendent bien plus bas.
+// Forcer deux décimales faisait disparaître un cours de 0,005 euro à la bascule de
+// devise, alors qu'il s'affichait correctement en euros.
+function decimalesDe(valeur) {
+  const [, decimale = ''] = valeur.split('.');
+  return decimale.length;
+}
+
 function convertir(montant, taux) {
+  const decimalesSortie = Math.max(ECHELLE_MONTANT, decimalesDe(montant));
+
   const produit = multiplier(
-    versUnites(montant, ECHELLE_MONTANT),
-    versUnites(taux, ECHELLE_PRU),
-    ECHELLE_PRU
+    versUnites(montant, decimalesSortie),
+    decimalesSortie,
+    versUnites(taux, ECHELLE_TAUX),
+    ECHELLE_TAUX,
+    decimalesSortie
   );
 
-  return formater(produit, ECHELLE_MONTANT, ECHELLE_MONTANT);
+  return formater(produit, decimalesSortie, decimalesSortie);
 }
 
 describe("jeu d'essai partagé de la conversion d'affichage", () => {

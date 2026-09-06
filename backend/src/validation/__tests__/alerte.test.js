@@ -27,7 +27,7 @@ describe("schéma de création d'une alerte", () => {
   // si la cible est un actif. Le contrôler ici permet un message compréhensible plutôt
   // qu'une erreur de contrainte brute remontée par PostgreSQL.
   it("rejette une alerte sur actif sans actif_id", () => {
-    const { actif_id, ...sansActif } = ALERTE_ACTIF;
+    const { actif_id: _actifId, ...sansActif } = ALERTE_ACTIF;
     const resultat = creationAlerte.safeParse(sansActif);
 
     expect(resultat.success).toBe(false);
@@ -49,10 +49,28 @@ describe("schéma de création d'une alerte", () => {
     expect(creationAlerte.safeParse({ ...ALERTE_ACTIF, valeur_seuil: '-10.00' }).success).toBe(false);
   });
 
-  it('rejette un seuil à plus de deux décimales', () => {
-    expect(creationAlerte.safeParse({ ...ALERTE_ACTIF, valeur_seuil: '70000.123' }).success).toBe(
-      false
+  // Un seuil sur un actif se compare à un cours, qui descend sous le centime : il suit
+  // l'échelle des prix. Un seuil sur le capital se compare à un montant en euros.
+  it('accepte un seuil de cours sous le centime', () => {
+    expect(creationAlerte.safeParse({ ...ALERTE_ACTIF, valeur_seuil: '0.000015' }).success).toBe(
+      true
     );
+  });
+
+  it('rejette un seuil à plus de dix-huit décimales', () => {
+    expect(
+      creationAlerte.safeParse({ ...ALERTE_ACTIF, valeur_seuil: '0.0000000000000000001' }).success
+    ).toBe(false);
+  });
+
+  it('rejette un seuil de capital à plus de deux décimales', () => {
+    expect(
+      creationAlerte.safeParse({
+        type_cible: 'capital_total',
+        sens_seuil: 'au_dessus',
+        valeur_seuil: '45000.123',
+      }).success
+    ).toBe(false);
   });
 
   it('conserve le seuil en chaîne, sans conversion en flottant', () => {
