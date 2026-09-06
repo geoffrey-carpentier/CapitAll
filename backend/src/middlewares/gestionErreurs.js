@@ -20,7 +20,19 @@ function gestionErreurs(erreur, req, res, next) {
     return res.status(erreur.statut).json(corps);
   }
 
-  console.error(`Erreur non gérée sur ${req.method} ${req.originalUrl}`, erreur);
+  // Le journal ne reçoit ni la chaîne de requête ni l'objet d'erreur entier.
+  //
+  // La chaîne de requête porte des valeurs saisies par l'appelant : le chemin suffit à
+  // situer l'incident. Et une erreur PostgreSQL transporte un champ `detail` qui recopie
+  // la valeur en cause — « Key (email)=(...) already exists » — ce qui déposerait une
+  // adresse d'utilisateur dans les journaux du serveur à chaque conflit d'unicité. Le
+  // message et la pile d'appels situent le défaut sans rien recopier des données.
+  console.error(
+    `Erreur non gérée sur ${req.method} ${req.path} : ${erreur.name} — ${erreur.message}`
+  );
+  if (erreur.stack) {
+    console.error(erreur.stack);
+  }
   return res.status(500).json({ erreur: 'Une erreur interne est survenue.' });
 }
 
