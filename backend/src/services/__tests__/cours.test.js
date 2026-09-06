@@ -76,6 +76,7 @@ describe('service de cours', () => {
       ['crypto', DUREES_VIE_SECONDES.crypto],
       ['devise', DUREES_VIE_SECONDES.devise],
       ['metal', DUREES_VIE_SECONDES.metal],
+      ['action', DUREES_VIE_SECONDES.action],
     ];
 
     for (const [type, ttlAttendu] of cas) {
@@ -87,7 +88,13 @@ describe('service de cours', () => {
 
       await service.getCours('SYM', type);
 
-      expect(cache.ecrireCoursCache).toHaveBeenCalledWith('SYM', expect.anything(), ttlAttendu);
+      // La classe précède le symbole : les deux forment l'identité du cours en cache.
+      expect(cache.ecrireCoursCache).toHaveBeenCalledWith(
+        type,
+        'SYM',
+        expect.anything(),
+        ttlAttendu
+      );
     }
   });
 
@@ -125,16 +132,14 @@ describe('service de cours', () => {
     await expect(service.getCours('BTC', 'crypto')).rejects.toThrow(/aucun cours connu/);
   });
 
-  it("signale explicitement qu'aucun fournisseur n'est branché pour les actions", async () => {
+  it("route également les actions vers l'adaptateur configuré", async () => {
     const cache = creerCacheFactice();
-    const adaptateurs = {
-      obtenirAdaptateur: vi.fn().mockImplementation(() => {
-        throw new Error('Fournisseur non branché pour le type d\'actif « action ».');
-      }),
-    };
+    const adaptateurs = creerAdaptateursFactices(getCoursAdaptateur);
     const service = creerServiceCours({ adaptateurs, cache });
 
-    await expect(service.getCours('AAPL', 'action')).rejects.toThrow(/non branché/);
+    await service.getCours('AAPL', 'action');
+
+    expect(adaptateurs.obtenirAdaptateur).toHaveBeenCalledWith('action');
   });
 });
 

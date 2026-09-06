@@ -7,8 +7,9 @@
 // du tableau de bord, quand les valeurs viennent d'être calculées.
 
 const {
-  ECHELLE_PRU,
+  ECHELLE_PRIX,
   ECHELLE_MONTANT,
+  ECHELLE_POURCENTAGE,
   versUnites,
   comparer,
   diviser,
@@ -19,8 +20,11 @@ const {
 // lorsque la valeur atteint 70 000, pas seulement lorsqu'elle le dépasse. C'est ce
 // qu'attend l'utilisateur qui a fixé ce seuil.
 function estFranchi(sensSeuil, valeurObservee, valeurSeuil) {
-  const observee = versUnites(valeurObservee, ECHELLE_PRU);
-  const seuil = versUnites(valeurSeuil, ECHELLE_PRU);
+  // Un seuil se compare à un cours ou à un capital : l'échelle des prix les couvre tous
+  // deux, et permet un seuil sous le centime là où l'échelle du prix de revient n'aurait
+  // rien apporté qu'un chiffre de plus.
+  const observee = versUnites(valeurObservee, ECHELLE_PRIX);
+  const seuil = versUnites(valeurSeuil, ECHELLE_PRIX);
   const position = comparer(observee, seuil);
 
   return sensSeuil === 'au_dessus' ? position >= 0 : position <= 0;
@@ -58,20 +62,20 @@ function ecartRestant(sensSeuil, valeurConstatee, valeurSeuil) {
     return null;
   }
 
-  const observee = versUnites(valeurConstatee, ECHELLE_PRU);
+  const observee = versUnites(valeurConstatee, ECHELLE_PRIX);
   if (observee === 0n) {
     return null;
   }
-  const seuil = versUnites(valeurSeuil, ECHELLE_PRU);
+  const seuil = versUnites(valeurSeuil, ECHELLE_PRIX);
 
   if (estFranchi(sensSeuil, valeurConstatee, valeurSeuil)) {
     return '0';
   }
 
   const ecart = seuil > observee ? seuil - observee : observee - seuil;
-  const pourcentage = diviser(ecart * 100n, observee, ECHELLE_PRU);
+  const pourcentage = diviser(ecart * 100n, ECHELLE_PRIX, observee, ECHELLE_PRIX, ECHELLE_POURCENTAGE);
 
-  return formater(pourcentage, ECHELLE_PRU, ECHELLE_MONTANT);
+  return formater(pourcentage, ECHELLE_POURCENTAGE, ECHELLE_MONTANT);
 }
 
 function evaluerAlertes(alertesActives, contexte) {
