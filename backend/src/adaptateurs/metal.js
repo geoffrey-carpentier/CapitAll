@@ -7,11 +7,17 @@
 // adaptateur multiplierait les appels sortants pour la même donnée.
 
 const { ErreurFournisseur } = require('../erreurs');
+const { chaineDecimalePositive } = require('./valeur');
+const { ECHELLE_PRIX, ECHELLE_TAUX, versUnites, versChaine, multiplier } = require('../utils/decimal');
 
 const BASE_URL = 'https://api.gold-api.com';
 const SOURCE = 'gold-api';
 
-const DECIMALES_PRIX = 2;
+// L'unité de cotation. gold-api publie un prix par ONCE TROY, et c'est l'unité dans
+// laquelle les quantités sont saisies et affichées (D88) : le produit quantité × cours a
+// donc un sens sans conversion. L'interface affichait auparavant des grammes sur des
+// quantités qui étaient des onces, ce qui faisait mentir le libellé d'un facteur 31.
+const UNITE = 'once troy';
 
 function creerAdaptateurMetal({ recupererJson, obtenirTauxUsdEur }) {
   async function getCours(symbole) {
@@ -20,29 +26,39 @@ function creerAdaptateurMetal({ recupererJson, obtenirTauxUsdEur }) {
       `${BASE_URL}/price/${encodeURIComponent(symboleNormalise)}`
     );
 
-    const prixUsd = reponse?.price;
+    const prixUsd = chaineDecimalePositive(reponse?.price);
 
-    if (typeof prixUsd !== 'number' || !Number.isFinite(prixUsd) || prixUsd <= 0) {
+    if (prixUsd === null) {
       throw new ErreurFournisseur(`gold-api n'a pas renvoyé de prix pour ${symboleNormalise}.`);
     }
 
-    const tauxUsdEur = Number(await obtenirTauxUsdEur());
+    const tauxUsdEur = chaineDecimalePositive(await obtenirTauxUsdEur());
 
-    if (!tauxUsdEur || tauxUsdEur <= 0) {
+    if (tauxUsdEur === null) {
       throw new ErreurFournisseur(
         'Taux de change USD vers EUR indisponible, conversion du métal impossible.'
       );
     }
 
-    // Cette multiplication est faite en virgule flottante, alors que le portefeuille
-    // proscrit le flottant sur les montants (D4). La distinction est volontaire : il
-    // s'agit ici de convertir un cours, donnée déjà approximative reçue en flottant du
-    // fournisseur et rafraîchie en permanence, et non d'un montant du patrimoine.
-    // Le résultat est immédiatement arrondi au centime, puis manipulé en chaîne par le
-    // moteur de calcul. Aucune imprécision ne se propage donc aux PRU ni aux plus-values.
+    // La conversion se fait en entiers, comme le reste du projet (D4).
+    //
+    // Elle était auparavant faite en virgule flottante puis arrondie au centime, au
+    // motif qu'un cours est une donnée approximative. L'argument ne tient plus : le
+    // cours est désormais conservé à l'échelle des prix, et l'arrondir au centime à
+    // l'entrée effacerait précisément ce que le contrat numérique vient d'ouvrir.
     return {
       symbole: symboleNormalise,
-      cours_eur: (prixUsd * tauxUsdEur).toFixed(DECIMALES_PRIX),
+      cours_eur: versChaine(
+        multiplier(
+          versUnites(prixUsd, ECHELLE_PRIX),
+          ECHELLE_PRIX,
+          versUnites(tauxUsdEur, ECHELLE_TAUX),
+          ECHELLE_TAUX,
+          ECHELLE_PRIX
+        ),
+        ECHELLE_PRIX
+      ),
+      unite: UNITE,
       horodatage: reponse.updatedAt
         ? new Date(reponse.updatedAt).toISOString()
         : new Date().toISOString(),
@@ -53,4 +69,4 @@ function creerAdaptateurMetal({ recupererJson, obtenirTauxUsdEur }) {
   return { getCours, source: SOURCE };
 }
 
-module.exports = { creerAdaptateurMetal, BASE_URL, SOURCE };
+module.exports = { creerAdaptateurMetal, BASE_URL, SOURCE, UNITE };

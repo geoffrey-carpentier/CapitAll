@@ -3,22 +3,37 @@
 // conversion USD vers EUR dont dépend l'adaptateur des métaux.
 
 const { ErreurFournisseur } = require('../erreurs');
+const { chaineDecimalePositive } = require('./valeur');
+const { ECHELLE_TAUX, versUnites, versChaine, diviser } = require('../utils/decimal');
 
 const BASE_URL = 'https://api.frankfurter.dev/v1';
 const SOURCE = 'frankfurter';
 
-// Nombre de décimales conservées après l'inversion du taux. La division n'a pas de
-// résultat exact en général : on fixe une précision suffisante pour un cours de
-// change, puis on retire les zéros inutiles.
-const DECIMALES_TAUX = 8;
+// Le nombre de décimales conservées après l'inversion est celui de l'échelle des taux
+// (D88). La division n'a pas de résultat exact en général : elle est arrondie une fois,
+// au plus proche, comme partout ailleurs.
 
 // Frankfurter cote toujours à partir de l'euro : rates.USD vaut le nombre de dollars
 // que vaut UN euro. Or un utilisateur qui détient des dollars veut savoir ce que vaut
 // UN dollar en euros, soit l'inverse. Oublier cette inversion donnerait un cours
 // faux d'un facteur proche de 1,3 sans que rien ne le signale.
+//
+// L'inversion se fait en entiers. Elle passait auparavant par une division flottante
+// suivie d'un arrondi à huit décimales, alors que ce taux est appliqué à tout montant
+// converti en dollars et sert aussi à ramener en euros les cours des métaux et des
+// actions : c'est la valeur la plus réutilisée de toute la chaîne, et la moins bien
+// placée pour porter une approximation.
 function inverserTaux(tauxDepuisEuro) {
-  const inverse = 1 / tauxDepuisEuro;
-  return inverse.toFixed(DECIMALES_TAUX).replace(/\.?0+$/, '');
+  const taux = versUnites(tauxDepuisEuro, ECHELLE_TAUX);
+
+  if (taux === 0n) {
+    return null;
+  }
+
+  return versChaine(
+    diviser(versUnites('1', ECHELLE_TAUX), ECHELLE_TAUX, taux, ECHELLE_TAUX, ECHELLE_TAUX),
+    ECHELLE_TAUX
+  );
 }
 
 function creerAdaptateurFrankfurter({ recupererJson }) {
@@ -39,9 +54,9 @@ function creerAdaptateurFrankfurter({ recupererJson }) {
       `${BASE_URL}/latest?base=EUR&symbols=${encodeURIComponent(symboleNormalise)}`
     );
 
-    const tauxDepuisEuro = reponse?.rates?.[symboleNormalise];
+    const tauxDepuisEuro = chaineDecimalePositive(reponse?.rates?.[symboleNormalise]);
 
-    if (!tauxDepuisEuro || tauxDepuisEuro <= 0) {
+    if (tauxDepuisEuro === null) {
       throw new ErreurFournisseur(`Frankfurter n'a pas renvoyé de taux pour ${symboleNormalise}.`);
     }
 

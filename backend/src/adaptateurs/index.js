@@ -2,13 +2,15 @@
 //
 // La logique métier appelle toujours getCours(symbole) sur l'adaptateur que lui rend
 // ce module : elle ignore quel fournisseur répond, et un changement de fournisseur ne
-// la touche pas (D5). C'est ce qui permettra d'ajouter les actions sans modifier le
-// service de cours.
+// la touche pas (D5). Les actions utilisent ainsi leur chaîne de fournisseurs sans
+// modifier le service de cours.
 
 const { recupererJson } = require('./clientHttp');
 const { creerAdaptateurCoinbase } = require('./coinbase');
 const { creerAdaptateurFrankfurter } = require('./frankfurter');
 const { creerAdaptateurMetal } = require('./metal');
+const { creerAdaptateurActions } = require('./actions');
+const config = require('../config');
 const { ErreurFournisseur } = require('../erreurs');
 
 function creerAdaptateurs({ recupererJson: clientHttp = recupererJson, obtenirTauxUsdEur } = {}) {
@@ -23,16 +25,20 @@ function creerAdaptateurs({ recupererJson: clientHttp = recupererJson, obtenirTa
     recupererJson: clientHttp,
     obtenirTauxUsdEur: obtenirTauxUsdEur ?? frankfurter.obtenirTauxUsdEur,
   });
+  const actions = creerAdaptateurActions({
+    recupererJson: clientHttp,
+    obtenirTauxUsdEur: obtenirTauxUsdEur ?? frankfurter.obtenirTauxUsdEur,
+    fmpApiKey: config.fmpApiKey,
+    finnhubApiKey: config.finnhubApiKey,
+    alphaVantageApiKey: config.alphaVantageApiKey,
+  });
 
   const parType = {
     crypto: coinbase,
     devise: frankfurter,
     metal,
+    action: actions,
   };
-
-  // Le type action est prévu au modèle mais son fournisseur n'est pas encore branché.
-  // L'absence est signalée explicitement plutôt que rendue par un null silencieux,
-  // qui provoquerait une erreur incompréhensible plus loin dans la chaîne.
   function obtenirAdaptateur(type) {
     const adaptateur = parType[type];
 
