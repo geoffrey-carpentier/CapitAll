@@ -1,7 +1,7 @@
 import './FriseMouvements.css';
 import Montant from './Montant';
 import Variation from './Variation';
-import { comparerDecimales } from '../utils/formatage';
+import { comparerDecimales, formaterQuantiteEnNature } from '../utils/formatage';
 
 // Chronologie des mouvements d'une position.
 //
@@ -16,7 +16,10 @@ import { comparerDecimales } from '../utils/formatage';
 // Liste ordonnée sémantique, conformément à la spécification : la chronologie fait
 // partie de l'information, elle ne doit pas reposer sur la seule disposition visuelle.
 
-const LIBELLES_SENS = { achat: 'Achat', vente: 'Vente' };
+// Une sortie non marchande est un retrait ou un transfert. L'étiquette dit « Sortie » et
+// jamais « Vente » : c'est tout l'objet de D89 que ce mouvement ne se lise pas comme une
+// opération de marché, et la frise est l'endroit où la confusion se verrait.
+const LIBELLES_SENS = { achat: 'Achat', vente: 'Vente', sortie_non_marchande: 'Sortie' };
 
 function formaterDate(horodatage) {
   const date = new Date(horodatage);
@@ -46,6 +49,7 @@ export default function FriseMouvements({
   symbole,
   devise = 'EUR',
   masque = false,
+  surCorrection,
   surSuppression,
 }) {
   if (mouvements.length === 0) {
@@ -66,6 +70,10 @@ export default function FriseMouvements({
     <ol className="frise-mouvements">
       {duPlusRecent.map((mouvement) => {
         const date = formaterDate(mouvement.date_transaction);
+        // Un retrait n'a ni prix ni montant : les deux valent zéro en base, et les
+        // afficher donnerait à lire « 0 € » là où la notion ne s'applique pas. C'est
+        // exactement la lecture « vente à zéro euro » que ce lot supprime.
+        const marchand = mouvement.sens !== 'sortie_non_marchande';
 
         return (
           <li key={mouvement.id} className={`frise-mouvements__evenement frise-mouvements__evenement--${mouvement.sens}`}>
@@ -88,20 +96,49 @@ export default function FriseMouvements({
             </div>
 
             <dl className="frise-mouvements__details">
-              <div>
-                <dt>Prix unitaire</dt>
-                <dd>
-                  {masque ? '••••' : <Montant valeur={mouvement.prix_unitaire} type="cours" devise={devise} />}
-                </dd>
-              </div>
-              <div>
-                <dt>Montant</dt>
-                <dd>{masque ? '••••' : <Montant valeur={mouvement.montant} devise={devise} />}</dd>
-              </div>
+              {marchand && (
+                <div>
+                  <dt>Prix unitaire</dt>
+                  <dd>
+                    {masque ? '••••' : <Montant valeur={mouvement.prix_unitaire} type="cours" devise={devise} />}
+                  </dd>
+                </div>
+              )}
+              {marchand && (
+                <div>
+                  <dt>Montant</dt>
+                  <dd>{masque ? '••••' : <Montant valeur={mouvement.montant} devise={devise} />}</dd>
+                </div>
+              )}
               {!estNul(mouvement.frais) && (
                 <div>
                   <dt>Frais</dt>
-                  <dd>{masque ? '••••' : <Montant valeur={mouvement.frais} devise={devise} />}</dd>
+                  <dd>
+                    {masque ? (
+                      '••••'
+                    ) : (
+                      <>
+                        <Montant valeur={mouvement.frais} devise={devise} />
+                        {/* Ce qui a réellement été prélevé, quand ce n'était pas des
+                            euros : la contre-valeur seule ferait disparaître le fait. */}
+                        {mouvement.frais_unite && mouvement.frais_unite !== 'EUR' && (
+                          <span className="frise-mouvements__frais-origine">
+                            {' '}
+                            ({formaterQuantiteEnNature(mouvement.frais_montant, mouvement.frais_unite)})
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </dd>
+                </div>
+              )}
+              {/* Valeur emportée par une sortie, au prix de revient. Elle occupe la
+                  place de la plus-value réalisée sans en porter le nom : les deux ne
+                  peuvent jamais être renseignées sur un même mouvement. */}
+              {mouvement.cout_sortie != null && (
+                <div>
+                  <dt>Valeur sortie du portefeuille</dt>
+                  <dd>{masque ? '••••' : <Montant valeur={mouvement.cout_sortie} devise={devise} />}</dd>
                 </div>
               )}
               {mouvement.plus_value_realisee !== null && (
@@ -130,19 +167,40 @@ export default function FriseMouvements({
               </div>
             </dl>
 
-            {surSuppression && (
-              <button
-                type="button"
-                className="frise-mouvements__suppression"
-                onClick={() => surSuppression(mouvement)}
-              >
-                {/* Le libellé nomme le mouvement visé : « Supprimer », lu seul dans une
-                    liste de liens, ne dirait pas lequel des quatre serait supprimé. */}
-                <span aria-hidden="true">Supprimer</span>
-                <span className="lecteur-ecran-seulement">
-                  Supprimer {LIBELLES_SENS[mouvement.sens]?.toLowerCase()} du {date}
-                </span>
-              </button>
+            {(surCorrection || surSuppression) && (
+              <div className="frise-mouvements__actions">
+                {/* Corriger précède supprimer : c'est le geste réparateur, et celui
+                    qu'une saisie fautive appelle en premier. Avant D51 révisée, seule la
+                    seconde existait, et corriger un prix imposait de détruire le
+                    mouvement puis tous ceux qui en dépendaient. */}
+                {surCorrection && (
+                  <button
+                    type="button"
+                    className="frise-mouvements__correction"
+                    onClick={() => surCorrection(mouvement)}
+                  >
+                    <span aria-hidden="true">Corriger</span>
+                    <span className="lecteur-ecran-seulement">
+                      Corriger {LIBELLES_SENS[mouvement.sens]?.toLowerCase()} du {date}
+                    </span>
+                  </button>
+                )}
+                {surSuppression && (
+                  <button
+                    type="button"
+                    className="frise-mouvements__suppression"
+                    onClick={() => surSuppression(mouvement)}
+                  >
+                    {/* Le libellé nomme le mouvement visé : « Supprimer », lu seul dans
+                        une liste de liens, ne dirait pas lequel des quatre serait
+                        supprimé. */}
+                    <span aria-hidden="true">Supprimer</span>
+                    <span className="lecteur-ecran-seulement">
+                      Supprimer {LIBELLES_SENS[mouvement.sens]?.toLowerCase()} du {date}
+                    </span>
+                  </button>
+                )}
+              </div>
             )}
           </li>
         );

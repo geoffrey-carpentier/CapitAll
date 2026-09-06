@@ -7,6 +7,7 @@ import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
+import { fenetreDePeriode } from '../utils/serie';
 import Carte from '../composants/Carte';
 import Montant from '../composants/Montant';
 import Variation from '../composants/Variation';
@@ -17,6 +18,7 @@ import SelecteurPeriode from '../composants/SelecteurPeriode';
 import FriseMouvements from '../composants/FriseMouvements';
 import BarreProgression from '../composants/BarreProgression';
 import Confirmation from '../composants/Confirmation';
+import Champ from '../composants/Champ';
 import FeuilleMouvement from '../composants/FeuilleMouvement';
 import FeuilleSeuil from '../composants/FeuilleSeuil';
 import Bouton from '../composants/Bouton';
@@ -38,10 +40,33 @@ import './DetailPosition.css';
 // que tout le reste de l'application, elle n'est chargée qu'à l'affichage du graphe.
 const Courbe = lazy(() => import('../composants/Courbe'));
 
-// Nombre de points repris pour chaque plage. La série est journalière et continue :
-// borner la fenêtre revient à en garder la fin. C'est de la présentation, les
-// performances de chaque plage restant calculées par le serveur sur la série entière.
-const JOURS_PAR_PERIODE = { jour: 2, semaine: 7, mois: 30, annee: 365, origine: null };
+// Ce que la suppression d'un mouvement recalcule, dit avant de la confirmer. La
+// conséquence n'est pas la même selon la nature du mouvement, et l'annoncer de travers
+// sur un mouvement irréversible vaut moins que de ne rien annoncer du tout.
+const TITRES_SUPPRESSION = {
+  achat: 'Supprimer cet achat ?',
+  vente: 'Supprimer cette vente ?',
+  sortie_non_marchande: 'Supprimer cette sortie ?',
+};
+
+const CONSEQUENCES_SUPPRESSION = {
+  achat:
+    'La suppression de cet achat recalculera le prix de revient de la position, ainsi que la quantité détenue et la plus-value latente.',
+  vente:
+    'La suppression de cette vente recalculera la quantité détenue et la plus-value réalisée de la position.',
+  sortie_non_marchande:
+    'La suppression de cette sortie recalculera la quantité détenue et la valeur sortie du portefeuille.',
+};
+
+// Nombre de jours retenus pour chaque plage. C'est de la présentation, les performances
+// de chaque plage restant calculées par le serveur sur la série entière.
+//
+// La fenêtre se compte en jours et non en points : la série n'est pas continue — un
+// point n'existe que si l'utilisateur a consulté ce jour-là, et il n'est pas écrit du
+// tout quand le cours manque. Garder les sept derniers points pouvait donc couvrir trois
+// semaines sous l'étiquette « Semaine ». Les bornes sont désormais celles que le serveur
+// applique pour calculer la performance affichée juste à côté.
+const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: null };
 
 const PERIODE_PAR_DEFAUT = 'mois';
 
@@ -67,7 +92,13 @@ function natureDeLErreur(erreur) {
   if (erreur.statut === 0) {
     return 'reseau';
   }
-  return erreur.statut === 401 ? 'session' : 'api';
+  if (erreur.statut === 401) {
+    return 'session';
+  }
+  // Un 400 n'est pas une panne : le serveur a répondu, et il a refusé. Le distinguer
+  // ici évite d'annoncer « le serveur n'a pas pu répondre » alors qu'il a répondu, et
+  // de proposer une action qui échouerait à l'identique.
+  return erreur.statut === 400 ? 'refus' : 'api';
 }
 
 // Seuls les seuils encore en vigueur ou déjà franchis concernent l'écran : un seuil
@@ -87,6 +118,11 @@ export default function DetailPosition() {
   const [periode, setPeriode] = useState(PERIODE_PAR_DEFAUT);
   const [aSupprimer, setASupprimer] = useState(null);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  // Null tant que le nom n'est pas en cours d'édition : la chaîne vide est un nom vide,
+  // pas une absence d'édition, et confondre les deux ouvrirait le formulaire tout seul.
+  const [renommage, setRenommage] = useState(null);
+  const [renommageEnCours, setRenommageEnCours] = useState(false);
+  const [erreurRenommage, setErreurRenommage] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
 
   const mouvement = useMouvement();
@@ -147,14 +183,39 @@ export default function DetailPosition() {
   // tracer sept serait du travail perdu.
   const points = useMemo(() => {
     const serie = position?.historique?.points ?? [];
-    const jours = JOURS_PAR_PERIODE[periode];
-    const fenetre = jours ? serie.slice(-jours) : serie;
+    const fenetre = fenetreDePeriode(serie, JOURS_PAR_PERIODE[periode]);
 
     return fenetre.map((point) => ({
       date: point.date_snapshot,
       valeur: afficher(point.cours_eur) ?? point.cours_eur,
     }));
   }, [position, periode, afficher]);
+
+  async function confirmerRenommage(evenement) {
+    evenement.preventDefault();
+    const nom = renommage.trim();
+
+    if (!nom) {
+      setErreurRenommage('Le nom est obligatoire.');
+      return;
+    }
+
+    setRenommageEnCours(true);
+    setErreurRenommage(null);
+
+    try {
+      const renomme = await api.renommerActif(jeton, id, nom);
+      // La réponse porte la ligne telle que la base la rend : c'est elle qui est
+      // affichée, et non le texte saisi. Le nom montré est donc le nom enregistré.
+      setPosition((precedente) => ({ ...precedente, nom: renomme.nom }));
+      setRenommage(null);
+      setConfirmation(`Position renommée en ${renomme.nom}.`);
+    } catch (echec) {
+      setErreurRenommage(echec.message);
+    } finally {
+      setRenommageEnCours(false);
+    }
+  }
 
   async function confirmerSuppression() {
     setSuppressionEnCours(true);
@@ -220,9 +281,21 @@ export default function DetailPosition() {
       <div className="detail">
         <MessageErreur
           nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={nature === 'session' ? () => naviguer('/connexion') : charger}
+          message={nature === 'api' || nature === 'refus' ? erreur.message : undefined}
+          libelleAction={
+            nature === 'session'
+              ? 'Se reconnecter'
+              : nature === 'refus'
+                ? 'Revenir aux positions'
+                : 'Réessayer'
+          }
+          surAction={
+            nature === 'session'
+              ? () => naviguer('/connexion')
+              : nature === 'refus'
+                ? () => naviguer('/positions')
+                : charger
+          }
         />
       </div>
     );
@@ -237,6 +310,7 @@ export default function DetailPosition() {
   // Le sens du tracé vient de la performance calculée par le serveur, jamais d'une
   // comparaison entre deux montants convertis en nombres.
   const sensDeLaPeriode = sensVariation(performances[periode] ?? '0') ?? 'stable';
+  const natureErreur = erreur ? natureDeLErreur(erreur) : null;
 
   return (
     <div className="detail">
@@ -246,9 +320,52 @@ export default function DetailPosition() {
           <span className="lecteur-ecran-seulement">Revenir aux positions</span>
         </Link>
 
-        <JetonClasse classe={position.type} />
+        <JetonClasse classe={position.type} symbole={position.symbole} />
         <div className="detail__identite">
-          <h1 className="detail__nom">{position.nom}</h1>
+          {/* Le nom d'une position lui appartient : c'est celui que l'utilisateur a saisi,
+              pas celui du fournisseur, et rien ne le rendait modifiable alors que la
+              route existait depuis la création des actifs (D51 révisée, S-26). Le symbole
+              et la classe, eux, ne changent pas : ils identifient l'actif et en changer
+              ferait porter à des mouvements déjà enregistrés une nature qu'ils n'ont pas
+              eue. */}
+          {renommage === null ? (
+            <div className="detail__nom-ligne">
+              <h1 className="detail__nom">{position.nom}</h1>
+              <button
+                type="button"
+                className="detail__renommer"
+                onClick={() => setRenommage(position.nom)}
+              >
+                <span aria-hidden="true">Renommer</span>
+                <span className="lecteur-ecran-seulement">Renommer {position.nom}</span>
+              </button>
+            </div>
+          ) : (
+            <form className="detail__nom-ligne" onSubmit={confirmerRenommage}>
+              <Champ
+                label={`Nouveau nom de ${position.symbole}`}
+                valeur={renommage}
+                onChange={(evenement) => setRenommage(evenement.target.value)}
+                erreur={erreurRenommage ?? undefined}
+                maxLength={100}
+                autoComplete="off"
+                disabled={renommageEnCours}
+              />
+              <Bouton type="submit" enCours={renommageEnCours} desactive={!renommage.trim()}>
+                Enregistrer
+              </Bouton>
+              <Bouton
+                variante="secondaire"
+                onClick={() => {
+                  setRenommage(null);
+                  setErreurRenommage(null);
+                }}
+                desactive={renommageEnCours}
+              >
+                Annuler
+              </Bouton>
+            </form>
+          )}
           <p className="detail__signalement">
             <span>
               {position.symbole} · {classe}
@@ -282,9 +399,15 @@ export default function DetailPosition() {
         </div>
       </div>
 
-      {/* Une erreur survenue alors que la fiche est déjà affichée ne la vide pas. */}
+      {/* Une erreur survenue alors que la fiche est déjà affichée ne la vide pas. Un
+          refus métier y porte le motif rendu par le serveur, et aucune action : la même
+          demande serait refusée de la même façon. */}
       {erreur && position && (
-        <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />
+        <MessageErreur
+          nature={natureErreur}
+          message={natureErreur === 'refus' ? erreur.message : undefined}
+          surAction={natureErreur === 'refus' ? undefined : charger}
+        />
       )}
 
       {confirmation && <Message>{confirmation}</Message>}
@@ -423,7 +546,8 @@ export default function DetailPosition() {
               symbole={position.symbole}
               devise={devise}
               masque={masque}
-              surSuppression={(mouvement) => setASupprimer({ type: 'mouvement', mouvement })}
+              surCorrection={(aCorriger) => mouvement.corriger(position.id, aCorriger.id)}
+              surSuppression={(aRetirer) => setASupprimer({ type: 'mouvement', mouvement: aRetirer })}
             />
           ) : (
             <>
@@ -496,13 +620,10 @@ export default function DetailPosition() {
 
       {aSupprimer?.type === 'mouvement' && (
         <Confirmation
-          titre={
-            aSupprimer.mouvement.sens === 'achat' ? 'Supprimer cet achat ?' : 'Supprimer cette vente ?'
-          }
+          titre={TITRES_SUPPRESSION[aSupprimer.mouvement.sens] ?? 'Supprimer ce mouvement ?'}
           consequence={
-            aSupprimer.mouvement.sens === 'achat'
-              ? "La suppression de cet achat recalculera le prix de revient de la position, ainsi que la quantité détenue et la plus-value latente."
-              : "La suppression de cette vente recalculera la quantité détenue et la plus-value réalisée de la position."
+            CONSEQUENCES_SUPPRESSION[aSupprimer.mouvement.sens] ??
+            'La suppression de ce mouvement recalculera la position.'
           }
           libelleConfirmation="Supprimer le mouvement"
           enCours={suppressionEnCours}
@@ -519,6 +640,16 @@ export default function DetailPosition() {
         <FeuilleMouvement
           actifs={[position]}
           actifInitialId={position.id}
+          // Le mouvement à corriger est cherché dans la frise déjà chargée : l'adresse
+          // ne porte que son identifiant, et une adresse recopiée sur un mouvement
+          // supprimé depuis ouvre alors la feuille en création plutôt qu'en erreur.
+          mouvement={
+            mouvement.idCorrection
+              ? (mouvements.find(
+                  (element) => String(element.id) === String(mouvement.idCorrection)
+                ) ?? null)
+              : null
+          }
           surFermeture={mouvement.fermer}
           surEnregistrement={({ resume }) => {
             mouvement.fermer();

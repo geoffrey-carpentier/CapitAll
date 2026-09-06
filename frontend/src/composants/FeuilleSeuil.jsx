@@ -27,7 +27,7 @@ const SENS = [
 
 const DECALAGES = [-10, -5, 5, 10];
 
-const MOTIF_MONTANT = /^\d+(\.\d{1,2})?$/;
+const MOTIF_MONTANT = /^\d+(\.\d+)?$/;
 
 function normaliser(valeur) {
   return String(valeur ?? '')
@@ -36,27 +36,41 @@ function normaliser(valeur) {
     .replace(',', '.');
 }
 
-// Application exacte d'un décalage en points de pourcentage à un montant à deux
-// décimales, sans jamais passer par un nombre à virgule flottante : un décalage n'est
-// qu'une proposition de saisie, mais la proposition doit être aussi exacte qu'une
-// valeur saisie à la main, faute de quoi le champ afficherait un artefact d'arrondi.
-// Le facteur reste toujours positif, les quatre décalages proposés étant compris entre
-// -10 et +10 points, ce qui dispense de traiter un facteur négatif.
+// Application exacte d'un décalage en points de pourcentage à une valeur, sans jamais
+// passer par un nombre à virgule flottante : un décalage n'est qu'une proposition de
+// saisie, mais la proposition doit être aussi exacte qu'une valeur saisie à la main,
+// faute de quoi le champ afficherait un artefact d'arrondi.
+//
+// Le calcul travaillait auparavant en centimes, et refusait donc toute valeur portant
+// plus de deux décimales : les quatre boutons restaient sans effet sur un cours de
+// 88 123,4567891 comme sur un taux de 1,12345678. Ce n'était pas un défaut propre aux
+// cryptomonnaies, contrairement à ce qu'on en avait déduit, mais une limite de précision
+// qui touchait toutes les classes.
+//
+// Il travaille désormais à l'échelle de la valeur reçue, quelle qu'elle soit. Le facteur
+// reste toujours positif, les quatre décalages proposés étant compris entre -10 et +10
+// points, ce qui dispense de traiter un facteur négatif.
 function decalerMontant(montant, pointsDePourcentage) {
   if (typeof montant !== 'string' || !MOTIF_MONTANT.test(montant)) {
     return null;
   }
 
   const [entiere, decimale = ''] = montant.split('.');
-  const centimes = BigInt(entiere) * 100n + BigInt((decimale + '00').slice(0, 2));
+  const decimales = decimale.length;
+  const unites = BigInt(entiere + decimale);
   const facteur = 100n + BigInt(pointsDePourcentage);
 
-  const produit = centimes * facteur;
+  const produit = unites * facteur;
   const quotient = produit / 100n;
   const reste = produit % 100n;
   const arrondi = reste * 2n >= 100n ? quotient + 1n : quotient;
 
-  return `${arrondi / 100n}.${(arrondi % 100n).toString().padStart(2, '0')}`;
+  if (decimales === 0) {
+    return arrondi.toString();
+  }
+
+  const echelle = 10n ** BigInt(decimales);
+  return `${arrondi / echelle}.${(arrondi % echelle).toString().padStart(decimales, '0')}`;
 }
 
 const CHAMPS_SERVEUR = ['type_cible', 'sens_seuil', 'valeur_seuil', 'actif_id'];
@@ -134,8 +148,11 @@ export default function FeuilleSeuil({
     valeurNormalisee === ''
       ? 'Le seuil est obligatoire.'
       : !MOTIF_MONTANT.test(valeurNormalisee)
-        ? 'Le seuil doit être un montant positif, avec au plus 2 décimales.'
-        : Number(valeurNormalisee) <= 0
+        ? 'Le seuil doit être une valeur positive.'
+        : // La positivité se lit sur les chiffres. Passer par Number ferait rentrer le
+          // flottant que toute la chaîne tient à l'écart, et sur un seuil de cours très
+          // faible la conversion perdrait précisément ce qui distingue la valeur de zéro.
+          !/[1-9]/.test(valeurNormalisee)
           ? 'Le seuil doit être strictement positif.'
           : null;
 
@@ -272,6 +289,12 @@ export default function FeuilleSeuil({
                 disabled={envoi || propose === null}
                 onClick={() => {
                   setValeurSeuil(propose);
+                  // Le sens suit le signe du décalage. Sans cela, un décalage négatif
+                  // laissait le sens par défaut « au-dessus » sur un seuil placé sous la
+                  // valeur actuelle : l'alerte était franchie à l'instant même de sa
+                  // création. Le sens reste modifiable ensuite, le décalage ne fait que
+                  // proposer celui qui correspond à l'intention exprimée.
+                  setSens(points < 0 ? 'en_dessous' : 'au_dessus');
                   setQuitte(true);
                 }}
               >
