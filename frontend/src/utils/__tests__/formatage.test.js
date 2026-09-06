@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formaterMontant,
   formaterQuantite,
+  formaterQuantiteEnNature,
   formaterCours,
   formaterTaux,
   formaterPourcentage,
@@ -90,9 +91,12 @@ describe('catégorie 2 — quantités', () => {
     expect(formaterQuantite('0.60000010', 'crypto', 'BTC')).toBe(`0,6000001${NBSP}BTC`);
   });
 
-  it('affiche un métal en grammes, à trois décimales', () => {
-    expect(formaterQuantite('18', 'metal')).toBe(`18${NBSP}g`);
-    expect(formaterQuantite('620.500', 'metal')).toBe(`620,5${NBSP}g`);
+  // L'once troy est l'unité de cotation du fournisseur et celle dans laquelle les
+  // quantités sont saisies (D88). Le gramme affiché auparavant ne correspondait à
+  // aucune conversion : le libellé mentait d'un facteur 31,1034768.
+  it('affiche un métal en onces troy, à quatre décimales', () => {
+    expect(formaterQuantite('18', 'metal')).toBe(`18${NBSP}oz`);
+    expect(formaterQuantite('620.500', 'metal')).toBe(`620,5${NBSP}oz`);
   });
 
   it('affiche une devise avec son code, à deux décimales', () => {
@@ -136,15 +140,25 @@ describe('catégorie 3 — cours unitaires, quatre plages', () => {
     expect(formaterCours('9.99999')).toBe(`10${NBSP}€`);
   });
 
-  it('sous le centime : six décimales', () => {
+  // Sous l'unité, la précision se compte en chiffres significatifs et non en décimales.
+  // La règle précédente s'arrêtait à six décimales et rendait « 0 € » pour une valeur
+  // qui n'était pas nulle, ce que la politique de formatage interdit partout ailleurs.
+  it('sous le centime : quatre chiffres significatifs', () => {
     expect(formaterCours('0.000842')).toBe(`0,000842${NBSP}€`);
-    expect(formaterCours('0.00000012')).toBe(`0${NBSP}€`);
+    expect(formaterCours('0.00000012')).toBe(`0,00000012${NBSP}€`);
+    expect(formaterCours('0.0000000012')).toBe(`0,0000000012${NBSP}€`);
+  });
+
+  it('accepte une graduation transmise en notation scientifique', () => {
+    // La bibliothèque de graphes calcule ses graduations et les transmet en nombres,
+    // que JavaScript écrit en exposant sous 1e-6.
+    expect(formaterCours('1e-7')).toBe(`0,0000001${NBSP}€`);
   });
 
   it('bascule de plage exactement aux bornes', () => {
     expect(formaterCours('10.12345')).toBe(`10,12${NBSP}€`);
     expect(formaterCours('9.12345')).toBe(`9,1235${NBSP}€`);
-    expect(formaterCours('0.01234')).toBe(`0,0123${NBSP}€`);
+    expect(formaterCours('0.01234')).toBe(`0,01234${NBSP}€`);
     expect(formaterCours('0.00934')).toBe(`0,00934${NBSP}€`);
   });
 });
@@ -309,5 +323,31 @@ describe('comparaison de valeurs décimales', () => {
     const decroissant = (a, b) => comparerDecimales(a, b, { descendant: true });
     expect([...liste].sort(decroissant)).toEqual(['12.00', '5.00', null]);
     expect([...liste].sort((a, b) => comparerDecimales(a, b))).toEqual(['5.00', '12.00', null]);
+  });
+});
+
+// Quantité dont on connaît l'unité mais pas la classe : les frais prélevés en nature
+// (D89). La classe n'est pas devinée, et le nombre de décimales ne dépend donc que de
+// ce que la base peut porter.
+describe('catégorie 2 bis — quantité en nature', () => {
+  it('accole l’unité prélevée à la quantité', () => {
+    expect(formaterQuantiteEnNature('0.002', 'ETH')).toBe(`0,002${NBSP}ETH`);
+  });
+
+  it('retire les zéros de fin comme partout ailleurs', () => {
+    expect(formaterQuantiteEnNature('0.002000000000000000', 'ETH')).toBe(`0,002${NBSP}ETH`);
+  });
+
+  it('conserve une quantité que deux décimales auraient effacée', () => {
+    expect(formaterQuantiteEnNature('0.000021', 'ETH')).toBe(`0,000021${NBSP}ETH`);
+  });
+
+  it('rend la valeur seule quand aucune unité n’est donnée', () => {
+    expect(formaterQuantiteEnNature('1.5')).toBe('1,5');
+  });
+
+  it('rend null sur une valeur inexploitable', () => {
+    expect(formaterQuantiteEnNature(null, 'ETH')).toBeNull();
+    expect(formaterQuantiteEnNature('abc', 'ETH')).toBeNull();
   });
 });

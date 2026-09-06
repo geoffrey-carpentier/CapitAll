@@ -15,14 +15,22 @@
 // leur échelle, multipliées, puis ramenées à deux décimales. Aucun flottant n'entre dans
 // la chaîne, conformément à la politique de formatage.
 
-const DECIMALES_MONTANT = 2;
+// Plancher de précision du résultat : l'euro et le dollar se règlent au centime, une
+// conversion n'en montre jamais moins.
+const DECIMALES_MINIMALES = 2;
 
 // Un taux de change porte quatre décimales à l'affichage, mais le serveur en transmet
 // davantage. On garde toute la précision reçue : la tronquer ferait dériver la somme
-// d'une colonne convertie.
-const DECIMALES_TAUX = 12;
+// d'une colonne convertie. La valeur suit l'échelle des taux du serveur (D88).
+const DECIMALES_TAUX = 18;
 
 const CHIFFRES = /^-?\d+(\.\d+)?$/;
+
+// Nombre de décimales portées par une valeur, telle qu'elle est écrite.
+function decimalesDe(valeur) {
+  const [, decimale = ''] = valeur.split('.');
+  return decimale.length;
+}
 
 // Chaîne décimale vers entier à l'échelle demandée. Les décimales excédentaires sont
 // tronquées : elles ne sont pas représentables à cette échelle.
@@ -58,6 +66,14 @@ function versChaine(entier, decimales) {
 // Le résultat est arrondi au centime, au plus proche, les demis s'éloignant de zéro :
 // c'est la règle du serveur, et deux règles d'arrondi différentes dans une même
 // application produiraient des écarts d'un centime impossibles à expliquer.
+// Le résultat porte autant de décimales que la valeur reçue, sans jamais descendre sous
+// le centime.
+//
+// La version précédente ramenait toute entrée à deux décimales. Elle convenait à un
+// montant de patrimoine, mais la même fonction sert aussi les cours et les prix de
+// revient de l'écran de détail : un cours de 0,005 euro devenait 0,00 dollar, et la
+// bascule de devise faisait disparaître une position qui existait en euros. Suivre la
+// précision de l'entrée règle les deux cas sans avoir à distinguer l'appelant.
 export function convertir(montant, taux) {
   if (typeof montant !== 'string' || !CHIFFRES.test(montant)) {
     return null;
@@ -66,7 +82,9 @@ export function convertir(montant, taux) {
     return null;
   }
 
-  const produit = versEntier(montant, DECIMALES_MONTANT) * versEntier(taux, DECIMALES_TAUX);
+  const decimalesSortie = Math.max(DECIMALES_MINIMALES, decimalesDe(montant));
+
+  const produit = versEntier(montant, decimalesSortie) * versEntier(taux, DECIMALES_TAUX);
   const facteur = 10n ** BigInt(DECIMALES_TAUX);
 
   const quotient = produit / facteur;
@@ -75,8 +93,8 @@ export function convertir(montant, taux) {
 
   // Arrondi au plus proche : on regarde si le reste atteint la moitié du diviseur.
   if (resteAbsolu * 2n < facteur) {
-    return versChaine(quotient, DECIMALES_MONTANT);
+    return versChaine(quotient, decimalesSortie);
   }
 
-  return versChaine(quotient + (produit < 0n ? -1n : 1n), DECIMALES_MONTANT);
+  return versChaine(quotient + (produit < 0n ? -1n : 1n), decimalesSortie);
 }

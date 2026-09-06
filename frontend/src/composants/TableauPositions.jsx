@@ -68,7 +68,7 @@ export default function TableauPositions({
               aria-label={libelleAccessible(position, devise, masque)}
             >
               <span className="positions-liste__identite">
-                <JetonClasse classe={position.type} />
+                <JetonClasse classe={position.type} symbole={position.symbole} />
                 <span>
                   <span className="positions-liste__nom">{position.nom}</span>
                   <span className="positions-liste__detail">
@@ -142,7 +142,7 @@ export default function TableauPositions({
             <tr key={position.id}>
               <th scope="row" className="positions-liste__cellule-actif">
                 <Link to={`/positions/${position.id}`} className="positions-liste__lien">
-                  <JetonClasse classe={position.type} />
+                  <JetonClasse classe={position.type} symbole={position.symbole} />
                   <span>
                     <span className="positions-liste__nom">{position.nom}</span>
                     <span className="positions-liste__symbole">{position.symbole}</span>

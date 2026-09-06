@@ -5,13 +5,18 @@ import Bouton from './Bouton';
 // sortir. Jamais un code technique brut, qui n'apprend rien à celui qui le lit et
 // inquiète sans l'aider.
 //
-// Trois natures d'erreur, volontairement distinguées. Le serveur qui répond en erreur
+// Quatre natures d'erreur, volontairement distinguées. Le serveur qui répond en erreur
 // et le réseau qui ne répond pas ne demandent pas le même geste : dans un cas réessayer
 // a du sens, dans l'autre il faut d'abord retrouver une connexion. Les confondre sous
 // « une erreur est survenue » laisserait l'utilisateur sans prise.
 //
 // La session expirée n'est pas une panne mais une fin de validité : elle se dit
 // autrement et mène à la reconnexion.
+//
+// Le refus est la quatrième, et la seule qui ne soit pas une panne du tout : le serveur
+// a parfaitement répondu, il a refusé l'opération pour une raison métier. Proposer de
+// réessayer y serait un contresens, puisque la même demande sera refusée à l'identique.
+// C'est à l'appelant de ne pas fournir d'action dans ce cas.
 
 const MESSAGES = {
   api: {
@@ -26,6 +31,10 @@ const MESSAGES = {
   session: {
     titre: 'Session expirée',
     explication: 'Votre session a pris fin. Reconnectez-vous pour retrouver vos données.',
+  },
+  refus: {
+    titre: 'Opération refusée',
+    explication: "Cette opération n'a pas pu être effectuée.",
   },
 };
 
