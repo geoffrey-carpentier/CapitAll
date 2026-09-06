@@ -18,7 +18,10 @@ import { sensVariation } from '../utils/formatage';
 // n'aboutit à une valeur affichée : la variation vient du serveur et passe par le
 // module de formatage comme partout ailleurs.
 
-const LARGEUR = 80;
+// 120 px et non 80 : sur la dernière colonne du tableau des positions, la courbe se
+// lisait sur une bande étroite alors que la colonne avait la place. Trente points sur
+// 80 px les espacent de moins de trois pixels, ce qui écrase toute inflexion.
+const LARGEUR = 120;
 const HAUTEUR = 24;
 const MARGE = 2;
 

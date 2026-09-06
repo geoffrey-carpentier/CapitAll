@@ -98,10 +98,12 @@ describe('composition', () => {
     expect(screen.getByText(/Coinbase/)).toBeTruthy();
     expect(screen.getByText(/Frankfurter/)).toBeTruthy();
     // Le texte affirmait que le fournisseur d'actions n'était pas branché. Il l'est
-    // depuis D85, et l'écran décrit maintenant la chaîne réelle ainsi que sa condition :
-    // la valorisation dépend d'une clé configurée côté serveur.
+    // depuis D85, et l'écran décrit la chaîne réelle, repli compris.
     expect(screen.getByText(/Financial Modeling Prep/)).toBeTruthy();
-    expect(screen.getByText(/clé de fournisseur est configurée/)).toBeTruthy();
+    expect(screen.getByText(/gold-api/)).toBeTruthy();
+    // La fiche dit aussi ce qui arrive quand un cours manque : c'est la question que
+    // l'utilisateur se pose devant une ligne sans valorisation.
+    expect(screen.getByText(/dernier cours connu/)).toBeTruthy();
     expect(screen.getByText(/aucun conseil en investissement/)).toBeTruthy();
   });
 });

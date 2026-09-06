@@ -43,7 +43,11 @@
   align-items: center;
   gap: var(--espace-1);
   padding: var(--espace-2) var(--espace-1);
-  font-size: var(--taille-legende);
+  /* Corps de texte plutôt que légende : ces cinq libellés sont la structure de
+     l'application, pas une annotation. Ils étaient plus petits que la moindre valeur
+     affichée à côté d'eux. */
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-forte);
   color: var(--couleur-texte-attenue);
   text-decoration: none;
 }
@@ -201,7 +205,11 @@
   }
 
   .coquille__pseudo {
-    font-size: var(--taille-legende);
+    /* Corps de texte plutôt que légende : ces cinq libellés sont la structure de
+     l'application, pas une annotation. Ils étaient plus petits que la moindre valeur
+     affichée à côté d'eux. */
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-forte);
     color: var(--couleur-texte-attenue);
   }
 

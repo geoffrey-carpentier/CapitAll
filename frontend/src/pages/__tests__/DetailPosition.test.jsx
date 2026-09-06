@@ -168,7 +168,7 @@ describe('composition de la fiche', () => {
     rendre();
 
     expect(await screen.findByRole('heading', { name: 'Bitcoin', level: 1 })).toBeTruthy();
-    expect(screen.getByText(/BTC · Cryptomonnaie/)).toBeTruthy();
+    expect(screen.getByText(/BTC · Cryptos/)).toBeTruthy();
     expect(screen.getByLabelText(/Cours à jour, source coinbase/)).toBeTruthy();
   });
 

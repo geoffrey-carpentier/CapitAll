@@ -146,7 +146,7 @@ describe('règles de comportement', () => {
     await screen.findByText('Répartition');
 
     expect(
-      screen.getByRole('link', { name: 'Voir les positions de la classe Cryptomonnaie' })
+      screen.getByRole('link', { name: 'Voir les positions de la classe Cryptos' })
         .getAttribute('href')
     ).toBe('/positions?classes=crypto');
     expect(
@@ -472,7 +472,7 @@ describe('accessibilité', () => {
     // de description à fournir, elle se lit directement, entrée par entrée.
     await screen.findByText(/12.480,65/);
     const entrees = screen.getAllByRole('listitem');
-    const crypto = entrees.find((entree) => entree.textContent.includes('Cryptomonnaie'));
+    const crypto = entrees.find((entree) => entree.textContent.includes('Cryptos'));
 
     expect(crypto).toBeTruthy();
     expect(crypto.textContent).toMatch(/59,9/);
