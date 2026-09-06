@@ -86,12 +86,16 @@ export default function FriseMouvements({
                 {/* Le signe double une information déjà portée par l'étiquette Achat ou
                     Vente : il aide le balayage visuel, il n'a rien à annoncer de plus. */}
                 <span aria-hidden="true">{mouvement.sens === 'achat' ? '+' : '−'}</span>
-                <Montant
-                  valeur={mouvement.quantite}
-                  type="quantite"
-                  classe={classe}
-                  symbole={symbole}
-                />
+                {masque ? (
+                  <span aria-label="Quantité masquée">•••• {symbole}</span>
+                ) : (
+                  <Montant
+                    valeur={mouvement.quantite}
+                    type="quantite"
+                    classe={classe}
+                    symbole={symbole}
+                  />
+                )}
               </span>
             </div>
 

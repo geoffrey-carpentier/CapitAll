@@ -460,12 +460,16 @@ export default function DetailPosition() {
         <div className="detail__repere">
           <dt>Quantité détenue</dt>
           <dd>
-            <Montant
-              valeur={position.quantite_detenue}
-              type="quantite"
-              classe={position.type}
-              symbole={position.symbole}
-            />
+            {masque ? (
+              <span aria-label="Quantité masquée">•••• {position.symbole}</span>
+            ) : (
+              <Montant
+                valeur={position.quantite_detenue}
+                type="quantite"
+                classe={position.type}
+                symbole={position.symbole}
+              />
+            )}
           </dd>
         </div>
         <div className="detail__repere">

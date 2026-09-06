@@ -343,6 +343,37 @@ describe('accessibilité et affichage', () => {
     // Les lignes restent là, avec leur nom : seule la valeur est cachée.
     expect(lignesDuTableau()).toHaveLength(3);
   });
+
+  // La quantité détenue échappait au masquage : elle dit pourtant tout autant ce que
+  // l'on possède qu'un montant en euros, et rapprochée du cours, qui est public, elle
+  // redonne la valorisation que le masquage venait de cacher.
+  it('masque aussi la quantité détenue, en gardant le symbole', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('table');
+
+    // Les deux rendus, liste mobile et tableau, coexistent dans le document.
+    expect(screen.getAllByText(/0,6\s*BTC/).length).toBeGreaterThan(0);
+
+    await utilisateur.click(screen.getByLabelText('Masquer les montants'));
+
+    expect(screen.queryAllByText(/0,6\s*BTC/)).toHaveLength(0);
+    expect(screen.queryAllByText(/128,5\s*XAU/)).toHaveLength(0);
+    // Le symbole reste : il dit de quoi il s'agit sans dire combien.
+    expect(screen.getAllByText(/•+\s*BTC/).length).toBeGreaterThan(0);
+  });
+
+  // Le masquage porte sur les valeurs, pas sur les proportions : une variation en
+  // pourcentage ne dit rien du montant possédé et reste lisible.
+  it('laisse les variations en pourcentage visibles', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('table');
+
+    await utilisateur.click(screen.getByLabelText('Masquer les montants'));
+
+    expect(screen.getAllByText(/%/).length).toBeGreaterThan(0);
+  });
 });
 
 // Colonne de tendance sur trente jours (D81). La courbe miniature ne porte jamais

@@ -72,13 +72,17 @@ export default function TableauPositions({
                 <span>
                   <span className="positions-liste__nom">{position.nom}</span>
                   <span className="positions-liste__detail">
-                    <Montant
-                      valeur={position.quantite_detenue}
-                      type="quantite"
-                      classe={position.type}
-                      symbole={position.symbole}
-                      taille="legende"
-                    />
+                    {masque ? (
+                      <span className="positions-liste__masque">•••• {position.symbole}</span>
+                    ) : (
+                      <Montant
+                        valeur={position.quantite_detenue}
+                        type="quantite"
+                        classe={position.type}
+                        symbole={position.symbole}
+                        taille="legende"
+                      />
+                    )}
                     {position.source_cours === 'repli' && (
                       <PastilleFraicheur
                         source={position.source_cours}
@@ -157,12 +161,16 @@ export default function TableauPositions({
                 )}
               </th>
               <td className="positions-liste__colonne-nombre">
-                <Montant
-                  valeur={position.quantite_detenue}
-                  type="quantite"
-                  classe={position.type}
-                  symbole={position.symbole}
-                />
+                {masque ? (
+                  `•••• ${position.symbole}`
+                ) : (
+                  <Montant
+                    valeur={position.quantite_detenue}
+                    type="quantite"
+                    classe={position.type}
+                    symbole={position.symbole}
+                  />
+                )}
               </td>
               <td className="positions-liste__colonne-nombre">
                 {masque ? '••••' : <Montant valeur={position.cours_eur} type="cours" devise={devise} />}
