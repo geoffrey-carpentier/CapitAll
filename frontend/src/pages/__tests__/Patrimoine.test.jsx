@@ -138,6 +138,23 @@ describe('règles de comportement', () => {
     expect(screen.queryByText('Répartition')).toBeNull();
   });
 
+  // La répartition pose la question « qu'est-ce qui pèse le plus » ; la suivante est
+  // toujours « de quoi cette part est-elle faite ». Chaque entrée mène donc aux positions
+  // de sa classe, avec le filtre que l'écran Positions lit déjà dans l'adresse.
+  it('renvoie aux positions de la classe depuis la répartition', async () => {
+    rendre();
+    await screen.findByText('Répartition');
+
+    expect(
+      screen.getByRole('link', { name: 'Voir les positions de la classe Cryptomonnaie' })
+        .getAttribute('href')
+    ).toBe('/positions?classes=crypto');
+    expect(
+      screen.getByRole('link', { name: 'Voir les positions de la classe Action' })
+        .getAttribute('href')
+    ).toBe('/positions?classes=action');
+  });
+
   // Une courbe à un point ne trace rien et laisse croire à une perte de données.
   it('remplace la courbe par un message sous deux points de mesure', async () => {
     api.historique.mockResolvedValue({
