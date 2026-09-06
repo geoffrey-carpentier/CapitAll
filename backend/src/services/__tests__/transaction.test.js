@@ -41,14 +41,25 @@ const HISTORIQUE = [
 ];
 
 function monter({ actif = ACTIF, historique = HISTORIQUE } = {}) {
-  const actifs = { trouverParIdEtUtilisateur: vi.fn().mockResolvedValue(actif) };
+  const executer = vi.fn();
+  const actifs = {
+    trouverParIdEtUtilisateur: vi.fn().mockResolvedValue(actif),
+    verrouillerParIdEtUtilisateur: vi.fn().mockResolvedValue(actif),
+  };
   const transactions = {
     listerParActifEtUtilisateur: vi.fn().mockResolvedValue(historique),
     creer: vi.fn().mockImplementation(async (donnees) => ({ id: 42, ...donnees })),
     supprimer: vi.fn().mockResolvedValue(true),
   };
+  const dansTransaction = vi.fn(async (operation) => operation(executer));
 
-  return { service: creerServiceTransaction({ actifs, transactions }), actifs, transactions };
+  return {
+    service: creerServiceTransaction({ actifs, transactions, dansTransaction }),
+    actifs,
+    transactions,
+    dansTransaction,
+    executer,
+  };
 }
 
 function mouvement(sens, quantite, prixUnitaire, frais = '0', date = '2026-08-24T10:00:00.000Z') {
@@ -63,7 +74,7 @@ function mouvement(sens, quantite, prixUnitaire, frais = '0', date = '2026-08-24
 
 describe('enregistrement', () => {
   it('écrit un achat sans charger l\'historique, qui n\'a rien à contrôler', async () => {
-    const { service, transactions } = monter();
+    const { service, actifs, transactions, dansTransaction } = monter();
 
     await service.enregistrer({
       actifId: 7,
@@ -73,6 +84,8 @@ describe('enregistrement', () => {
 
     expect(transactions.creer).toHaveBeenCalledTimes(1);
     expect(transactions.listerParActifEtUtilisateur).not.toHaveBeenCalled();
+    expect(actifs.verrouillerParIdEtUtilisateur).toHaveBeenCalledTimes(1);
+    expect(dansTransaction).toHaveBeenCalledTimes(1);
   });
 
   it('refuse une vente supérieure à la quantité détenue', async () => {
@@ -83,6 +96,29 @@ describe('enregistrement', () => {
         actifId: 7,
         utilisateurId: 2,
         donnees: mouvement('vente', '0.9', '63000.00'),
+      })
+    ).rejects.toMatchObject({ statut: 400 });
+
+    expect(transactions.creer).not.toHaveBeenCalled();
+  });
+
+  it('refuse une vente antérieure au premier achat', async () => {
+    const { service, transactions } = monter({
+      historique: [
+        {
+          ...HISTORIQUE[0],
+          id: 1,
+          quantite: '1.00000000',
+          date_transaction: '2026-05-27T10:00:00.000Z',
+        },
+      ],
+    });
+
+    await expect(
+      service.enregistrer({
+        actifId: 7,
+        utilisateurId: 2,
+        donnees: mouvement('vente', '1', '63000.00', '0', '2026-05-26T10:00:00.000Z'),
       })
     ).rejects.toMatchObject({ statut: 400 });
 
@@ -103,6 +139,7 @@ describe('enregistrement', () => {
     ).rejects.toMatchObject({ statut: 404 });
 
     expect(transactions.creer).not.toHaveBeenCalled();
+    expect(transactions.listerParActifEtUtilisateur).not.toHaveBeenCalled();
   });
 });
 
@@ -234,6 +271,80 @@ describe('simulation', () => {
 });
 
 describe('suppression', () => {
+  it('supprime une transaction dans la transaction SQL verrouillée', async () => {
+    const { service, actifs, transactions, dansTransaction, executer } = monter();
+
+    await service.supprimer({ actifId: 7, idTransaction: 2, utilisateurId: 2 });
+
+    expect(dansTransaction).toHaveBeenCalledTimes(1);
+    expect(actifs.verrouillerParIdEtUtilisateur).toHaveBeenCalledWith(7, 2, executer);
+    expect(transactions.listerParActifEtUtilisateur).toHaveBeenCalledWith(7, 2, executer);
+    expect(transactions.supprimer).toHaveBeenCalledWith(2, 7, 2, executer);
+  });
+
+  it('refuse de supprimer un achat qui rendrait une vente ultérieure impossible', async () => {
+    const { service, transactions } = monter({
+      historique: [
+        {
+          id: 1,
+          sens: 'achat',
+          quantite: '1.00000000',
+          prix_unitaire: '100.00',
+          frais: '0.00',
+          date_transaction: '2026-01-01T10:00:00.000Z',
+        },
+        {
+          id: 2,
+          sens: 'vente',
+          quantite: '0.80000000',
+          prix_unitaire: '120.00',
+          frais: '0.00',
+          date_transaction: '2026-01-02T10:00:00.000Z',
+        },
+      ],
+    });
+
+    await expect(
+      service.supprimer({ actifId: 7, idTransaction: 1, utilisateurId: 2 })
+    ).rejects.toMatchObject({ statut: 400 });
+
+    expect(transactions.supprimer).not.toHaveBeenCalled();
+  });
+
+  // Le refus emprunte l'invariant de la création, mais pas son message : « quantité
+  // insuffisante » est écrit pour la saisie d'une vente et ne veut rien dire en réponse
+  // au retrait d'un achat.
+  it('motive le refus par le retrait, et non par la quantité saisie', async () => {
+    const { service } = monter({
+      historique: [
+        {
+          id: 1,
+          sens: 'achat',
+          quantite: '1.00000000',
+          prix_unitaire: '100.00',
+          frais: '0.00',
+          date_transaction: '2026-01-01T10:00:00.000Z',
+        },
+        {
+          id: 2,
+          sens: 'vente',
+          quantite: '0.80000000',
+          prix_unitaire: '120.00',
+          frais: '0.00',
+          date_transaction: '2026-01-02T10:00:00.000Z',
+        },
+      ],
+    });
+
+    const erreur = await service
+      .supprimer({ actifId: 7, idTransaction: 1, utilisateurId: 2 })
+      .then(() => null, (echec) => echec);
+
+    expect(erreur.statut).toBe(400);
+    expect(erreur.message).toMatch(/ne peut pas être retiré/);
+    expect(erreur.message).not.toMatch(/Quantité insuffisante/);
+  });
+
   it('rend 404 lorsque la transaction ne correspond à aucune ligne du compte', async () => {
     const { service, transactions } = monter();
     transactions.supprimer.mockResolvedValue(false);
@@ -241,5 +352,18 @@ describe('suppression', () => {
     await expect(
       service.supprimer({ actifId: 7, idTransaction: 3, utilisateurId: 2 })
     ).rejects.toMatchObject({ statut: 404 });
+
+    expect(transactions.supprimer).not.toHaveBeenCalled();
+  });
+
+  it('rend 404 sans lire l\'historique quand l\'actif n\'appartient pas au demandeur', async () => {
+    const { service, transactions } = monter({ actif: null });
+
+    await expect(
+      service.supprimer({ actifId: 7, idTransaction: 2, utilisateurId: 99 })
+    ).rejects.toMatchObject({ statut: 404 });
+
+    expect(transactions.listerParActifEtUtilisateur).not.toHaveBeenCalled();
+    expect(transactions.supprimer).not.toHaveBeenCalled();
   });
 });

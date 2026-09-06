@@ -101,10 +101,34 @@ async function simulerTransaction(req, res, next) {
   try {
     const effet = await serviceTransaction.simuler({
       actifId: req.params.id,
+      // Présent seulement sur la route de correction : la simulation remplace alors le
+      // mouvement visé au lieu d'en ajouter un.
+      idTransaction: req.params.idTransaction ?? null,
       utilisateurId: req.utilisateur.id,
       donnees: req.body,
     });
     res.status(200).json(effet);
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
+// Correction d'un mouvement enregistré (D51 révisée). Le corps est celui d'une création,
+// et la réponse un 200 : aucune ressource n'est créée, celle qui existait est corrigée.
+//
+// PATCH et non PUT : le corps ne porte que les champs modifiables du mouvement, jamais
+// sa représentation complète — ni son identifiant, ni son actif, ni les valeurs que le
+// moteur en dérive. Un PUT annoncerait un remplacement de la ressource entière, que
+// cette route ne permet pas.
+async function modifierTransaction(req, res, next) {
+  try {
+    const transaction = await serviceTransaction.modifier({
+      actifId: req.params.id,
+      idTransaction: req.params.idTransaction,
+      utilisateurId: req.utilisateur.id,
+      donnees: req.body,
+    });
+    res.status(200).json(transaction);
   } catch (erreur) {
     next(erreur);
   }
@@ -131,5 +155,6 @@ module.exports = {
   supprimer,
   ajouterTransaction,
   simulerTransaction,
+  modifierTransaction,
   supprimerTransaction,
 };
