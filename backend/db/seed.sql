@@ -100,23 +100,17 @@ JOIN (VALUES
 ) AS v(titre, contenu, epinglee) ON true
 WHERE u.email = 'admin@capitall.fr';
 
--- Historique de valorisation : 90 jours de snapshots journaliers pour le compte
--- utilisateur, afin que la courbe d'évolution du tableau de bord soit alimentée dès
--- le premier lancement (Q-C). Les cours passés des fournisseurs n'étant pas conservés,
--- ces valeurs ne seraient pas recalculables après coup : on les amorce donc ici.
--- La valeur suit une tendance haussière avec une ondulation et un léger bruit, pour
--- une courbe crédible sans être artificiellement lisse. Bornée à >= 0 par le schéma,
--- elle reste ici largement positive.
-INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur)
-SELECT (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr'),
-       jour::date,
-       ROUND((
-           24000
-           + (jour::date - (CURRENT_DATE - 89)) * 130
-           + SIN((jour::date - (CURRENT_DATE - 89)) / 7.0) * 1600
-           + (random() - 0.5) * 900
-       )::numeric, 2)
-FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour;
+-- Historique de valorisation : la somme des positions au cours du jour.
+--
+-- Il était auparavant produit par une formule indépendante — tendance, ondulation et bruit
+-- aléatoire — sans rapport avec les cours de la table voisine. Les deux courbes de
+-- l'application se contredisaient alors à l'écran : le patrimoine affichait 76 800 € au
+-- sommet d'une courbe qui plafonnait à 37 500 €. Une valorisation est une somme de
+-- positions, pas une seconde série inventée ; elle se calcule donc à partir de la première,
+-- écrite juste après, ce qui impose d'insérer les deux blocs dans cet ordre.
+--
+-- La raison d'être de la table ne change pas : les cours passés des fournisseurs ne sont
+-- pas conservés, ces valeurs ne seraient donc pas recalculables après coup.
 
 -- Historique de cours par position : les mêmes quatre-vingt-dix jours, déclinés actif
 -- par actif, pour alimenter le graphe de cours de l'écran de détail et la colonne de
@@ -127,8 +121,7 @@ FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour;
 -- La série est déterministe : aucune fonction aléatoire n'y intervient, l'ondulation
 -- venant d'un sinus décalé par l'identifiant de l'actif. Deux exécutions du seed
 -- produisent donc exactement les mêmes courbes, ce qui permet de s'y appuyer dans une
--- vérification. Le bloc de valorisation totale, antérieur, conserve son bruit
--- aléatoire : le rendre déterministe ne relève pas de ce lot.
+-- vérification.
 --
 -- Le cours part du prix du premier achat réel de l'actif et progresse d'environ
 -- dix-huit pour cent sur la période. Il reste ainsi cohérent avec le prix de revient
@@ -162,3 +155,12 @@ JOIN LATERAL (
 ) AS premier ON true
 CROSS JOIN generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour
 WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr');
+
+INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur)
+SELECT (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr'),
+       sc.date_snapshot,
+       ROUND(SUM(sc.cours_eur * sc.quantite), 2)
+FROM snapshot_cours sc
+JOIN actif a ON a.id = sc.actif_id
+WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr')
+GROUP BY sc.date_snapshot;

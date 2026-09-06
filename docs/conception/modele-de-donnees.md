@@ -370,7 +370,7 @@ version 2 (D85).
 ### 3.8 Index créés
 
 Outre les index que PostgreSQL crée seul pour chaque clé primaire et chaque contrainte
-d'unicité, six index explicites figurent au script :
+d'unicité, sept index explicites figurent au script :
 
 | Index | Portée |
 |---|---|

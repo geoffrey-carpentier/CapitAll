@@ -218,7 +218,7 @@ Les variables obligatoires sont contrôlées au démarrage. Si l'une manque, le 
 
 Le script `backend/db/seed.sql` crée trois comptes, six actifs, douze transactions,
 deux alertes, trois annonces, quatre-vingt-dix jours d'historique de valorisation et
-cinq cent quarante relevés de cours par position, répartis dans sept tables.
+cinq cent quarante relevés de cours par position, répartis dans huit tables.
 
 Il **réinitialise entièrement** une base de démonstration avec `TRUNCATE ... CASCADE`
 avant de réinsérer les données. Il est déterministe et rejouable pour repartir d'un

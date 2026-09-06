@@ -98,7 +98,7 @@ l'interface lorsque l'API répond à son tour. Aucun script d'attente n'est néc
 Le premier démarrage crée le volume de données et y joue, dans l'ordre, les trois scripts
 d'initialisation montés dans le conteneur de la base :
 
-1. `backend/db/schema.sql` — les sept tables, les index et le rôle applicatif ;
+1. `backend/db/schema.sql` — les huit tables, les index et le rôle applicatif ;
 2. `backend/db/seed.sql` — le jeu de données de démonstration ;
 3. `backend/db/docker/03-role-applicatif.sh` — pose sur `capitall_app` le mot de passe
    tiré de `CAPITALL_APP_PASSWORD`, le schéma versionné n'en portant qu'un factice.
