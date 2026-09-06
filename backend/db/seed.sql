@@ -46,24 +46,29 @@ WHERE u.email = 'user@capitall.fr';
 -- Transactions d'achat et de vente. Les quantités vendues restent inférieures aux
 -- quantités détenues (la règle est vérifiée côté serveur, on la respecte ici par
 -- cohérence du jeu d'essai). jours = ancienneté en jours par rapport à aujourd'hui.
-INSERT INTO transaction (actif_id, sens, quantite, prix_unitaire, frais, date_transaction, note)
-SELECT a.id, t.sens, t.quantite, t.prix_unitaire, t.frais,
+-- Les frais sont donnés dans leur unité de prélèvement et dans leur contre-valeur en
+-- euros (D89) : les deux coïncident tant que l'unité est l'euro, ce qu'impose la
+-- contrainte de cohérence. Le renfort ETH porte le cas où elles diffèrent, et le
+-- transfert celui d'un mouvement qui n'est pas une vente.
+INSERT INTO transaction (actif_id, sens, quantite, prix_unitaire, frais, frais_montant, frais_unite, date_transaction, note)
+SELECT a.id, t.sens, t.quantite, t.prix_unitaire, t.frais, t.frais_montant, t.frais_unite,
        now() - t.jours * INTERVAL '1 day', t.note
 FROM actif a
 JOIN (VALUES
-    ('BTC',  'achat', 0.50,    54000.00, 15.00, 88, 'Achat initial'),
-    ('BTC',  'achat', 0.30,    61000.00, 10.00, 52, 'Renforcement'),
-    ('BTC',  'vente', 0.20,    63500.00,  8.00, 20, 'Prise de bénéfice partielle'),
-    ('ETH',  'achat', 4.00,     2750.00,  6.00, 80, NULL),
-    ('ETH',  'achat', 2.00,     3150.00,  5.00, 35, 'Renfort DCA'),
-    ('USD',  'achat', 5000.00,     0.92,  0.00, 75, 'Constitution poche dollar'),
-    ('XAU',  'achat', 2.00,     1780.00,  4.00, 70, 'Once d''or'),
-    ('XAU',  'achat', 1.00,     1950.00,  3.00, 25, NULL),
-    ('AAPL', 'achat', 20.00,     168.00,  1.00, 65, NULL),
-    ('AAPL', 'vente', 5.00,      182.00,  1.00, 18, 'Allègement'),
-    ('NVDA', 'achat', 10.00,     102.00,  1.00, 60, NULL),
-    ('NVDA', 'achat', 5.00,      118.00,  1.00, 22, 'Renfort thématique IA')
-) AS t(symbole, sens, quantite, prix_unitaire, frais, jours, note) ON a.symbole = t.symbole
+    ('BTC',  'achat',                0.50,  54000.00, 15.00, 15.00, 'EUR', 88, 'Achat initial'),
+    ('BTC',  'achat',                0.30,  61000.00, 10.00, 10.00, 'EUR', 52, 'Renforcement'),
+    ('BTC',  'vente',                0.20,  63500.00,  8.00,  8.00, 'EUR', 20, 'Prise de bénéfice partielle'),
+    ('ETH',  'achat',                4.00,   2750.00,  6.00,  6.00, 'EUR', 80, NULL),
+    ('ETH',  'achat',               1.998,   3150.00,  6.30, 0.002, 'ETH', 35, 'Renfort DCA, frais retenus en ETH par la plateforme'),
+    ('ETH',  'sortie_non_marchande', 0.10,      0.00,  0.00,  0.00, 'EUR', 12, 'Transfert vers un portefeuille personnel'),
+    ('USD',  'achat',             5000.00,      0.92,  0.00,  0.00, 'EUR', 75, 'Constitution poche dollar'),
+    ('XAU',  'achat',                2.00,   1780.00,  4.00,  4.00, 'EUR', 70, 'Once d''or'),
+    ('XAU',  'achat',                1.00,   1950.00,  3.00,  3.00, 'EUR', 25, NULL),
+    ('AAPL', 'achat',               20.00,    168.00,  1.00,  1.00, 'EUR', 65, NULL),
+    ('AAPL', 'vente',                5.00,    182.00,  1.00,  1.00, 'EUR', 18, 'Allègement'),
+    ('NVDA', 'achat',               10.00,    102.00,  1.00,  1.00, 'EUR', 60, NULL),
+    ('NVDA', 'achat',                5.00,    118.00,  1.00,  1.00, 'EUR', 22, 'Renfort thématique IA')
+) AS t(symbole, sens, quantite, prix_unitaire, frais, frais_montant, frais_unite, jours, note) ON a.symbole = t.symbole
 WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr');
 
 -- Alertes du compte utilisateur : une sur un actif, une sur le capital total.
