@@ -1,0 +1,62 @@
+.jeton-classe {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: var(--taille-legende);
+}
+
+.jeton-classe__forme {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  /*
+    La forme reste le repère principal : elle survit au niveau de gris comme au
+    daltonisme, ce que la couleur seule ne fait pas. La couleur de classe s'y ajoute
+    depuis D98, pour que la pastille de la légende et le segment de l'anneau se
+    reconnaissent au premier regard. Repli sur l'accent si la classe est inconnue.
+  */
+  background-color: var(--couleur-accent);
+}
+
+.jeton-classe__forme--actif {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #101418;
+  font-size: 12px;
+  font-weight: var(--graisse-forte);
+  line-height: 1;
+}
+
+/* Couleurs d'identité des actifs, distinctes des couleurs sémantiques de gain/perte. */
+.jeton-classe__forme--actif[data-symbole='BTC'] { background: #f7931a; }
+.jeton-classe__forme--actif[data-symbole='ETH'] { background: #8c9bc2; }
+.jeton-classe__forme--actif[data-symbole='XAU'] { background: #e3b341; }
+.jeton-classe__forme--actif[data-symbole='XAG'] { background: #c7d0da; }
+.jeton-classe__forme--devise.jeton-classe__forme--actif { background: #b7c2ce; }
+.jeton-classe__forme--action.jeton-classe__forme--actif { background: #e8ecf1; }
+
+.jeton-classe__forme--crypto {
+  background-color: var(--couleur-classe-crypto);
+  border-radius: 50%;
+}
+
+.jeton-classe__forme--metal {
+  background-color: var(--couleur-classe-metal);
+  border-radius: 3px;
+}
+
+.jeton-classe__forme--devise {
+  background-color: var(--couleur-classe-devise);
+  transform: rotate(45deg);
+}
+
+.jeton-classe__forme--action {
+  background-color: var(--couleur-classe-action);
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+
+.jeton-classe__libelle {
+  color: var(--couleur-texte-attenue);
+}

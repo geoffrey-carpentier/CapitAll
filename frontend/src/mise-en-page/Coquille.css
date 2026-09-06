@@ -1,0 +1,212 @@
+/*
+  Mobile d'abord : la navigation est une barre d'onglets fixée en bas de l'écran,
+  là où le pouce l'atteint. À partir de 900 pixels, elle devient une colonne latérale.
+*/
+
+.coquille {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.coquille__navigation {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  background: var(--couleur-carte);
+  border-top: 1px solid var(--couleur-bordure);
+}
+
+.coquille__marque,
+.coquille__pied {
+  display: none;
+}
+
+.coquille__liste {
+  display: flex;
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.coquille__liste > li {
+  flex: 1;
+}
+
+.coquille__lien {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espace-1);
+  padding: var(--espace-2) var(--espace-1);
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  text-decoration: none;
+}
+
+.coquille__icone {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.coquille__action-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Même apparence que le bouton soit un lien, quand il conduit au Patrimoine, ou un
+   bouton, quand il ouvre la saisie sur l'écran courant : la remise à zéro des styles
+   propres au bouton natif évite que la barre change d'aspect d'un écran à l'autre. */
+.coquille__ajout {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-top: -14px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--couleur-accent);
+  color: #0b1015;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(76, 154, 255, 0.3);
+}
+
+.coquille__ajout-symbole {
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.coquille__lien--actif {
+  color: var(--couleur-accent);
+}
+
+/* L'indisponibilité se lit aussi au trait barré, pas seulement à l'opacité. */
+.coquille__lien--indisponible {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.coquille__symbole {
+  font-size: var(--taille-titre);
+  line-height: 1;
+}
+
+.coquille__contenu {
+  flex: 1;
+  /* Sans cette ligne, le contenu garde la largeur minimale de ce qu'il porte : un
+     élément de conteneur flexible vaut min-width: auto par défaut, et refuse donc de
+     se réduire sous la largeur intrinsèque d'un tableau large. La page se mettait alors
+     à déborder horizontalement au lieu de laisser le tableau défiler chez lui. */
+  min-width: 0;
+  padding: var(--espace-4);
+  padding-bottom: 88px;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .coquille {
+    flex-direction: row;
+  }
+
+  .coquille__navigation {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    height: 100vh;
+    width: 220px;
+    flex-direction: column;
+    border-top: none;
+    border-right: 1px solid var(--couleur-bordure);
+    padding: var(--espace-6) var(--espace-4);
+    gap: var(--espace-6);
+  }
+
+  .coquille__marque {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-3);
+    font-size: var(--taille-titre);
+    font-weight: var(--graisse-forte);
+  }
+
+  .coquille__marque > span {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--rayon-carte);
+    background: var(--couleur-accent);
+    /* La même encre sombre que le bouton flottant, sur le même fond accentué. La
+       couleur de texte ordinaire n'y atteignait que 2,40:1, mesuré au navigateur : la
+       lettre était illisible, même si son aria-hidden la met hors du champ formel de
+       la règle. */
+    color: #0b1015;
+    font-size: var(--taille-corps);
+  }
+
+  .coquille__liste {
+    flex: none;
+    flex-direction: column;
+    gap: var(--espace-1);
+  }
+
+  .coquille__liste > li {
+    flex: none;
+  }
+
+  .coquille__action-mobile {
+    display: none;
+  }
+
+  .coquille__lien {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--espace-3);
+    padding: var(--espace-3);
+    font-size: var(--taille-corps);
+    border-radius: var(--rayon-carte);
+  }
+
+  .coquille__lien--actif {
+    background: rgba(76, 154, 255, 0.1);
+  }
+
+  .coquille__pied {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-2);
+    margin-top: auto;
+  }
+
+  .coquille__icone {
+    width: 20px;
+    height: 20px;
+  }
+
+  .coquille__pseudo {
+    font-size: var(--taille-legende);
+    color: var(--couleur-texte-attenue);
+  }
+
+  .coquille__contenu {
+    padding: var(--espace-8);
+    padding-bottom: var(--espace-8);
+  }
+}

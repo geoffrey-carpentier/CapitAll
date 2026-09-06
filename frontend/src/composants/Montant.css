@@ -1,0 +1,29 @@
+.montant {
+  /* Chiffres de largeur fixe : sans cela, les colonnes de montants se décalent d'une
+     ligne à l'autre selon les chiffres présents. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.montant--corps {
+  font-size: var(--taille-corps);
+}
+
+.montant--legende {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+.montant--titre {
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+}
+
+.montant--principal {
+  font-size: var(--taille-montant);
+  font-weight: var(--graisse-forte);
+}
+
+.montant--indisponible {
+  color: var(--couleur-texte-attenue);
+}

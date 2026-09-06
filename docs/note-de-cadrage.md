@@ -1,0 +1,73 @@
+# Note de cadrage - CapitAll
+
+## Contexte et objectif
+
+De nombreux particuliers répartissent leur épargne entre plusieurs supports (cryptomonnaies, comptes titres, devises étrangères, métaux précieux) sans disposer d'une vue consolidée de leur patrimoine. Le suivi se fait généralement à la main, dans un tableur, avec des cours mis à jour manuellement et des calculs de plus-value approximatifs.
+
+CapitAll est une application web mobile-first qui centralise ces différents actifs, automatise la récupération des cours et calcule le prix de revient, la plus-value latente et la plus-value réalisée de chaque ligne de portefeuille.
+
+## Public cible
+
+Particulier gérant un patrimoine diversifié sur plusieurs classes d'actifs, qui souhaite une vue d'ensemble sans ressaisir manuellement les cours.
+
+## Périmètre fonctionnel du MVP
+
+Fonctionnalités couvertes :
+
+- inscription et connexion sécurisées, chaque utilisateur ne consulte et ne modifie que son propre patrimoine
+- création, modification et suppression d'actifs suivis (cryptomonnaie, devise, métal précieux, et une liste blanche d'actions américaines)
+- enregistrement de transactions d'achat et de vente sur un actif
+- calcul automatique du prix de revient moyen pondéré par actif, de la plus-value latente et de la plus-value réalisée, à partir des cours récupérés en temps réel
+- tableau de bord de répartition du patrimoine et d'évolution de sa valeur
+- alertes de seuil (sur un actif ou sur le capital total)
+- historique de valorisation journalière du portefeuille
+- cours courant des actions d'une liste blanche, avec repli entre fournisseurs
+
+Hors périmètre du MVP, pistes d'évolution à mentionner à l'oral :
+
+- recherche libre de symboles boursiers et ETF
+- export fiscal
+- multi-devise de référence complet (la bascule d'affichage euro/dollar du tableau de bord, elle, est retenue au périmètre, D43)
+- import de transactions par fichier CSV (retenu comme évolution de version 2, D44)
+- notifications par email
+- partage social, paiement, règles automatiques de trading
+- publications par les utilisateurs, widget Coin360
+- fil d'annonces internes et espace d'administration (reportés en version 2, D85)
+- enrichissement de la fiche action (capitalisation, fourchette 52 semaines,
+  moyennes mobiles)
+
+## Rôles utilisateurs
+
+Le MVP expose le parcours de l'utilisateur inscrit. Le schéma conserve un rôle
+`admin` et le serveur un intergiciel de rôle, mais aucune route ni interface
+d'administration n'est montée ; annonces et administration sont reportées en version 2
+(D85). Le cloisonnement des données patrimoniales repose sur une vérification de
+propriété systématique côté serveur, y compris pour un compte portant le rôle `admin`.
+
+## Choix technique et justification
+
+- front-end : React avec Vite, react-router pour le routing
+- back-end : Node.js avec Express, architecture en couches (routes, middlewares, contrôleurs, services, modèles)
+- base de données : PostgreSQL, pour son typage NUMERIC qui évite les approximations de calcul flottant sur des montants financiers
+- authentification : JWT, hachage des mots de passe avec bcrypt
+
+Ce choix est cohérent avec la nature du projet : un tableau de bord interactif consommant des API JSON externes et destiné en priorité à un usage mobile se prête mieux à une architecture front et back séparés qu'à un rendu de pages côté serveur.
+
+## Sources de données externes retenues
+
+| Classe d'actif | Fournisseur(s) | Clé requise | Commentaires |
+|---|---|---|---|
+| Devises | Frankfurter (taux BCE) | non | Testée le 09/07/2026, réponse JSON conforme. |
+| Métaux précieux | gold-api.com | non | Testée le 09/07/2026, réponse JSON conforme. |
+| Cryptomonnaies | Coinbase (principal), CoinGecko Demo (repli) | non (Coinbase), oui (CoinGecko Demo) | Coinbase testé le 09/07/2026. CoinGecko Demo avec clé (D25). |
+| Actions | FMP (principal), Finnhub (secours 1), Alpha Vantage (secours 2) | oui | Cours courant uniquement dans le MVP ; liste blanche d'environ 85 valeurs américaines (D27, D85). |
+
+Chaque fournisseur est encapsulé derrière une interface commune côté serveur, pour ne pas coupler la logique métier (calcul du prix de revient, calcul de la plus-value) à un fournisseur en particulier.
+
+## Sécurité
+
+Le patrimoine financier étant une donnée sensible, une attention particulière sera portée à : requêtes préparées systématiques, validation des entrées côté serveur, hachage des mots de passe, protection des routes par middleware d'authentification, secrets et clés d'API dans un fichier .env exclu du dépôt, HTTPS en production.
+
+## Prochaine étape
+
+Conception détaillée : diagramme de cas d'utilisation, modèle conceptuel de données puis modèle logique et physique, schéma d'architecture, maquettes des écrans principaux (tableau de bord, ajout de transaction, détail d'un actif) en version desktop et mobile.

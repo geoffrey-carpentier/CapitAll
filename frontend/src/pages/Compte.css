@@ -1,0 +1,97 @@
+/*
+  Écran Compte. Cinq cartes empilées, sans sous-navigation : la spécification veut un
+  seul écran, chaque section étant assez courte pour se lire d'un trait.
+*/
+
+.compte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-6);
+}
+
+.compte__entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+}
+
+.compte__titre {
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+  margin: 0;
+}
+
+.compte__carte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
+}
+
+/* Liste de définitions plutôt qu'un tableau : ce sont des paires libellé/valeur, pas
+   des données à croiser en deux dimensions. */
+.compte__informations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  margin: 0;
+}
+
+.compte__ligne {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espace-4);
+}
+
+.compte__ligne dt {
+  color: var(--couleur-texte-attenue);
+}
+
+.compte__ligne dd {
+  margin: 0;
+  text-align: right;
+  font-weight: var(--graisse-forte);
+  /* L'adresse électronique peut être longue : elle se coupe plutôt que de pousser la
+     carte au-delà de la largeur de l'écran. */
+  overflow-wrap: anywhere;
+}
+
+.compte__note {
+  margin: 0;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-caption, 0.875rem);
+}
+
+.compte__formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.compte__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+}
+
+.compte__reglage {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espace-4);
+}
+
+.compte__reglage-libelle {
+  margin: 0 0 var(--espace-1) 0;
+  font-weight: var(--graisse-forte);
+}
+
+/* En dessous de 480 px, le réglage et son contrôle ne tiennent plus côte à côte sans
+   réduire la zone tactile sous les 44 px exigés (D77) : ils passent l'un sous l'autre. */
+@media (max-width: 480px) {
+  .compte__reglage {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -1,0 +1,83 @@
+/* Socle visuel : remise à zéro minimale et application des jetons. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body,
+h1,
+h2,
+h3,
+p,
+figure {
+  margin: 0;
+}
+
+body {
+  background: var(--couleur-fond);
+  color: var(--couleur-texte);
+  font-family: var(--police);
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-normale);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+}
+
+h2 {
+  font-size: var(--taille-corps);
+  font-weight: var(--graisse-forte);
+}
+
+a {
+  color: var(--couleur-accent);
+}
+
+/*
+  Indicateur de focus défini une seule fois pour tout le document. Il reste visible
+  au clavier, condition d'une navigation sans souris : le supprimer rendrait
+  l'application inutilisable pour qui n'emploie pas de pointeur.
+*/
+:focus-visible {
+  outline: 2px solid var(--couleur-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/*
+  Les règles d'affichage des valeurs numériques appartiennent désormais au composant
+  Montant et à sa feuille de style : les conserver ici en double exposait à ce qu'une
+  règle globale l'emporte sur celle du composant, le gras s'appliquant alors à toute
+  valeur, y compris aux légendes qui doivent rester discrètes.
+*/
+
+/* Réservé aux lecteurs d'écran : invisible à l'œil, restitué à la voix. */
+.lecteur-ecran-seulement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

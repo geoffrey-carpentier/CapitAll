@@ -1,0 +1,41 @@
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-2);
+  font-size: var(--taille-corps);
+  padding: var(--espace-3);
+  border: 1px solid;
+  border-radius: var(--rayon-carte);
+  margin-bottom: var(--espace-4);
+}
+
+.message__symbole {
+  flex-shrink: 0;
+  font-weight: var(--graisse-forte);
+}
+
+/* Dernière occurrence de l'ancien rouge #F0564F recopié en rgb : le jeton vaut #F8645D
+   depuis la correction de contraste, et le fond ne suivait pas. */
+.message--erreur {
+  color: var(--couleur-negatif);
+  border-color: var(--couleur-negatif);
+  background: color-mix(in srgb, var(--couleur-negatif) 8%, transparent);
+}
+
+/*
+  Donnée incomplète ou dégradée : cours absent, ou valorisation reprise du dernier cours
+  connu. Ni une erreur, qui annoncerait un échec, ni une simple information, qui
+  n'appellerait aucune vigilance. L'ambre est la couleur de cet état, et de lui seul
+  (D70).
+*/
+.message--avertissement {
+  color: var(--couleur-avertissement);
+  border-color: var(--couleur-avertissement);
+  background: rgba(227, 179, 65, 0.08);
+}
+
+.message--information {
+  color: var(--couleur-texte-attenue);
+  border-color: var(--couleur-bordure);
+  background: rgba(76, 154, 255, 0.06);
+}

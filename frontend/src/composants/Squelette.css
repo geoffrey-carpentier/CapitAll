@@ -1,0 +1,75 @@
+.squelette {
+  display: block;
+  background-color: var(--couleur-bordure);
+  border-radius: 4px;
+  /*
+    Le délai de 200 ms annoncé par le composant, jusqu'ici seulement écrit en commentaire.
+    Sur une connexion rapide la réponse arrive avant ce seuil, et le squelette
+    n'apparaissait alors que le temps d'un clignotement — exactement ce que le délai doit
+    éviter.
+
+    Deux animations : la première ne fait qu'attendre puis rendre l'élément visible, la
+    seconde signale que l'attente est en cours et non figée. Le faire en CSS plutôt qu'avec
+    une minuterie évite un rendu supplémentaire par squelette, et il y en a jusqu'à sept
+    par écran.
+  */
+  opacity: 0;
+  animation:
+    squelette-apparition 1ms linear 200ms forwards,
+    squelette-pulsation 1.4s ease-in-out 200ms infinite;
+}
+
+@keyframes squelette-apparition {
+  to {
+    opacity: 1;
+  }
+}
+
+.squelette--ligne {
+  height: 14px;
+}
+
+.squelette--titre {
+  height: 28px;
+  border-radius: var(--rayon-carte);
+}
+
+.squelette--bloc {
+  height: 120px;
+  border-radius: var(--rayon-carte);
+}
+
+.squelette--graphe {
+  height: 180px;
+  border-radius: var(--rayon-carte);
+}
+
+.squelette--cercle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+}
+
+@keyframes squelette-pulsation {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Une animation continue est une gêne réelle pour certains utilisateurs : la préférence
+   système est respectée, la forme restant visible.
+
+   Seule la pulsation est retirée, pas l'apparition : `animation: none` laisserait
+   l'élément à l'opacité nulle que pose le délai, et le squelette ne s'afficherait jamais
+   pour qui a réglé cette préférence. Un passage d'opacité unique n'est pas un mouvement,
+   et la règle globale de `base.css`, qui ramène toute durée à une fraction de
+   milliseconde, ne touche pas au délai. */
+@media (prefers-reduced-motion: reduce) {
+  .squelette {
+    animation: squelette-apparition 1ms linear 200ms forwards;
+  }
+}

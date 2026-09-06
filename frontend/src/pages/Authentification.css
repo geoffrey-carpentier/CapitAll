@@ -1,0 +1,95 @@
+.authentification {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espace-4);
+}
+
+.authentification__carte {
+  width: 100%;
+  max-width: 400px;
+  background: var(--couleur-carte);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-carte);
+  padding: var(--espace-8) var(--espace-6);
+}
+
+.authentification__titre {
+  font-size: var(--taille-montant);
+  font-weight: var(--graisse-forte);
+  margin-bottom: var(--espace-2);
+}
+
+.authentification__intro {
+  font-size: var(--taille-corps);
+  color: var(--couleur-texte-attenue);
+  margin-bottom: var(--espace-6);
+}
+
+.authentification__bascule {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  text-align: center;
+  margin-top: var(--espace-6);
+}
+
+/* Indicateur de robustesse du mot de passe, à l'inscription.
+   Aucune couleur nouvelle : les segments acquis reprennent l'accent de l'interface.
+   La teinte ne porte rien à elle seule, la phrase sous la jauge dit tout. */
+.robustesse {
+  margin: calc(var(--espace-2) * -1) 0 var(--espace-4);
+}
+
+.robustesse__jauge {
+  display: flex;
+  gap: var(--espace-1);
+  margin-bottom: var(--espace-2);
+}
+
+.robustesse__segment {
+  flex: 1;
+  height: 3px;
+  border-radius: var(--rayon-pilule);
+  background: var(--couleur-bordure);
+}
+
+.robustesse__segment--acquis {
+  background: var(--couleur-accent);
+}
+
+.robustesse__resume {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}
+
+/* Clé de réinitialisation affichée en mode démonstration. Le cadre la détache du reste
+   du texte : c'est une valeur à recopier, pas une phrase à lire. */
+.authentification__cle {
+  margin: var(--espace-4) 0;
+  padding: var(--espace-3);
+  border: 1px solid var(--couleur-avertissement);
+  border-radius: var(--rayon-carte);
+  background: color-mix(in srgb, var(--couleur-avertissement) 8%, transparent);
+}
+
+.authentification__cle-titre {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-legende);
+  color: var(--couleur-avertissement);
+}
+
+.authentification__cle-valeur {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--taille-legende);
+  /* La clé fait soixante-quatre caractères : elle doit se couper plutôt que déborder. */
+  word-break: break-all;
+  color: var(--couleur-texte);
+}
+
+.authentification__cle-note {
+  margin: var(--espace-2) 0 0;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+}

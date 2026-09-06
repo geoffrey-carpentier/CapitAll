@@ -1,0 +1,404 @@
+# Cahier des charges - CapitAll
+
+| Version | Date | Nature de la révision |
+|---|---|---|
+| 1.0 | 14/07/2026 | rédaction initiale |
+| 1.1 | 21/07/2026 | fournisseurs de cours révisés, fiche d'actif enrichie |
+| 1.2 | 29/07/2026 | plus-value réalisée, bascule d'affichage euro/dollar, routes du portefeuille |
+| 2.0 | 30/07/2026 | restructuration complète : acteurs, règles de gestion, exigences non fonctionnelles détaillées, critères de recette, matrice de traçabilité, glossaire |
+| 2.1 | 31/08/2026 | alignement sur le MVP livré : actions courantes retenues, annonces et administration reportées en V2 (D85), contrat API constaté |
+
+## 1. Objet et portée du document
+
+Ce document définit ce que CapitAll doit faire, dans quelles limites, et à quelles conditions le résultat sera considéré comme conforme. Il sert de référence unique en cas de doute sur le périmètre.
+
+Il ne décrit ni l'architecture technique détaillée, ni le modèle de données complet, ni le calendrier : ces éléments relèvent des documents cités en annexe, auxquels il renvoie plutôt que de les recopier.
+
+Les décisions structurantes sont référencées par leur identifiant, de la forme D12, et consignées dans le registre de décisions du projet. Ce registre fait foi : lorsqu'une décision révise une décision antérieure, c'est la plus récente qui s'applique.
+
+## 2. Contexte et enjeux
+
+### 2.1 Constat
+
+Un particulier qui diversifie son épargne se retrouve avec autant de vues partielles que de plateformes : un compte d'échange pour les cryptomonnaies, une banque pour les devises, un négociant pour les métaux, un courtier pour les actions. Aucun de ces acteurs n'a de vision de l'ensemble, et aucun n'a d'intérêt à la fournir.
+
+La consolidation se fait donc à la main, le plus souvent dans un tableur. Les cours y sont recopiés au gré des connexions, les prix de revient sont approximatifs, et les plus-values affichées sont rarement exactes.
+
+### 2.2 Problématique
+
+Comment offrir à un particulier une vue consolidée, à jour et fiable de son patrimoine multi-actifs, sans ressaisie manuelle des cours et avec des calculs de rentabilité exacts ?
+
+### 2.3 Objectifs
+
+| # | Objectif | Comment il est atteint |
+|---|---|---|
+| O1 | Centraliser des actifs de nature différente | quatre classes gérées par un modèle commun, ramenées à une unité de compte unique |
+| O2 | Supprimer la ressaisie des cours | récupération automatique auprès de fournisseurs externes, appelés côté serveur |
+| O3 | Garantir l'exactitude des calculs | arithmétique exacte de bout en bout, aucun calcul monétaire en virgule flottante |
+| O4 | Rendre le patrimoine consultable en mobilité | conception mobile-first, et non adaptation a posteriori d'une interface de bureau |
+| O5 | Protéger des données patrimoniales sensibles | authentification, cloisonnement strict par utilisateur, validation systématique des entrées |
+
+### 2.4 Acteurs
+
+| Acteur | Description | Ce qu'il peut faire | Ce qu'il ne peut pas faire |
+|---|---|---|---|
+| **Visiteur** | personne non authentifiée | créer un compte, se connecter | accéder à la moindre donnée patrimoniale |
+| **Utilisateur** | particulier gérant un patrimoine diversifié, à l'aise avec une application web, sans formation financière particulière | gérer ses actifs, ses transactions, ses alertes ; consulter son portefeuille | accéder aux données d'un autre utilisateur |
+| **Fournisseur de cours** | acteur externe, non humain | fournir un cours sur interrogation | rien d'autre : l'application ne lui transmet aucune donnée |
+
+Le schéma conserve les rôles `utilisateur` et `admin`, mais le MVP ne monte aucun
+parcours d'administration. Un compte `admin` reste cloisonné à ses propres données
+patrimoniales ; les capacités de gestion du service sont reportées en version 2 (D85).
+
+## 3. Périmètre
+
+### 3.1 Fonctionnalités retenues
+
+| Domaine | Fonctionnalité | Référence |
+|---|---|---|
+| Compte | inscription, connexion, cloisonnement des données | D7 |
+| Actifs | suivi d'actifs sur quatre classes : cryptomonnaie, devise, métal précieux, action | D9, D20 |
+| Transactions | enregistrement des achats et des ventes, suppression d'une saisie erronée | D9, D51 |
+| Valorisation | prix de revient moyen pondéré, plus-value latente, plus-value réalisée | D8, D42, D54 |
+| Cours | récupération automatique auprès de fournisseurs externes, mise en cache | D5, D6, D14 |
+| Portefeuille | tableau de bord consolidé, répartition par classe, courbe d'évolution | D16 |
+| Affichage | bascule euro ou dollar, à l'affichage uniquement | D43 |
+| Alertes | seuils sur un actif ou sur le capital total, évaluation automatique | D15, D50, D56 |
+| Historique | instantané de valorisation journalier | D16, D49 |
+| Actions | cours courant d'une liste blanche de valeurs américaines, avec repli entre fournisseurs | D20, D26, D27, D85 |
+
+### 3.2 Fonctionnalités écartées
+
+Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
+
+| Écartée | Motif |
+|---|---|
+| Recherche libre de symboles boursiers et de fonds indiciels | dépendance non maîtrisée aux quotas des fournisseurs ; une liste blanche bornée démontre la même capacité |
+| Export fiscal | complexité réglementaire sans rapport avec l'objectif du produit |
+| Devise de référence multiple | impliquerait un prix de revient et un historique par devise. La bascule d'affichage retenue couvre le besoin d'usage à un coût sans commune mesure (D43) |
+| Import de transactions par fichier | le coût ne tient pas dans la lecture du fichier mais dans les formats hétérogènes, la correspondance des colonnes, les rejets partiels et la détection des doublons. Reporté à une version ultérieure (D44) |
+| Notifications par courriel ou notification poussée | infrastructure supplémentaire sans valeur ajoutée pour le besoin exprimé |
+| Publications par les utilisateurs | le produit n'est pas un réseau social |
+| Widget de marché externe embarqué | dépendance réseau supplémentaire et exception de sécurité contraires aux principes retenus (D24) |
+| Annonces internes | table conservée dans le socle, mais aucune route ni interface dans le MVP ; report en version 2 (D85) |
+| Administration du service | rôle et intergiciel conservés, mais routes et interface reportées en version 2 faute d'un lot rapide et sans impact (D85) |
+| Fiche action enrichie | le MVP livre le cours courant ; les métadonnées de marché restent une évolution (D85) |
+
+### 3.3 Hypothèses retenues
+
+- L'utilisateur saisit lui-même ses transactions. Aucune connexion à un compte bancaire ou à une plateforme d'échange n'est prévue.
+- Les cours sont ceux publiés par des sources publiques gratuites. Ils ne constituent pas une donnée contractuelle et peuvent différer de ceux d'une plateforme de négociation.
+- La devise de référence des calculs est l'euro (D11).
+- Le volume de données par utilisateur reste modeste : quelques dizaines d'actifs, quelques centaines de transactions.
+
+## 4. Exigences fonctionnelles
+
+### 4.1 Gestion du compte
+
+- En tant que visiteur, je veux créer un compte avec une adresse électronique et un mot de passe, afin de disposer de mon propre espace. Contraintes : adresse au format valide et non déjà utilisée, mot de passe d'une longueur minimale contrôlée côté serveur, message explicite si l'adresse est déjà prise.
+- En tant qu'utilisateur inscrit, je veux me connecter, afin de retrouver mon portefeuille. Contraintes : message d'échec strictement générique, ne révélant jamais si c'est l'adresse ou le mot de passe qui est en cause ; soumission verrouillée pendant l'appel réseau.
+- En tant qu'utilisateur connecté, je veux consulter les informations de mon compte, afin de vérifier mon identité applicative.
+- En tant qu'utilisateur connecté, je veux changer mon mot de passe, afin de préserver la sécurité de mon compte. Contraintes : l'ancien mot de passe est exigé, le nouveau respecte les mêmes règles qu'à l'inscription, la session en cours n'est pas invalidée.
+- En tant qu'utilisateur connecté, je veux supprimer mon compte, afin d'exercer mon droit à l'effacement. Contraintes : confirmation par le mot de passe, vérifiée par le serveur et non par la seule interface, suppression en cascade des actifs, transactions, alertes et instantanés, opération irréversible et annoncée comme telle.
+- En tant qu'utilisateur connecté, je veux exporter mes mouvements dans un fichier, afin de les conserver ou de les exploiter hors de l'application. Contraintes : la totalité des mouvements du compte, format CSV lisible par un tableur, valeurs brutes sans mise en forme, aucun mouvement d'un autre compte accessible. Il ne s'agit pas d'un export fiscal, qui reste hors périmètre.
+- En tant qu'utilisateur connecté, je veux choisir la devise d'affichage et masquer les montants, afin d'adapter la consultation à mon contexte.
+
+### 4.2 Gestion des actifs
+
+- En tant qu'utilisateur connecté, je veux ajouter un actif à suivre en précisant sa classe, son symbole et son nom, afin d'y enregistrer des transactions. Contraintes : un même symbole ne peut être suivi deux fois, la classe est restreinte aux quatre valeurs autorisées.
+- En tant qu'utilisateur connecté, je veux renommer un actif, afin de corriger une saisie ou d'adopter une appellation qui me parle.
+- En tant qu'utilisateur connecté, je veux supprimer un actif, afin de retirer une ligne devenue sans objet. Contrainte : la suppression emporte les transactions et les alertes qui s'y rattachent, et l'utilisateur en est averti.
+- En tant qu'utilisateur connecté, je veux consulter le détail d'un actif, avec l'historique de ses transactions, son prix de revient, son cours et ses plus-values, afin de suivre sa performance individuelle.
+- En tant qu'utilisateur connecté, je veux voir les informations de contexte d'une action, afin de situer ma position sans quitter l'application. Contrainte : ces données proviennent de la même réponse que le cours, sans appel supplémentaire ; elles n'existent pas pour les devises et les métaux, la fiche s'adapte donc à la classe d'actif.
+
+### 4.3 Gestion des transactions
+
+- En tant qu'utilisateur connecté, je veux enregistrer un achat ou une vente en précisant la quantité, le prix unitaire, les frais et la date, afin que mon prix de revient et mes plus-values soient recalculés. Contraintes : quantité strictement positive, prix positif ou nul, frais positifs ou nuls, date non postérieure au jour courant, impossibilité de vendre plus que la quantité détenue.
+- En tant qu'utilisateur connecté, je veux indiquer les frais dans l'unité où ma plateforme les a réellement prélevés — euros, actif échangé, ou autre actif — afin que mon relevé dise ce qui m'a été retenu et non seulement ce que cela valait. La contre-valeur en euros est calculée au prix de l'opération lorsque les frais sont retenus dans l'actif échangé, et demandée explicitement sinon.
+- En tant qu'utilisateur connecté, je veux enregistrer un transfert ou un retrait vers un compte qui m'appartient, afin que ma quantité détenue reste juste sans qu'une vente que je n'ai pas faite apparaisse dans mes plus-values.
+- En tant qu'utilisateur connecté, je veux corriger un mouvement déjà enregistré, afin de réparer une saisie fautive sans détruire les mouvements qui en dépendent. Contraintes : la correction est refusée si elle rend un mouvement postérieur impossible, l'actif du mouvement n'est pas modifiable, et un refus ne modifie rien.
+- En tant qu'utilisateur connecté, je veux renommer une position, afin que la liste porte les noms que j'y reconnais. Le symbole et la classe restent inchangés.
+- En tant qu'utilisateur connecté, je veux savoir quels symboles l'application accepte avant de saisir, afin de ne pas découvrir un refus après coup.
+- En tant que visiteur ayant oublié mon mot de passe, je veux en choisir un nouveau moi-même, afin de retrouver l'accès à mon compte sans qu'un administrateur ait à intervenir sur mes données (D23).
+- En tant qu'utilisateur, je veux que changer mon mot de passe ferme mes autres sessions, afin qu'un accès dérobé cesse au moment où je réagis, sans que la session depuis laquelle j'agis soit interrompue.
+- En tant qu'utilisateur connecté, je veux supprimer une transaction saisie par erreur, afin que mes calculs redeviennent justes. Sans cette possibilité, une saisie erronée fausserait définitivement le prix de revient (D51).
+
+### 4.4 Portefeuille et valorisation
+
+- En tant qu'utilisateur connecté, je veux consulter un tableau de bord consolidé présentant la valeur totale de mon patrimoine, sa répartition par classe d'actif et son évolution, afin d'avoir une vue d'ensemble immédiate.
+- En tant qu'utilisateur connecté, je veux distinguer ma plus-value latente de ma plus-value réalisée, afin de savoir ce que j'ai effectivement gagné de ce que je gagnerais si je vendais aujourd'hui.
+- En tant qu'utilisateur connecté, je veux basculer l'affichage entre euro et dollar, afin de lire mon patrimoine dans l'une ou l'autre devise. Contrainte : la bascule ne touche que l'affichage. Les montants restent calculés et conservés en euro, et l'historique est converti au taux courant (D43).
+- En tant qu'utilisateur connecté, je veux visualiser l'évolution de mon patrimoine dans le temps, afin de juger de la pertinence de mes choix.
+- En tant qu'utilisateur connecté, je veux être informé lorsqu'un cours n'a pas pu être obtenu, afin de ne pas prendre une valeur incomplète pour une valeur exacte. Contrainte : une valeur inconnue n'est jamais présentée comme une valeur nulle.
+
+### 4.5 Alertes
+
+- En tant qu'utilisateur connecté, je veux définir un seuil sur le cours d'un actif ou sur mon capital total, afin d'être informé sans consulter l'application en permanence. Contraintes : seuil strictement positif ; une alerte cible soit un actif précis, soit le capital total, jamais les deux ni aucun des deux.
+- En tant qu'utilisateur connecté, je veux consulter mes alertes et savoir lesquelles ont été franchies, ainsi que la date du franchissement.
+- En tant qu'utilisateur connecté, je veux désactiver une alerte, afin de garder une liste pertinente.
+
+### 4.6 Pistes de version 2 : annonces et administration
+
+Ces récits — consultation et publication d'annonces, liste et désactivation de
+comptes — sont conservés comme pistes de version 2. Ils ne constituent pas des
+critères de recette du MVP livré (D85).
+
+### 4.8 Règles de gestion
+
+Ces règles s'appliquent en toute circonstance et sont vérifiées côté serveur, quelle que soit l'interface utilisée.
+
+| # | Règle | Portée |
+|---|---|---|
+| RG1 | Un utilisateur n'accède qu'à ses propres données, en lecture comme en écriture | toutes les ressources patrimoniales |
+| RG2 | Un même symbole ne peut être suivi deux fois par le même utilisateur | actifs |
+| RG3 | On ne peut pas faire sortir d'une position une quantité supérieure à celle détenue, que ce soit par vente ou par sortie non marchande | transactions |
+| RG4 | Une transaction ne peut pas être datée dans le futur | transactions |
+| RG5 | Le prix de revient et les plus-values ne sont jamais conservés en base, ils sont recalculés depuis les transactions | valorisation |
+| RG6 | Le prix de revient intègre les frais d'achat, quelle que soit l'unité dans laquelle ils ont été prélevés ; une vente ne le modifie pas | valorisation |
+| RG6 bis | Une sortie non marchande — transfert, retrait — retire de la quantité sans dégager de produit : elle ne modifie pas le prix de revient unitaire et ne produit aucune plus-value réalisée | valorisation |
+| RG6 ter | Un mouvement peut être corrigé, jamais déplacé vers une autre position ; une correction qui rendrait un mouvement postérieur impossible est refusée sans rien écrire | transactions |
+| RG12 | Un jeton reste soumis à l'état du compte : un compte désactivé ou supprimé, et un jeton émis avant la borne de révocation du compte, ferment la session immédiatement | accès |
+| RG13 | Les tentatives de connexion sont plafonnées par adresse électronique et non par adresse réseau ; une connexion réussie remet le compteur à zéro | accès |
+| RG14 | Une clé de réinitialisation vaut une heure, ne sert qu'une fois, et n'est jamais conservée en clair | accès |
+| RG7 | Les transactions sont prises en compte dans l'ordre chronologique, indépendamment de leur ordre de saisie | valorisation |
+| RG8 | Un instantané de valorisation est unique par utilisateur et par jour | historique |
+| RG9 | Une alerte cible soit un actif, soit le capital total, jamais les deux ni aucun des deux | alertes |
+| RG10 | Un seuil est franchi de manière inclusive : atteindre le seuil suffit à déclencher l'alerte | alertes |
+| RG11 | Une alerte déjà déclenchée n'est plus réévaluée, et une alerte dont le cours est indisponible n'est pas évaluée | alertes |
+| RG12 | Le rôle d'un compte n'est accepté dans aucune entrée utilisateur | sécurité |
+| RG13 | Un compte désactivé ne peut plus se connecter ; la désactivation est réversible et ne supprime aucune donnée | comptes |
+
+La règle RG3 ne peut pas être exprimée par une contrainte de base de données : elle porte sur la somme de plusieurs lignes et non sur une ligne isolée. Elle est donc vérifiée dans la couche métier. Cette distinction entre ce que le modèle relationnel garantit et ce qui relève de l'application est assumée et documentée.
+
+## 5. Exigences non fonctionnelles
+
+### 5.1 Sécurité
+
+| Exigence | Mise en œuvre attendue |
+|---|---|
+| Authentification | jeton signé en HS256, durée de validité de deux heures, sans jeton de rafraîchissement : au-delà, l'utilisateur se reconnecte |
+| Stockage du jeton côté client | en mémoire, sans persistance dans le navigateur, afin de limiter l'exposition en cas d'injection de contenu. Un rafraîchissement de page déconnecte, comportement assumé (D57) |
+| Mots de passe | hachage bcrypt avec un coût de travail d'au moins 10, jamais de stockage ni de journalisation en clair |
+| Réponse à un échec de connexion | message générique, et comparaison effectuée même sur un compte inexistant afin de ne pas créer d'écart de temps de réponse exploitable |
+| Contrôle d'accès | trois niveaux : authentification, propriété de la ressource, rôle. Le filtre du propriétaire est porté par la requête de base de données elle-même, jamais par une comparaison effectuée après lecture |
+| Ressource appartenant à autrui | code 404 et non 403, afin de ne pas confirmer l'existence d'un identifiant (D52) |
+| Injection | requêtes paramétrées exclusivement, à travers un point de passage unique, aucune concaténation |
+| Validation des entrées | schéma déclaratif par point d'entrée, rejet des champs inconnus, contraintes de format alignées sur celles de la base |
+| Contenu affiché | échappement systématique de tout contenu saisi par l'utilisateur, avec une vigilance particulière sur le champ libre des transactions |
+| Secrets | exclusivement dans un fichier d'environnement non versionné, avec un modèle vide et commenté publié. Refus de démarrage si une variable critique manque |
+| Origines autorisées | partage de ressources entre origines restreint au domaine de l'interface |
+
+### 5.2 Exactitude des calculs
+
+Exigence structurante du produit, au même rang que la sécurité. Une application patrimoniale qui affiche une plus-value fausse est aussi défaillante qu'une application vulnérable.
+
+- Aucun calcul monétaire ni aucune agrégation de quantité ne repose sur l'arithmétique en virgule flottante.
+- Les montants et les quantités sont conservés en base dans un type numérique à précision arbitraire, et manipulés côté serveur en entiers à échelle fixe.
+- Les quantités admettent huit décimales, les montants deux.
+- Le seul point où une valeur en virgule flottante est acceptée est la lecture d'une réponse de fournisseur externe, immédiatement convertie et arrondie.
+
+### 5.3 Accessibilité
+
+Le référentiel général d'amélioration de l'accessibilité est appliqué dès l'intégration, et non vérifié après coup.
+
+- Contraste d'au moins 4,5:1 entre un texte et son fond, y compris pour le texte secondaire.
+- Libellé explicite sur chaque champ de formulaire, message d'erreur associé au champ concerné.
+- Navigation au clavier complète, ordre de tabulation cohérent, indicateur de focus visible.
+- **Une information n'est jamais portée par la seule couleur.** Une variation de valeur est systématiquement accompagnée d'un signe et d'une flèche. Cette exigence s'applique aussi bien aux maquettes qu'au code.
+
+### 5.4 Résilience et disponibilité
+
+L'application dépend de services externes gratuits, sans engagement de disponibilité. Elle doit se comporter correctement quand ils font défaut.
+
+| Défaillance | Comportement attendu |
+|---|---|
+| Un fournisseur de cours ne répond pas | le dernier cours connu est renvoyé, explicitement signalé comme tel avec sa date d'origine |
+| Aucun cours connu pour un actif | la position est présentée sans valorisation, jamais valorisée à zéro, et le symbole concerné est signalé |
+| Le cache est indisponible | l'application démarre et fonctionne, les cours étant demandés directement aux fournisseurs. Le cache est une optimisation, jamais une dépendance dure |
+| La base de données est indisponible | le serveur refuse de démarrer avec un message explicite plutôt que de servir des réponses partielles |
+| Une variable de configuration critique manque | arrêt immédiat au démarrage, avec la liste complète des variables manquantes |
+| L'écriture d'un instantané ou l'évaluation des alertes échoue | l'incident est journalisé et la consultation du portefeuille aboutit malgré tout : ce sont des effets de bord, pas le service rendu |
+
+### 5.5 Performance
+
+*Rubrique volontairement proportionnée au contexte.* CapitAll est destiné à un usage individuel et à une démonstration, non à un service à fort trafic. Aucun test de charge n'est donc exigé. Les engagements retenus sont fonctionnels et vérifiables :
+
+- un rafraîchissement du tableau de bord ne déclenche pas systématiquement d'appel sortant, grâce au cache des cours et à ses durées de vie adaptées à chaque classe d'actif : 120 secondes pour une cryptomonnaie qui cote en continu, 3600 secondes pour une devise dont les taux de référence ne sont publiés qu'une fois par jour ouvré, 600 secondes pour un métal, 300 secondes pour une action (D21) ;
+- les cours nécessaires à une consolidation sont demandés en une seule opération groupée, avec déduplication des symboles ;
+- l'historique de valorisation est lu depuis les instantanés conservés, jamais reconstitué en interrogeant les fournisseurs pour chaque point de la courbe ;
+- aucun traitement de complexité quadratique dans les services métier.
+
+### 5.6 Exploitation et journalisation
+
+- Deux niveaux de journalisation : information pour le démarrage et les événements significatifs, erreur pour les échecs d'authentification, les défaillances de fournisseur et les incidents de cache. Aucun niveau de débogage actif hors développement.
+- Aucune donnée personnelle ni aucun secret n'apparaît dans les journaux.
+- Les erreurs renvoyées au client ne contiennent jamais de pile d'appels ni de message technique.
+- La base est amorçable par un jeu de données de démonstration idempotent, rejouable autant que nécessaire pour repartir d'un état propre.
+
+### 5.7 Compatibilité
+
+- Navigateurs récents fondés sur les moteurs courants, dans leurs deux dernières versions majeures.
+- Conception mobile-first, maquettée en 375 pixels de large et déclinée en 1440 pixels.
+- Aucune dépendance à une résolution ou à un système d'exploitation particulier.
+
+### 5.8 Protection des données personnelles
+
+Les seules données à caractère personnel collectées sont l'adresse électronique, le pseudonyme et le mot de passe haché. Aucune donnée relevant des catégories particulières du règlement général sur la protection des données n'est collectée.
+
+Les montants et transactions saisis constituent une donnée patrimoniale sensible sur le plan de la confidentialité, sans relever de ces catégories particulières. Ils sont cloisonnés par utilisateur, à tous les niveaux.
+
+Trois principes sont appliqués : minimisation, aucune donnée n'étant collectée sans usage identifié ; cloisonnement, aucun utilisateur ni administrateur n'accédant aux données patrimoniales d'un autre ; effacement en cascade, la suppression d'un compte entraînant celle de l'ensemble de ses données. Aucune conservation d'adresse réseau ni d'identifiant en clair dans les journaux au-delà du strict nécessaire au diagnostic.
+
+## 6. Architecture et choix techniques
+
+Description complète : `conception/architecture.md`. Résumé des choix engageants :
+
+| Brique | Choix | Motif principal |
+|---|---|---|
+| Interface | React 18 avec Vite | tableau de bord interactif consommant des données au format JSON ; un rendu serveur imposerait un rechargement à chaque changement de période ou de devise d'affichage |
+| Serveur | Node.js 20 et Express | architecture en couches explicite, et partage des schémas de validation avec l'interface |
+| Base de données | PostgreSQL 16 | type numérique à précision arbitraire indispensable aux montants, et contraintes de vérification riches |
+| Cache | Redis 7 | cache court des cours, nécessaire de toute façon, et couvrant un besoin réel de stockage clé-valeur (D14) |
+| Authentification | jeton signé et bcrypt | interface sans état, adaptée à un client découplé |
+| Validation | schémas déclaratifs | source unique de la forme attendue, réutilisable des deux côtés (D41) |
+| Représentation graphique | Recharts (D58) | composants natifs de l'écosystème de l'interface, sans adaptateur à écrire ; la courbe d'aire couvre le besoin depuis que la répartition se lit en liste chiffrée (D74) |
+| Conteneurisation | Docker et Docker Compose | reproductibilité de l'environnement et démonstration de la procédure de déploiement |
+
+Les cours sont appelés exclusivement côté serveur (D6). Chaque fournisseur est encapsulé dans un adaptateur exposant une interface commune, ce qui permet d'en changer sans toucher à la logique métier (D5).
+
+## 7. Modèle de données
+
+Sept entités : `utilisateur`, `actif`, `transaction`, `alerte`, `snapshot_valorisation`, `snapshot_cours`, `annonce`. Modèle conceptuel, modèle logique, cardinalités et diagramme : `conception/modele-de-donnees.md`. Script de création : `../backend/db/schema.sql`.
+
+Trois partis pris de modélisation méritent d'être signalés ici, car ils conditionnent le comportement fonctionnel :
+
+- **Aucune valeur dérivée n'est conservée.** Le prix de revient et les plus-values sont recalculés depuis les transactions. Les stocker créerait un risque d'incohérence permanent (D8).
+- **L'instantané de valorisation fait exception, volontairement.** Il n'est pas recalculable après coup, faute de conserver les cours passés : c'est un fait historique daté, pas une donnée redondante (D16).
+- **Il n'existe pas de référentiel d'actifs partagé.** Chaque utilisateur possède ses propres lignes, ce qui évite une table de correspondance et une gestion de doublons sans bénéfice à cette échelle (D9).
+
+## 8. Interface de programmation
+
+Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Une ressource inexistante et une ressource appartenant à un autre utilisateur renvoient toutes deux un code 404 (D52).
+
+| Méthode | Route | Accès | Description | Codes de statut |
+|---|---|---|---|---|
+| GET | `/api/sante` | public | état de santé HTTP de l'API | 200 |
+| POST | `/api/auth/inscription` | public | création de compte | 201, 400, 409 |
+| POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401, 403 |
+| PATCH | `/api/compte/mot-de-passe` | authentifié | changement de mot de passe, ancien exigé | 204, 400, 401 |
+| DELETE | `/api/compte` | authentifié | suppression du compte et de ses données, mot de passe de confirmation exigé | 204, 400, 401 |
+| GET | `/api/compte/export-mouvements` | authentifié | export CSV de tous les mouvements du compte (D84) | 200, 401 |
+| GET | `/api/auth/moi` | authentifié | informations du compte courant | 200, 401 |
+| GET | `/api/actifs` | authentifié | liste des actifs suivis | 200, 401 |
+| POST | `/api/actifs` | authentifié | création d'un actif suivi | 201, 400, 401, 409 |
+| GET | `/api/actifs/:id` | propriétaire | détail : transactions, prix de revient, cours, plus-values | 200, 401, 404 |
+| PATCH | `/api/actifs/:id` | propriétaire | modification du nom | 200, 400, 401, 404 |
+| DELETE | `/api/actifs/:id` | propriétaire | suppression, en cascade sur les transactions et alertes liées | 204, 401, 404 |
+| POST | `/api/actifs/:id/transactions` | propriétaire | enregistrement d'une transaction | 201, 400, 401, 404 |
+| POST | `/api/actifs/:id/transactions/simulation` | propriétaire | effet d'une transaction sur la position, avant enregistrement et sans écriture | 200, 400, 401, 404 |
+| DELETE | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | suppression d'une transaction, refusée si elle rend l'historique invalide | 204, 400, 401, 404 |
+| GET | `/api/portefeuille` | authentifié | consolidation : valeur totale, coût de revient, plus-values, répartition, taux de change, alertes franchies | 200, 401 |
+| GET | `/api/portefeuille/historique` | authentifié | instantanés de valorisation | 200, 401 |
+| GET | `/api/alertes` | authentifié | liste des alertes, chacune enrichie de la valeur actuellement observée sur sa cible et de l'écart restant avant franchissement en pourcentage | 200, 401 |
+| POST | `/api/alertes` | authentifié | création d'une alerte | 201, 400, 401, 404 |
+| PATCH | `/api/alertes/:id` | propriétaire | désactivation | 200, 400, 401, 404 |
+**Statut à la date de cette version.** Le tableau ci-dessus décrit les vingt points
+d'entrée effectivement montés par le serveur. Les routes d'annonces et
+d'administration ne font pas partie du contrat du MVP ; elles sont reportées en
+version 2 (D85). Les corps et réponses sont documentés dans `api/README.md`, avec
+une collection rejouable dans `api/capitall.http`.
+
+Les structures de données échangées par chaque point d'entrée sont documentées dans une collection d'appels rejouable, versionnée avec le projet.
+
+## 9. Interface utilisateur
+
+### 9.1 Routes de l'application
+
+| Route | Accès | Contenu |
+|---|---|---|
+| `/connexion` | public | formulaire de connexion |
+| `/inscription` | public | formulaire d'inscription |
+| `/patrimoine` | authentifié | consolidation, répartition, courbe d'évolution, seuils franchis |
+| `/positions` | authentifié | liste des positions, filtres par classe et tri |
+| `/positions/:id` | propriétaire | détail d'une position, ses mouvements et ses seuils |
+| `/seuils` | authentifié | gestion des seuils |
+| `/compte` | authentifié | profil, sécurité, préférences d'affichage, mentions |
+
+Les libellés et les chemins suivent le lexique du projet : patrimoine, position, seuil.
+
+La saisie d'un mouvement n'a pas de route à elle : c'est une feuille glissante en mobile et un dialogue centré en desktop, ouverts par-dessus l'écran courant, dont ils préservent le contexte. Leur ouverture est portée par le paramètre `?mouvement` de l'écran d'origine, de sorte qu'elle survive à un rechargement et se referme par le bouton de retour du navigateur.
+
+Toute route privée atteinte sans jeton valide redirige vers la connexion.
+
+### 9.2 Principes d'interface
+
+Interface sombre et sobre, conçue pour la lecture de chiffres. Direction artistique
+complète, palette et principes de mise en page :
+`conception/direction-artistique.md`. La maquette comporte sept écrans en mobile
+375 pixels et trois déclinaisons structurelles en bureau 1440 pixels (D66).
+
+## 10. Contraintes de réalisation
+
+**Gestion de versions.** Deux branches permanentes : une branche stable protégée et une branche d'intégration. Aucun commit direct sur l'une ou l'autre. Une branche par lot fonctionnel cohérent, créée depuis la branche d'intégration, un commit par élément de travail référençant son numéro, et une revue avant fusion (D39, D47). Messages de commit en français, selon la convention documentée dans `convention-commits.md`.
+
+**Tests.** Tests unitaires sur ce qui porte de la logique : validation des entrées, intergiciels, arithmétique, moteur de calcul, adaptateurs, stratégie de cache, évaluation des alertes. Les services métier sont conçus pour être testables sans base de données ni serveur HTTP. Vérifications fonctionnelles de chaque point d'entrée contre une base réellement amorcée, et scénarios de panne explicites pour les exigences de résilience de la section 5.4.
+
+**Déploiement.** Image applicative pour le serveur, image d'interface servie par un serveur web léger, service de base de données et service de cache, orchestrés par un fichier de composition unique. Variables sensibles exclusivement dans un fichier d'environnement non versionné, avec un modèle publié. Une chaîne d'intégration continue n'est pas requise ; l'exécution des tests avant fusion en tient lieu.
+
+## 11. Critères de recette
+
+Le produit est considéré comme conforme si l'ensemble des critères suivants est vérifié.
+
+| # | Critère | Vérification |
+|---|---|---|
+| C1 | Un utilisateur crée un compte, ajoute des actifs des quatre classes, saisit des transactions et obtient une consolidation exacte | parcours complet sur une base amorcée |
+| C2 | Le prix de revient et les plus-values correspondent au centime près à un calcul mené indépendamment | jeu d'essai documenté, confronté au calcul manuel et au test automatisé |
+| C3 | Aucun utilisateur n'accède à une donnée d'un autre, y compris en interrogeant directement l'interface de programmation | appels forgés avec le jeton d'un second compte |
+| C4 | L'application reste utilisable lorsqu'un fournisseur de cours est indisponible | fournisseur simulé en échec, puis panne réelle constatée |
+| C5 | L'application reste utilisable lorsque le cache est arrêté | service de cache stoppé puis redémarré |
+| C6 | Les règles de gestion RG1 à RG13 sont toutes vérifiées côté serveur | tests unitaires et appels de contrôle |
+| C7 | Les contrastes atteignent le seuil requis et aucune information n'est portée par la seule couleur | mesure par outil dédié, capture à l'appui |
+| C8 | L'ensemble se déploie sur une machine vierge à partir du dépôt et de la documentation | installation complète suivie pas à pas |
+
+## 12. Matrice de traçabilité
+
+Correspondance entre les besoins exprimés, les moyens techniques et les compétences du référentiel.
+
+| Besoin | Points d'entrée concernés | Règles associées | Compétences |
+|---|---|---|---|
+| Disposer d'un espace personnel protégé | inscription, connexion, compte courant | RG1, RG12 | CP5, CP7 |
+| Suivre des actifs de classes différentes | actifs | RG2 | CP5, CP6 |
+| Enregistrer des mouvements | transactions | RG3, RG4 | CP6, CP7 |
+| Connaître son prix de revient et ses plus-values | détail d'actif, portefeuille | RG5, RG6, RG7 | CP7 |
+| Obtenir des cours à jour sans ressaisie | service de cours et cache | aucune | CP6, CP7 |
+| Consulter une vue consolidée | portefeuille | RG5 | CP4, CP7 |
+| Suivre l'évolution dans le temps | historique | RG8 | CP5, CP7 |
+| Être averti au franchissement d'un seuil | alertes | RG9, RG10, RG11 | CP7 |
+| Consulter depuis un mobile | interface complète | aucune | CP2, CP3, CP4 |
+| Installer et redéployer l'application | composition de services et documentation | aucune | CP1, CP8 |
+
+## 13. Glossaire
+
+| Terme | Définition |
+|---|---|
+| **Prix de revient unitaire moyen pondéré** | coût moyen d'une unité détenue, frais d'achat inclus, recalculé à chaque achat au prorata des quantités |
+| **Plus-value latente** | gain ou perte théorique sur la quantité encore détenue, au cours du moment. Elle n'est pas encaissée |
+| **Plus-value réalisée** | gain ou perte effectivement constaté lors d'une vente, calculé au prix de revient en vigueur à cette date, frais de vente déduits |
+| **Instantané de valorisation** | photographie de la valeur totale du portefeuille à une date donnée, conservée parce qu'elle n'est pas reconstituable après coup |
+| **Adaptateur** | module encapsulant un fournisseur externe derrière une interface commune, afin que la logique métier ignore son identité |
+| **Durée de vie du cache** | délai au-delà duquel une valeur mise en cache est considérée comme périmée et redemandée à sa source |
+| **Liste blanche** | ensemble fermé de valeurs autorisées, ici les symboles d'actions suivables, contrôlé côté serveur |
+| **Cloisonnement** | garantie qu'un utilisateur ne peut accéder qu'à ses propres données, appliquée au niveau des requêtes de base de données |
+
+## 14. Documents de référence
+
+| Document | Contenu |
+|---|---|
+| `note-de-cadrage.md` | contexte, objectifs, périmètre initial |
+| `conception/cas-utilisation.md` | acteurs et cas d'utilisation, diagramme |
+| `conception/modele-de-donnees.md` | modèle conceptuel, logique et physique |
+| `conception/architecture.md` | architecture applicative, flux, adaptateurs |
+| `conception/direction-artistique.md` | palette, typographie, principes de mise en page, écrans |
+| `convention-commits.md` | convention de messages et flux de contribution |
+| `planning.md` | calendrier, jalons, gel du code |
+| `jeu-essai-calculs.md` | jeu d'essai détaillé du calcul du prix de revient et des plus-values |

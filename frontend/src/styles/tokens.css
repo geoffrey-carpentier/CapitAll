@@ -1,0 +1,93 @@
+/*
+  Jetons de la direction artistique (D10) : interface sombre, sobre, pensée pour la
+  lecture de chiffres. Les valeurs sont reprises telles quelles dans le dépôt plutôt
+  qu'importées d'ailleurs, afin que le projet reste autonome.
+
+  Les contrastes du texte sur les fonds sombres respectent le seuil de 4,5:1 exigé par
+  le référentiel d'accessibilité. Le vert et le rouge ne portent jamais seuls une
+  information : un signe ou un symbole les accompagne systématiquement.
+*/
+
+:root {
+  /* Couleurs */
+  --couleur-fond: #101418;
+  --couleur-carte: #1a2027;
+  --couleur-bordure: #2d3640;
+  /*
+    Contour des commandes : bordure d'un contrôle qu'on ne reconnaîtrait pas sans elle
+    — bouton secondaire, bascule euro/dollar, bouton de masquage.
+
+    Un jeton distinct, et non le relèvement de --couleur-bordure. La règle de contraste
+    des éléments non textuels ne porte que sur ce qui permet d'identifier un contrôle :
+    l'appliquer aussi aux filets décoratifs des cartes tracerait une grille sur des
+    écrans déjà denses, sans rien rendre plus lisible.
+
+    #667789 et non #9aa7b4, qui aurait passé plus largement (5,93 contre 3,16 au pire
+    des trois fonds). #9aa7b4 est la couleur du texte atténué : la reprendre donnerait
+    à un contour le poids d'un texte secondaire, et inverserait la hiérarchie — un
+    contour soutient la lecture, il ne la porte pas. Les deux rôles resteraient de plus
+    liés, et retoucher le texte atténué déplacerait toutes les bordures.
+
+    Mesuré au navigateur : 4,02 sur le fond, 3,57 sur une carte, 3,16 sur la carte
+    haute. Le seuil applicable est 3.
+  */
+  --couleur-contour-controle: #667789;
+  --couleur-texte: #e8ecf1;
+  --couleur-texte-attenue: #9aa7b4;
+  --couleur-accent: #4c9aff;
+  --couleur-positif: #34c77b;
+  /* Ajusté de #F0564F à #F8645D : 4,83:1 sur la carte haute #212A33. */
+  --couleur-negatif: #f8645d;
+
+  /*
+    Deux dérivés fonctionnels (D70), à l'emploi strictement borné. La carte haute est
+    l'unique fond du niveau 2 de contenant, c'est-à-dire du seul bloc de patrimoine.
+    L'ambre est l'unique couleur de l'état « cours en repli » et de la pastille de
+    fraîcheur tiède. Aucune autre couleur ne s'ajoute à la palette.
+  */
+  --couleur-carte-haute: #212a33;
+  --couleur-avertissement: #e3b341;
+
+  /*
+    Couleurs de classe d'actif (D98), pour l'anneau de répartition.
+
+    D74 avait retiré l'anneau faute d'une quatrième teinte : la solution d'alors
+    réemployait --couleur-avertissement pour les métaux et --couleur-negatif pour la
+    quatrième classe, ce qui faisait dire « donnée douteuse » à une classe et « perte »
+    à une autre. Le repli par niveaux d'opacité d'accent ne distinguait les segments
+    qu'à 1,46:1. Ces quatre teintes-ci sont dédiées : aucune n'est un jeton sémantique,
+    et aucune ne sert ailleurs dans l'interface.
+
+    Mesurées ensemble sur le fond de carte #1a2027, toutes paires confrontées :
+    contraste minimal 3,04:1 (seuil 3), écart de teinte minimal 16,8 en vision normale
+    (plancher 15) et 8,2 sous simulation de protanopie (cible 8). L'information ne
+    repose de toute façon pas sur elles : la légende chiffrée sous l'anneau porte le
+    libellé, la part et le montant de chaque classe, et le jeton garde sa forme (D76).
+  */
+  --couleur-classe-crypto: #3987e5;
+  --couleur-classe-metal: #d95926;
+  --couleur-classe-devise: #199e70;
+  --couleur-classe-action: #ce6bb0;
+
+  /* Espacements */
+  --espace-1: 4px;
+  --espace-2: 8px;
+  --espace-3: 12px;
+  --espace-4: 16px;
+  --espace-6: 24px;
+  --espace-8: 32px;
+
+  /* Rayons */
+  --rayon-carte: 8px;
+  --rayon-pilule: 999px;
+
+  /* Typographie */
+  --police: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --graisse-normale: 400;
+  --graisse-forte: 600;
+
+  --taille-legende: 12px;
+  --taille-corps: 14px;
+  --taille-titre: 18px;
+  --taille-montant: 28px;
+}
