@@ -17,6 +17,24 @@ async function consolide(req, res, next) {
   }
 }
 
+// Actualisation demandée : relève les cours du jour et évalue les seuils.
+//
+// Une commande, donc un POST, et non un GET paramétré. Elle change l'état — le point du
+// jour est écrit, les seuils franchis sont marqués — et c'est justement ce qu'un GET ne
+// doit pas faire. Le verbe suffit à empêcher qu'un préchargeur ou un rechargement la
+// rejoue.
+//
+// Elle rend le portefeuille dans la même forme que la lecture : l'appelant qui vient
+// d'actualiser n'a pas à enchaîner un second appel pour afficher le résultat.
+async function actualiser(req, res, next) {
+  try {
+    const portefeuille = await servicePortefeuille.actualiserPortefeuille(req.utilisateur.id);
+    res.status(200).json(portefeuille);
+  } catch (erreur) {
+    next(erreur);
+  }
+}
+
 async function historique(req, res, next) {
   try {
     const parametre = req.query.jours;
@@ -36,4 +54,4 @@ async function historique(req, res, next) {
   }
 }
 
-module.exports = { consolide, historique };
+module.exports = { consolide, actualiser, historique };

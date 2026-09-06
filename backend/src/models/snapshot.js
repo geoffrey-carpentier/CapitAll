@@ -16,10 +16,11 @@ const { query } = require('../db');
 // d'existence et la seconde insertion échouerait. Ici, c'est la base qui arbitre.
 async function enregistrerSiAbsent(utilisateurId, valeurTotaleEur) {
   const { rows } = await query(
-    `INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur)
-     VALUES ($1, CURRENT_DATE, $2)
+    `INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur, heure_releve)
+     VALUES ($1, CURRENT_DATE, $2, now())
      ON CONFLICT (utilisateur_id, date_snapshot) DO NOTHING
-     RETURNING id, to_char(date_snapshot, 'YYYY-MM-DD') AS date_snapshot, valeur_totale_eur`,
+     RETURNING id, to_char(date_snapshot, 'YYYY-MM-DD') AS date_snapshot, valeur_totale_eur,
+               heure_releve`,
     [utilisateurId, valeurTotaleEur]
   );
 
@@ -34,10 +35,15 @@ async function enregistrerSiAbsent(utilisateurId, valeurTotaleEur) {
 // le pilote la convertirait sinon en objet Date interprété dans le fuseau du serveur,
 // et la sérialisation JSON afficherait la veille pour tout fuseau à l'est de Greenwich.
 // Une date de snapshot est un jour calendaire, pas un instant.
+//
+// L'heure du relevé, elle, est bien un instant, et part telle quelle : c'est ce qui
+// permet à l'interface d'annoncer un pas de temps irrégulier plutôt que de le taire.
+// Elle vaut null pour les points antérieurs à son introduction.
 async function listerParUtilisateur(utilisateurId, nombreDeJours) {
   if (nombreDeJours) {
     const { rows } = await query(
-      `SELECT to_char(date_snapshot, 'YYYY-MM-DD') AS date_snapshot, valeur_totale_eur
+      `SELECT to_char(date_snapshot, 'YYYY-MM-DD') AS date_snapshot, valeur_totale_eur,
+              heure_releve
        FROM snapshot_valorisation
        WHERE utilisateur_id = $1
          AND date_snapshot >= CURRENT_DATE - $2::integer
@@ -48,7 +54,8 @@ async function listerParUtilisateur(utilisateurId, nombreDeJours) {
   }
 
   const { rows } = await query(
-    `SELECT to_char(date_snapshot, 'YYYY-MM-DD') AS date_snapshot, valeur_totale_eur
+    `SELECT to_char(date_snapshot, 'YYYY-MM-DD') AS date_snapshot, valeur_totale_eur,
+            heure_releve
      FROM snapshot_valorisation
      WHERE utilisateur_id = $1
      ORDER BY date_snapshot`,
