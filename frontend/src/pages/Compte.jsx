@@ -48,7 +48,7 @@ function formaterDate(valeur) {
 const LIBELLES_ROLE = { utilisateur: 'Utilisateur', admin: 'Administrateur' };
 
 export default function Compte() {
-  const { jeton, deconnecter } = useAuthentification();
+  const { jeton, deconnecter, remplacerJeton } = useAuthentification();
   const naviguer = useNavigate();
 
   const [profil, setProfil] = useState(null);
@@ -109,14 +109,19 @@ export default function Compte() {
     setMotDePasseEnCours(true);
 
     try {
-      await api.changerMotDePasse(jeton, { ancienMotDePasse, nouveauMotDePasse });
+      const { token } = await api.changerMotDePasse(jeton, {
+        ancienMotDePasse,
+        nouveauMotDePasse,
+      });
+      // Le changement révoque les jetons antérieurs, celui de cette session compris. Le
+      // serveur en remet un neuf : le retenir est ce qui permet à la session courante de
+      // survivre, pendant que les autres sessions du compte tombent.
+      remplacerJeton(token);
       setAncienMotDePasse('');
       setNouveauMotDePasse('');
       setConfirmationMotDePasse('');
-      // La session reste ouverte : le jeton ne dépend pas du mot de passe. Le dire
-      // évite que l'utilisateur s'attende à être déconnecté.
       setConfirmationChangement(
-        'Mot de passe modifié. Votre session reste ouverte, le prochain accès demandera le nouveau mot de passe.'
+        'Mot de passe modifié. Cette session reste ouverte ; vos autres sessions ont été fermées.'
       );
     } catch (echec) {
       const parChamp = erreursParChamp(echec);
@@ -344,11 +349,15 @@ export default function Compte() {
           </div>
           <div className="compte__ligne">
             <dt>Actions</dt>
-            <dd>Fournisseur non branché : ces positions ne sont pas valorisées</dd>
+            <dd>
+              Financial Modeling Prep, puis Finnhub et Alpha Vantage en secours, rafraîchi
+              toutes les 5 minutes. Ces positions ne sont valorisées que si une clé de
+              fournisseur est configurée sur le serveur.
+            </dd>
           </div>
         </dl>
         <p className="compte__note">
-          CapitAll est un outil de suivi. Il ne fournit aucun conseil en investissement et
+          WalletWatch est un outil de suivi. Il ne fournit aucun conseil en investissement et
           ne constitue pas une recommandation d&apos;achat ou de vente.
         </p>
       </Carte>
