@@ -70,6 +70,13 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-2h}
       ORIGINE_AUTORISEE: ${ORIGINE_AUTORISEE:-http://localhost:8080}
+      # Commodité de démonstration : la clé de réinitialisation est rendue dans la
+      # réponse, le projet n'ayant pas de service d'envoi de courriel. Fermée par
+      # défaut ; l'ouvrir révèle l'existence d'un compte à qui saisit son adresse.
+      AFFICHER_JETON_REINITIALISATION: ${AFFICHER_JETON_REINITIALISATION:-false}
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
