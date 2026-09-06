@@ -61,7 +61,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  vi.spyOn(api, 'portefeuille').mockResolvedValue(PORTEFEUILLE);
+  vi.spyOn(api, 'actualiserPortefeuille').mockResolvedValue(PORTEFEUILLE);
   vi.spyOn(api, 'historique').mockResolvedValue(HISTORIQUE);
   window.sessionStorage.clear();
 });
@@ -90,12 +90,12 @@ describe('règles de comportement', () => {
     rendre();
     await screen.findByText(/12.480,65/);
 
-    const appelsAvant = api.portefeuille.mock.calls.length + api.historique.mock.calls.length;
+    const appelsAvant = api.actualiserPortefeuille.mock.calls.length + api.historique.mock.calls.length;
     await utilisateur.click(screen.getByLabelText('Afficher les montants en dollars'));
 
     // 12480,65 x 1,1364 = 14183,0106, arrondi au centime.
     expect(await screen.findByText(/14.183,01/)).toBeTruthy();
-    expect(api.portefeuille.mock.calls.length + api.historique.mock.calls.length).toBe(appelsAvant);
+    expect(api.actualiserPortefeuille.mock.calls.length + api.historique.mock.calls.length).toBe(appelsAvant);
   });
 
   it('conserve le choix de devise dans la session', async () => {
@@ -127,7 +127,7 @@ describe('règles de comportement', () => {
   });
 
   it('masque la répartition tant qu\'il n\'y a qu\'une position', async () => {
-    api.portefeuille.mockResolvedValue({
+    api.actualiserPortefeuille.mockResolvedValue({
       ...PORTEFEUILLE,
       actifs: [PORTEFEUILLE.actifs[0]],
       repartition: [{ type: 'crypto', valeur: '12480.65', pourcentage: '100.00' }],
@@ -150,7 +150,7 @@ describe('règles de comportement', () => {
   });
 
   it('signale un repli sur le dernier cours connu sans masquer les valorisations', async () => {
-    api.portefeuille.mockResolvedValue({
+    api.actualiserPortefeuille.mockResolvedValue({
       ...PORTEFEUILLE,
       actifs: [
         { ...PORTEFEUILLE.actifs[0], source_cours: 'repli', horodatage_cours: '2026-08-09T10:00:00Z' },
@@ -169,7 +169,7 @@ describe('règles de comportement', () => {
   });
 
   it('nomme les actifs sans aucun cours et dit qu\'ils sortent du total', async () => {
-    api.portefeuille.mockResolvedValue({ ...PORTEFEUILLE, cours_indisponibles: ['XAU'] });
+    api.actualiserPortefeuille.mockResolvedValue({ ...PORTEFEUILLE, cours_indisponibles: ['XAU'] });
     rendre();
 
     expect(await screen.findByText(/XAU/)).toBeTruthy();
@@ -190,7 +190,7 @@ describe('règles de comportement', () => {
     // Les valeurs employées ici sont celles que contraint backend/db/schema.sql :
     // 'capital_total' ou 'actif' pour la cible, 'au_dessus' ou 'en_dessous' pour le
     // sens. Une fixture qui en inventerait d'autres validerait un composant faux.
-    api.portefeuille.mockResolvedValue({
+    api.actualiserPortefeuille.mockResolvedValue({
       ...PORTEFEUILLE,
       alertes_declenchees: [
         {
@@ -215,7 +215,7 @@ describe('règles de comportement', () => {
   });
 
   it('nomme le seuil d\'un actif descendu sous sa valeur', async () => {
-    api.portefeuille.mockResolvedValue({
+    api.actualiserPortefeuille.mockResolvedValue({
       ...PORTEFEUILLE,
       alertes_declenchees: [
         {
@@ -238,20 +238,125 @@ describe('règles de comportement', () => {
     expect(seuil.textContent).toMatch(/BTC est descendu sous/);
   });
 
-  it('recharge la courbe au changement de période', async () => {
+  // Changer de plage est un découpage d'affichage sur une série déjà reçue. Ce n'en
+  // était pas un : chaque clic rechargeait le portefeuille entier, donc rappelait les
+  // fournisseurs de cours et réécrivait les deux séries historiques.
+  it('ne redemande rien au serveur au changement de période', async () => {
     const utilisateur = userEvent.setup();
     rendre();
     await screen.findByText(/12.480,65/);
 
-    await utilisateur.click(screen.getByRole('tab', { name: /Année/ }));
+    const appels =
+      api.actualiserPortefeuille.mock.calls.length + api.historique.mock.calls.length;
 
-    await waitFor(() => expect(api.historique).toHaveBeenCalledWith('jeton-de-test', 365));
+    await utilisateur.click(screen.getByRole('tab', { name: /Année/ }));
+    await utilisateur.click(screen.getByRole('tab', { name: /Semaine/ }));
+    await utilisateur.click(screen.getByRole('tab', { name: /Jour/ }));
+
+    expect(
+      api.actualiserPortefeuille.mock.calls.length + api.historique.mock.calls.length
+    ).toBe(appels);
+  });
+
+  it('découpe la série sur la plage choisie, en jours et non en nombre de points', async () => {
+    // Série volontairement trouée : c'est le cas réel, le point du jour n'étant écrit
+    // que si l'utilisateur a consulté. Un découpage par nombre de points aurait rendu
+    // les sept derniers relevés, soit dix mois, sous l'étiquette « Semaine ».
+    api.historique.mockResolvedValue({
+      points: [
+        { date_snapshot: '2025-10-01', valeur_totale_eur: '9000.00' },
+        { date_snapshot: '2026-02-14', valeur_totale_eur: '9500.00' },
+        { date_snapshot: '2026-07-20', valeur_totale_eur: '11000.00' },
+        { date_snapshot: '2026-08-05', valeur_totale_eur: '12000.00' },
+        { date_snapshot: '2026-08-10', valeur_totale_eur: '12200.00' },
+        { date_snapshot: '2026-08-11', valeur_totale_eur: '12480.65' },
+      ],
+      performances: HISTORIQUE.performances,
+    });
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    // Par défaut le mois : le point de février est hors fenêtre, celui du 20 juillet
+    // dedans. Six relevés au total, dont quatre seulement dans les trente jours.
+    let courbe = await screen.findByRole('img', { name: /Évolution de la valeur/ });
+    expect(courbe.getAttribute('aria-label')).toMatch(/2026-07-20/);
+
+    await utilisateur.click(screen.getByRole('tab', { name: /Semaine/ }));
+    courbe = await screen.findByRole('img', { name: /Évolution de la valeur/ });
+    expect(courbe.getAttribute('aria-label')).toMatch(/2026-08-05/);
+
+    await utilisateur.click(screen.getByRole('tab', { name: /Suivi/ }));
+    courbe = await screen.findByRole('img', { name: /Évolution de la valeur/ });
+    expect(courbe.getAttribute('aria-label')).toMatch(/2025-10-01/);
+  });
+
+  // DATA-04 : le pas de la courbe n'est pas régulier, et le taire reviendrait à laisser
+  // croire à un relevé de clôture quotidien.
+  it('annonce que le relevé est pris à l\'heure de la consultation', async () => {
+    api.historique.mockResolvedValue({
+      ...HISTORIQUE,
+      points: HISTORIQUE.points.map((point, rang) => ({
+        ...point,
+        heure_releve: rang === 2 ? '2026-08-11T20:32:00.000Z' : null,
+      })),
+    });
+
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    expect(screen.getByText(/à l'heure de votre consultation/)).toBeTruthy();
+    expect(screen.getByText(/Dernier relevé le 11 août/)).toBeTruthy();
+  });
+
+  it('se contente de la mention générale quand l\'heure du relevé est inconnue', async () => {
+    // Les points antérieurs à l'introduction de la colonne n'ont pas d'heure : inventer
+    // une valeur serait pire que de ne rien dire.
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    expect(screen.getByText(/à l'heure de votre consultation/)).toBeTruthy();
+    expect(screen.queryByText(/Dernier relevé/)).toBeNull();
+  });
+
+  // Les deux boutons de la barre d'outils ne se confondent pas.
+  //
+  // La feuille d'écran masque le bouton de saisie sous 900 px, la barre basse portant
+  // alors l'action. La règle visait la classe générique des boutons : le bouton
+  // d'actualisation, ajouté dans la même barre, disparaissait avec lui — sur une
+  // application pensée pour le mobile, la commande n'existait que sur grand écran. La
+  // classe dédiée est ce qui permet à la règle de ne viser que le bon.
+  it('donne au bouton de saisie une classe qui lui est propre', async () => {
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    expect(screen.getByRole('button', { name: '+ Mouvement' }).className).toContain(
+      'patrimoine__ajout'
+    );
+    expect(screen.getByRole('button', { name: 'Actualiser' }).className).not.toContain(
+      'patrimoine__ajout'
+    );
+  });
+
+  // L'actualisation est désormais demandée, jamais déduite de l'affichage.
+  it('relève les cours à la demande, et une seule fois par affichage', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    expect(api.actualiserPortefeuille).toHaveBeenCalledTimes(1);
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Actualiser' }));
+
+    await waitFor(() => expect(api.actualiserPortefeuille).toHaveBeenCalledTimes(2));
+    expect(api.historique).toHaveBeenCalledTimes(2);
   });
 });
 
 describe('états', () => {
   it('affiche un squelette calqué sur la composition pendant le chargement', () => {
-    api.portefeuille.mockReturnValue(new Promise(() => {}));
+    api.actualiserPortefeuille.mockReturnValue(new Promise(() => {}));
     api.historique.mockReturnValue(new Promise(() => {}));
     const { container } = rendre();
 
@@ -262,7 +367,7 @@ describe('états', () => {
   });
 
   it('accueille un compte neuf par un texte et une action unique', async () => {
-    api.portefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
+    api.actualiserPortefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
     rendre({ premierLancement: true });
 
     expect(await screen.findByText(/Bienvenue, Camille/)).toBeTruthy();
@@ -274,7 +379,7 @@ describe('états', () => {
 
   // Un portefeuille devenu vide n'est pas un premier lancement : le texte diffère.
   it('distingue un portefeuille vidé d\'un premier lancement', async () => {
-    api.portefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
+    api.actualiserPortefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
     rendre();
 
     expect(await screen.findByText('Aucune position')).toBeTruthy();
@@ -282,19 +387,19 @@ describe('états', () => {
   });
 
   it('distingue une erreur du serveur d\'une coupure réseau', async () => {
-    api.portefeuille.mockRejectedValue(new ErreurApi('Service indisponible.', 500));
+    api.actualiserPortefeuille.mockRejectedValue(new ErreurApi('Service indisponible.', 500));
     const { unmount } = rendre();
     expect(await screen.findByText('Données indisponibles')).toBeTruthy();
     unmount();
 
-    api.portefeuille.mockRejectedValue(new ErreurApi('Le serveur est injoignable.', 0));
+    api.actualiserPortefeuille.mockRejectedValue(new ErreurApi('Le serveur est injoignable.', 0));
     rendre();
     expect(await screen.findByText('Connexion indisponible')).toBeTruthy();
   });
 
   it('propose de réessayer après une erreur, et recharge', async () => {
     const utilisateur = userEvent.setup();
-    api.portefeuille.mockRejectedValueOnce(new ErreurApi('Service indisponible.', 500));
+    api.actualiserPortefeuille.mockRejectedValueOnce(new ErreurApi('Service indisponible.', 500));
     rendre();
 
     await utilisateur.click(await screen.findByRole('button', { name: 'Réessayer' }));
@@ -302,7 +407,7 @@ describe('états', () => {
   });
 
   it('annonce une session expirée plutôt que de rediriger sans rien dire', async () => {
-    api.portefeuille.mockRejectedValue(new ErreurApi('Jeton expiré.', 401));
+    api.actualiserPortefeuille.mockRejectedValue(new ErreurApi('Jeton expiré.', 401));
     rendre();
 
     expect(await screen.findByText('Session expirée')).toBeTruthy();
@@ -316,7 +421,7 @@ describe('états', () => {
     await screen.findByText(/12.480,65/);
 
     api.historique.mockRejectedValue(new ErreurApi('Le serveur est injoignable.', 0));
-    await utilisateur.click(screen.getByRole('tab', { name: /Semaine/ }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Actualiser' }));
 
     expect(await screen.findByText('Connexion indisponible')).toBeTruthy();
     expect(screen.getByText(/12.480,65/)).toBeTruthy();
@@ -399,7 +504,7 @@ describe('saisie d’un mouvement', () => {
   // premier mouvement : c'est le premier pas du parcours de découverte.
   it("ouvre la feuille depuis l'état vide", async () => {
     const utilisateur = userEvent.setup();
-    api.portefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
+    api.actualiserPortefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [], repartition: [] });
     rendre();
 
     await utilisateur.click(
@@ -427,7 +532,7 @@ describe('saisie d’un mouvement', () => {
     const utilisateur = userEvent.setup();
     rendre();
     await screen.findByText(/12.480,65/);
-    const chargements = api.portefeuille.mock.calls.length;
+    const chargements = api.actualiserPortefeuille.mock.calls.length;
 
     await utilisateur.click(screen.getByRole('button', { name: '+ Mouvement' }));
     await utilisateur.selectOptions(screen.getByLabelText(/^Actif/), '1');
@@ -440,6 +545,6 @@ describe('saisie d’un mouvement', () => {
 
     expect(await screen.findByText(/Achat de 0,1\sBTC enregistré/)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
-    await waitFor(() => expect(api.portefeuille.mock.calls.length).toBeGreaterThan(chargements));
+    await waitFor(() => expect(api.actualiserPortefeuille.mock.calls.length).toBeGreaterThan(chargements));
   });
 });

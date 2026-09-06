@@ -110,6 +110,7 @@ function lignesDuTableau() {
 
 beforeEach(() => {
   vi.spyOn(api, 'portefeuille').mockResolvedValue(PORTEFEUILLE);
+  vi.spyOn(api, 'actualiserPortefeuille').mockResolvedValue(PORTEFEUILLE);
   window.sessionStorage.clear();
   adresse = null;
 });
@@ -125,11 +126,10 @@ describe('tri', () => {
     rendre();
     await screen.findByRole('table');
 
-    expect(lignesDuTableau().map((l) => l.slice(0, 20))).toEqual([
-      expect.stringContaining('Bitcoin'),
-      expect.stringContaining('Or'),
-      expect.stringContaining('Dollar'),
-    ]);
+    const lignes = lignesDuTableau();
+    expect(lignes[0]).toContain('Bitcoin');
+    expect(lignes[1]).toContain('Or');
+    expect(lignes[2]).toContain('Dollar');
   });
 
   it('inverse le sens au second clic sur la même colonne', async () => {
@@ -390,11 +390,10 @@ describe('tendance sur trente jours', () => {
 
     await utilisateur.click(screen.getByRole('button', { name: /30 jours/ }));
 
-    expect(lignesDuTableau().map((ligne) => ligne.slice(0, 20))).toEqual([
-      expect.stringContaining('Bitcoin'),
-      expect.stringContaining('Or'),
-      expect.stringContaining('Dollar'),
-    ]);
+    const lignes = lignesDuTableau();
+    expect(lignes[0]).toContain('Bitcoin');
+    expect(lignes[1]).toContain('Or');
+    expect(lignes[2]).toContain('Dollar');
     expect(adresse.search).toContain('tri=tendance');
   });
 
@@ -456,5 +455,17 @@ describe('saisie d’un mouvement', () => {
     await utilisateur.selectOptions(screen.getByLabelText(/^Actif/), '1');
 
     expect(screen.getByLabelText(/^Prix unitaire/).value).toBe('54890.12');
+  });
+});
+
+describe('effets de la consultation', () => {
+  // Afficher la liste des positions relevait les cours du jour et marquait les seuils
+  // franchis, par la seule vertu d'un GET qui écrivait. Cet écran ne fait que lire.
+  it("n'actualise jamais le portefeuille", async () => {
+    rendre();
+    await screen.findByRole('heading', { name: 'Positions', level: 1 });
+
+    expect(api.portefeuille).toHaveBeenCalled();
+    expect(api.actualiserPortefeuille).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formaterAnciennete } from '../duree';
+import { formaterAnciennete, formaterInstant } from '../duree';
 
 // L'instant courant est fixé explicitement : un test qui dépend de l'horloge réelle
 // échoue tôt ou tard, et toujours au mauvais moment.
@@ -44,5 +44,22 @@ describe('ancienneté d\'un horodatage', () => {
     expect(formaterAnciennete(null, MAINTENANT)).toBeNull();
     expect(formaterAnciennete(undefined, MAINTENANT)).toBeNull();
     expect(formaterAnciennete('pas une date', MAINTENANT)).toBeNull();
+  });
+});
+
+describe('instant en toutes lettres', () => {
+  it('rend le jour et l’heure', () => {
+    // L'heure du relevé se lit pour savoir à quel moment de la journée il a été pris :
+    // une formulation relative — « il y a 3 h » — ne répondrait pas à cette question.
+    expect(formaterInstant('2026-08-11T20:32:00.000Z')).toMatch(/11 août/);
+    expect(formaterInstant('2026-08-11T20:32:00.000Z')).toMatch(/\d{2}:\d{2}/);
+  });
+
+  it('rend null sur une absence ou une valeur illisible', () => {
+    // Les relevés antérieurs à l'introduction de la colonne n'ont pas d'heure : la
+    // légende doit pouvoir se taire plutôt qu'afficher « Invalid Date ».
+    expect(formaterInstant(null)).toBeNull();
+    expect(formaterInstant(undefined)).toBeNull();
+    expect(formaterInstant('pas une date')).toBeNull();
   });
 });

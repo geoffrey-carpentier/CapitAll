@@ -8,7 +8,12 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import './Courbe.css';
-import { formaterMontant, symboleDevise } from '../utils/formatage';
+import {
+  formaterCours,
+  formaterMontant,
+  symboleDevise,
+  versNotationPositionnelle,
+} from '../utils/formatage';
 import { bornes, hauteurDeBascule } from '../utils/echelleCourbe';
 
 // Évolution de la valeur dans le temps, en aire dégradée.
@@ -30,6 +35,26 @@ import { bornes, hauteurDeBascule } from '../utils/echelleCourbe';
 // il donne à voir d'un seul regard, sur toute la période, quand la position a été en
 // gain et quand elle a été en perte. Une aire d'une seule teinte ne dirait que le solde
 // du jour, et raterait l'essentiel du produit.
+
+// Graduation de l'axe des valeurs.
+//
+// Elle arrondissait à l'entier, ce qui convient à un patrimoine de plusieurs milliers
+// d'euros mais réduisait à « 0€ » toutes les graduations d'une série de cours inférieurs
+// à l'unité : le graphe d'un jeton à 0,000012 euro portait un axe entièrement nul.
+//
+// La bibliothèque transmet un nombre, que JavaScript écrit en exposant sous 1e-6 ; il
+// est ramené en écriture positionnelle avant tout formatage. Au-dessus de l'unité,
+// l'entier reste la bonne réponse : l'axe est étroit, et deux décimales n'y ajouteraient
+// que du bruit. En dessous, les chiffres significatifs prennent le relais.
+function graduation(valeur, symbole) {
+  const texte = versNotationPositionnelle(valeur);
+
+  if (Math.abs(Number(valeur)) >= 1) {
+    return `${Math.round(valeur)}${symbole}`;
+  }
+
+  return formaterCours(texte, { symbole });
+}
 
 function decrire(points, devise, sujet, prixDeRevient) {
   if (points.length < 2) {
@@ -143,7 +168,7 @@ export default function Courbe({
             tick={masque ? false : { fill: 'var(--couleur-texte-attenue)', fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(valeur) => `${Math.round(valeur)}${symbole}`}
+            tickFormatter={(valeur) => graduation(valeur, symbole)}
             // L'échelle englobe le prix de revient : sans cela, une position toujours
             // en gain sortirait sa ligne de référence du cadre, et la bascule de teinte
             // n'aurait plus de sens visible.
@@ -164,7 +189,12 @@ export default function Courbe({
                   ? undefined
                   : {
                       value: `Prix de revient ${formaterMontant(prixDeRevient, { symbole })}`,
-                      position: 'insideTopLeft',
+                      // Le libellé se pose du côté du trait où il reste de la place.
+                      // Dès que le prix de revient est le minimum de la période, la
+                      // ligne vient se coller au bas du cadre : posé sous elle, le
+                      // libellé tombait sur les dates de l'axe. Dans la moitié basse du
+                      // cadre, il passe donc au-dessus du trait.
+                      position: bascule > 0.5 ? 'insideBottomLeft' : 'insideTopLeft',
                       fill: 'var(--couleur-texte-attenue)',
                       fontSize: 11,
                     }

@@ -97,9 +97,10 @@ function nomDeFichier(reponse, repli) {
 // d'autorisation, le traitement de la session perdue et la forme des erreurs ; seule la
 // lecture du corps diffère.
 //
-// Un simple lien vers l'adresse ne conviendrait pas : le jeton vit en mémoire (D57) et
-// n'accompagne pas une navigation du navigateur. Le fichier est donc demandé comme
-// n'importe quel appel authentifié, puis remis à l'utilisateur depuis la page.
+// Un simple lien vers l'adresse ne conviendrait pas : le jeton est porté par un en-tête
+// d'autorisation et n'accompagne pas une navigation du navigateur. Le fichier est donc
+// demandé comme n'importe quel appel authentifié, puis remis à l'utilisateur depuis la
+// page.
 export async function requeteFichier(chemin, { jeton, nomParDefaut = 'export.csv' } = {}) {
   let reponse;
   try {
@@ -131,13 +132,16 @@ export const api = {
   inscription: (donnees) => requete('/auth/inscription', { methode: 'POST', corps: donnees }),
   connexion: (donnees) => requete('/auth/connexion', { methode: 'POST', corps: donnees }),
   profil: (jeton) => requete('/auth/moi', { jeton }),
+  // Lecture : elle ne change rien en base, et peut donc être rejouée sans conséquence.
   portefeuille: (jeton) => requete('/portefeuille', { jeton }),
-  // La fenêtre borne les points de la courbe ; les performances par plage, elles,
-  // portent toujours sur l'historique complet et sont calculées par le serveur.
-  historique: (jeton, jours) =>
-    requete(jours ? `/portefeuille/historique?jours=${jours}` : '/portefeuille/historique', {
-      jeton,
-    }),
+  // Actualisation : elle relève le point du jour et évalue les seuils. C'est une
+  // commande, elle porte un verbe qui le dit, et seul le tableau de bord la demande.
+  actualiserPortefeuille: (jeton) =>
+    requete('/portefeuille/actualisation', { methode: 'POST', jeton }),
+  // La série entière, sans fenêtre : changer de plage est un découpage d'affichage, il
+  // ne justifie pas un aller-retour. Les performances par plage portent de toute façon
+  // sur l'historique complet et sont calculées par le serveur.
+  historique: (jeton) => requete('/portefeuille/historique', { jeton }),
   // Détail d'une position : état courant, mouvements enrichis de leur effet sur le prix
   // de revient, et historique de cours avec la performance de chaque plage. Une
   // ressource appartenant à un autre compte répond 404, jamais 403 (D52) : l'appelant
@@ -157,8 +161,30 @@ export const api = {
       corps: donnees,
       jeton,
     }),
+  // Correction d'un mouvement enregistré (D51 révisée). PATCH et non PUT : le corps ne
+  // porte que les champs modifiables, jamais la représentation complète de la ressource.
+  modifierTransaction: (jeton, actifId, transactionId, donnees) =>
+    requete(`/actifs/${actifId}/transactions/${transactionId}`, {
+      methode: 'PATCH',
+      corps: donnees,
+      jeton,
+    }),
+  // Même récapitulatif que pour une création, mais le mouvement en remplace un au lieu
+  // de s'ajouter : la position « avant » est celle d'aujourd'hui, l'écart annoncé est
+  // donc bien ce que la correction change.
+  simulerModificationTransaction: (jeton, actifId, transactionId, donnees) =>
+    requete(`/actifs/${actifId}/transactions/${transactionId}/simulation`, {
+      methode: 'POST',
+      corps: donnees,
+      jeton,
+    }),
   supprimerTransaction: (jeton, actifId, transactionId) =>
     requete(`/actifs/${actifId}/transactions/${transactionId}`, { methode: 'DELETE', jeton }),
+  // Ce que l'application accepte, classe par classe, avec la provenance de chaque
+  // couverture et la date à laquelle elle a été constatée (D27).
+  symboles: (jeton) => requete('/symboles', { jeton }),
+  renommerActif: (jeton, id, nom) =>
+    requete(`/actifs/${id}`, { methode: 'PATCH', corps: { nom }, jeton }),
   // Chaque alerte revient enrichie de la valeur actuellement observée sur sa cible et
   // de l'écart restant avant franchissement, en pourcentage : deux valeurs dérivées
   // d'un montant, calculées par le serveur et non recalculées ici (D69).
@@ -170,11 +196,18 @@ export const api = {
     requete(`/alertes/${id}`, { methode: 'PATCH', corps: { statut: 'desactivee' }, jeton }),
   // Le compte agit toujours sur le porteur du jeton : aucune de ces trois routes ne
   // reçoit d'identifiant d'utilisateur, il n'y en a donc aucun à transmettre.
+  // Récupération d'un mot de passe oublié (D23). La réponse est la même que l'adresse
+  // corresponde ou non à un compte : le formulaire ne peut pas servir à découvrir
+  // quelles adresses sont inscrites.
+  demanderRecuperation: (donnees) =>
+    requete('/auth/mot-de-passe-oublie', { methode: 'POST', corps: donnees }),
+  reinitialiserMotDePasse: (donnees) =>
+    requete('/auth/reinitialisation', { methode: 'POST', corps: donnees }),
   changerMotDePasse: (jeton, donnees) =>
     requete('/compte/mot-de-passe', { methode: 'PATCH', corps: donnees, jeton }),
   // Le mot de passe accompagne la suppression : c'est le serveur qui le vérifie, la
   // confirmation devant résister à un appel direct et pas seulement au dialogue.
   supprimerCompte: (jeton, donnees) => requete('/compte', { methode: 'DELETE', corps: donnees, jeton }),
   exporterMouvements: (jeton) =>
-    requeteFichier('/compte/export-mouvements', { jeton, nomParDefaut: 'capitall-mouvements.csv' }),
+    requeteFichier('/compte/export-mouvements', { jeton, nomParDefaut: 'walletwatch-mouvements.csv' }),
 };
