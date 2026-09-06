@@ -14,7 +14,7 @@
 // Chaque entrée porte donc sa provenance et la date à laquelle elle a été constatée.
 // Une liste sans date est une liste dont personne ne peut dire si elle est encore vraie.
 
-const { SYMBOLES_ACTION_AUTORISES } = require('../validation/actif');
+const { SYMBOLES_ACTION_AUTORISES, ACTIONS_FMP } = require('../validation/actif');
 const { SOURCE: SOURCE_COINBASE } = require('../adaptateurs/coinbase');
 const { SOURCE: SOURCE_FRANKFURTER } = require('../adaptateurs/frankfurter');
 const { SOURCE: SOURCE_METAL, UNITE: UNITE_METAL } = require('../adaptateurs/metal');
@@ -29,10 +29,30 @@ const COUVERTURE_FERMEE = 'fermee';
 const COUVERTURE_OUVERTE = 'ouverte';
 
 // Les métaux ne sont pas contrôlés à la saisie : gold-api reçoit le symbole tel quel.
-// Ces deux-là sont ceux dont la cotation a été constatée, pas une liste imposée.
+// Ces quatre-là sont ceux dont la cotation a été constatée, pas une liste imposée. Le
+// platine et le palladium ont été ajoutés le 06/09/2026, après relevé effectif de leur
+// cours chez le même fournisseur, dans la même unité que l'or et l'argent.
 const SYMBOLES_METAL = [
   { symbole: 'XAU', nom: 'Or' },
   { symbole: 'XAG', nom: 'Argent' },
+  { symbole: 'XPT', nom: 'Platine' },
+  { symbole: 'XPD', nom: 'Palladium' },
+];
+
+// Couverture ouverte ne veut pas dire couverture inconnue. Ces quarante-quatre
+// cryptomonnaies sont celles du classement des cinquante premières capitalisations dont
+// Coinbase publiait effectivement un taux en euros au relevé du 06/09/2026. Ce n'est pas
+// une restriction — toute autre cryptomonnaie cotée reste acceptée — mais de quoi
+// proposer un choix plutôt qu'un champ vide.
+//
+// Six manquaient à ce relevé, faute d'être cotées en euros chez ce fournisseur : TRX,
+// STETH, BGB, XMR, OKB et KAS.
+const SUGGESTIONS_CRYPTO = [
+  'BTC', 'ETH', 'USDT', 'XRP', 'BNB', 'SOL', 'USDC', 'DOGE', 'ADA', 'AVAX',
+  'LINK', 'TON', 'SHIB', 'XLM', 'SUI', 'DOT', 'BCH', 'HBAR', 'LTC', 'PEPE',
+  'UNI', 'NEAR', 'APT', 'ICP', 'AAVE', 'ETC', 'TAO', 'POL', 'VET', 'CRO',
+  'ALGO', 'RENDER', 'FIL', 'ARB', 'ATOM', 'FET', 'OP', 'INJ', 'MKR', 'TIA',
+  'STX', 'IMX', 'GRT', 'SEI',
 ];
 
 function classes() {
@@ -41,9 +61,10 @@ function classes() {
       type: 'crypto',
       couverture: COUVERTURE_OUVERTE,
       provenance: SOURCE_COINBASE,
-      constate_le: '2026-07-09',
+      constate_le: '2026-09-06',
       controle: 'au premier relevé de cours',
-      note: 'Toute cryptomonnaie cotée en euros par le fournisseur est acceptée.',
+      suggestions: SUGGESTIONS_CRYPTO.map((symbole) => ({ symbole })),
+      note: "Toute cryptomonnaie cotée en euros par le fournisseur est acceptée. Les symboles proposés sont les quarante-quatre premières capitalisations dont le taux en euros a été relevé le 06/09/2026 ; six des cinquante premières n'y figurent pas, faute d'être cotées en euros.",
     },
     {
       type: 'devise',
@@ -57,22 +78,28 @@ function classes() {
       type: 'metal',
       couverture: COUVERTURE_FERMEE,
       provenance: SOURCE_METAL,
-      constate_le: '2026-07-09',
+      constate_le: '2026-09-06',
       controle: 'au premier relevé de cours',
       unite: UNITE_METAL,
       symboles: SYMBOLES_METAL,
-      note: 'Cotation par once troy. Le contrôle reste au relevé : ces deux symboles sont ceux dont la cotation a été constatée, non une restriction imposée par l’application.',
+      note: 'Cotation par once troy. Le contrôle reste au relevé : ces quatre symboles sont ceux dont la cotation a été constatée, non une restriction imposée par l’application.',
     },
     {
       type: 'action',
       couverture: COUVERTURE_FERMEE,
-      provenance: 'Financial Modeling Prep, plan gratuit',
-      constate_le: '2026-07-21',
+      provenance: 'Financial Modeling Prep (plan gratuit), Finnhub en repli',
+      constate_le: '2026-09-06',
       controle: 'à la saisie',
       // Seule classe dont la liste est **opposable** : la validation refuse tout symbole
       // absent, avant écriture et avant tout appel fournisseur.
-      symboles: [...SYMBOLES_ACTION_AUTORISES].sort().map((symbole) => ({ symbole })),
-      note: 'Liste fermée actée en D27. Un symbole absent est refusé à la saisie.',
+      symboles: [...SYMBOLES_ACTION_AUTORISES].sort().map((symbole) => ({
+        symbole,
+        // Dire quel fournisseur répondra n'est pas un détail d'implémentation : les deux
+        // n'ont pas le même quota, et c'est ce qui explique qu'un cours puisse manquer
+        // sur l'un et pas sur l'autre.
+        provenance: ACTIONS_FMP.includes(symbole) ? 'fmp' : 'finnhub',
+      })),
+      note: "Liste fermée actée en D27 et étendue en D99. Un symbole absent est refusé à la saisie. Les quatre-vingt-six premiers sont servis par le plan gratuit de FMP, les vingt suivants par Finnhub, dont le quota quotidien est plus étroit.",
     },
   ];
 }
@@ -86,4 +113,5 @@ module.exports = {
   COUVERTURE_FERMEE,
   COUVERTURE_OUVERTE,
   SYMBOLES_METAL,
+  SUGGESTIONS_CRYPTO,
 };

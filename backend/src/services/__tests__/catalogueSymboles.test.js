@@ -68,7 +68,37 @@ describe('catalogue des symboles', () => {
     // Le libellé « g » a fait mentir l'affichage d'un facteur 31 (D88) : l'unité voyage
     // désormais avec la classe, elle n'est plus une constante d'interface.
     expect(classe('metal').unite).toBe('once troy');
-    expect(classe('metal').symboles.map((entree) => entree.symbole)).toEqual(['XAU', 'XAG']);
+    // Platine et palladium ajoutés en D99, après relevé effectif de leur cours chez le
+    // même fournisseur et dans la même unité que l'or et l'argent.
+    expect(classe('metal').symboles.map((entree) => entree.symbole)).toEqual([
+      'XAU',
+      'XAG',
+      'XPT',
+      'XPD',
+    ]);
+  });
+
+  it('dit quel fournisseur répondra pour chaque action', () => {
+    // Les deux fournisseurs de la chaîne n'ont pas le même quota quotidien : c'est ce
+    // qui explique qu'un cours puisse manquer sur l'un et pas sur l'autre, et l'interface
+    // n'a aucun moyen de le deviner.
+    const actions = classe('action').symboles;
+    expect(actions.every((entree) => ['fmp', 'finnhub'].includes(entree.provenance))).toBe(true);
+    expect(actions.find((entree) => entree.symbole === 'AAPL').provenance).toBe('fmp');
+    expect(actions.find((entree) => entree.symbole === 'LLY').provenance).toBe('finnhub');
+    // TWTR n'est plus proposé : FMP le cotait encore, mais à un prix figé depuis son
+    // retrait de la cote en 2022.
+    expect(actions.some((entree) => entree.symbole === 'TWTR')).toBe(false);
+  });
+
+  it('propose des cryptomonnaies sans pour autant les imposer', () => {
+    // La couverture reste ouverte : les suggestions aident à la saisie, elles ne
+    // ferment rien. Une liste fermée mentirait le jour où le fournisseur en ajoute une.
+    const crypto = classe('crypto');
+    expect(crypto.couverture).toBe('ouverte');
+    expect(crypto.symboles).toBeUndefined();
+    expect(crypto.suggestions.length).toBeGreaterThan(40);
+    expect(crypto.suggestions.map((entree) => entree.symbole)).toContain('BTC');
   });
 
   it('ne dépend d’aucun appel fournisseur', async () => {
