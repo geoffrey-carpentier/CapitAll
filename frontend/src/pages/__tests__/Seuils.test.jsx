@@ -117,6 +117,7 @@ function rendre(entree = '/seuils') {
 beforeEach(() => {
   vi.spyOn(api, 'alertes').mockResolvedValue(SEUILS);
   vi.spyOn(api, 'portefeuille').mockResolvedValue(PORTEFEUILLE);
+  vi.spyOn(api, 'actualiserPortefeuille').mockResolvedValue(PORTEFEUILLE);
   // Sans ce nettoyage, la préférence de masquage écrite par un test antérieur
   // survivrait au montage suivant : sessionStorage n'est pas réinitialisé entre les
   // tests d'un même fichier, seulement entre les fichiers.
@@ -325,5 +326,35 @@ describe('erreurs et chargement', () => {
     rendre();
 
     expect(await screen.findByText('Session expirée')).toBeTruthy();
+  });
+});
+
+describe('lecture et saisie d’un mouvement', () => {
+  // L'écran lisait le portefeuille par une route qui écrivait : l'afficher relevait les
+  // cours du jour et marquait les seuils franchis, alors que le service prenait soin de
+  // ne pas le faire. C'est la lecture pure qui rend cet écran inoffensif.
+  it("n'actualise jamais le portefeuille", async () => {
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    expect(api.portefeuille).toHaveBeenCalled();
+    expect(api.actualiserPortefeuille).not.toHaveBeenCalled();
+  });
+
+  // Le bouton flottant de la barre mobile ouvre la saisie sur l'écran courant : encore
+  // faut-il que cet écran l'héberge, sans quoi l'adresse porterait une feuille que rien
+  // n'affiche.
+  it('héberge la feuille de saisie demandée par l’adresse', async () => {
+    rendre('/seuils?mouvement=nouveau');
+
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Nouveau mouvement' })).toBeTruthy();
+  });
+
+  it('n’affiche aucune feuille sans le paramètre', async () => {
+    rendre();
+    await screen.findByRole('heading', { name: 'Seuils', level: 1 });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

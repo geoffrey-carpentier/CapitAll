@@ -13,11 +13,31 @@
   --couleur-fond: #101418;
   --couleur-carte: #1a2027;
   --couleur-bordure: #2d3640;
+  /*
+    Contour des commandes : bordure d'un contrôle qu'on ne reconnaîtrait pas sans elle
+    — bouton secondaire, bascule euro/dollar, bouton de masquage.
+
+    Un jeton distinct, et non le relèvement de --couleur-bordure. La règle de contraste
+    des éléments non textuels ne porte que sur ce qui permet d'identifier un contrôle :
+    l'appliquer aussi aux filets décoratifs des cartes tracerait une grille sur des
+    écrans déjà denses, sans rien rendre plus lisible.
+
+    #667789 et non #9aa7b4, qui aurait passé plus largement (5,93 contre 3,16 au pire
+    des trois fonds). #9aa7b4 est la couleur du texte atténué : la reprendre donnerait
+    à un contour le poids d'un texte secondaire, et inverserait la hiérarchie — un
+    contour soutient la lecture, il ne la porte pas. Les deux rôles resteraient de plus
+    liés, et retoucher le texte atténué déplacerait toutes les bordures.
+
+    Mesuré au navigateur : 4,02 sur le fond, 3,57 sur une carte, 3,16 sur la carte
+    haute. Le seuil applicable est 3.
+  */
+  --couleur-contour-controle: #667789;
   --couleur-texte: #e8ecf1;
   --couleur-texte-attenue: #9aa7b4;
   --couleur-accent: #4c9aff;
   --couleur-positif: #34c77b;
-  --couleur-negatif: #f0564f;
+  /* Ajusté de #F0564F à #F8645D : 4,83:1 sur la carte haute #212A33. */
+  --couleur-negatif: #f8645d;
 
   /*
     Deux dérivés fonctionnels (D70), à l'emploi strictement borné. La carte haute est
@@ -27,6 +47,27 @@
   */
   --couleur-carte-haute: #212a33;
   --couleur-avertissement: #e3b341;
+
+  /*
+    Couleurs de classe d'actif (D98), pour l'anneau de répartition.
+
+    D74 avait retiré l'anneau faute d'une quatrième teinte : la solution d'alors
+    réemployait --couleur-avertissement pour les métaux et --couleur-negatif pour la
+    quatrième classe, ce qui faisait dire « donnée douteuse » à une classe et « perte »
+    à une autre. Le repli par niveaux d'opacité d'accent ne distinguait les segments
+    qu'à 1,46:1. Ces quatre teintes-ci sont dédiées : aucune n'est un jeton sémantique,
+    et aucune ne sert ailleurs dans l'interface.
+
+    Mesurées ensemble sur le fond de carte #1a2027, toutes paires confrontées :
+    contraste minimal 3,04:1 (seuil 3), écart de teinte minimal 16,8 en vision normale
+    (plancher 15) et 8,2 sous simulation de protanopie (cible 8). L'information ne
+    repose de toute façon pas sur elles : la légende chiffrée sous l'anneau porte le
+    libellé, la part et le montant de chaque classe, et le jeton garde sa forme (D76).
+  */
+  --couleur-classe-crypto: #3987e5;
+  --couleur-classe-metal: #d95926;
+  --couleur-classe-devise: #199e70;
+  --couleur-classe-action: #ce6bb0;
 
   /* Espacements */
   --espace-1: 4px;

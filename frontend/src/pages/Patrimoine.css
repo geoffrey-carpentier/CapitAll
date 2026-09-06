@@ -1,8 +1,13 @@
 /*
-  Composition asymétrique et assumée. Le patrimoine et sa courbe occupent le haut de
-  l'écran ; les chiffres de contexte sont des lignes de texte séparées par des filets,
-  jamais des cartes, parce que trois cartes de même poids donneraient à croire à trois
+  Composition en trois bandes. Le patrimoine et sa répartition se partagent la première,
+  la courbe occupe seule la seconde sur toute la largeur, les chiffres de contexte
+  ferment l'écran. Ces derniers sont des lignes de texte séparées par des filets, jamais
+  des cartes, parce que trois cartes de même poids donneraient à croire à trois
   indicateurs de tête là où il n'y en a qu'un.
+
+  La courbe a quitté la colonne latérale où elle tenait sur un tiers de largeur : c'est
+  la seule figure de l'écran qui gagne à s'étendre, et la répartition, désormais dotée de
+  son anneau (D98), occupe cette colonne bien mieux qu'elle.
 
   Deux niveaux de contenant seulement, comme le veut la grammaire visuelle : la carte au
   fond accentué pour le patrimoine, la carte bordée pour le graphe et la répartition.
@@ -16,10 +21,14 @@
   gap: var(--espace-8);
 }
 
+/* L'en-tête se replie plutôt que de pousser la page au débordement. Le bouton
+   d'actualisation, désormais affiché en mobile, portait la barre d'outils à 378 px : en
+   deçà de cette largeur, c'est la page entière qui défilait latéralement. */
 .patrimoine__entete {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--espace-4);
 }
 
@@ -31,7 +40,22 @@
 .patrimoine__outils {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--espace-2);
+}
+
+/* La borne suit celle de la navigation, pas celle du passage en tableau : le bouton
+   central de la barre basse reste affiché jusqu'à 899 px, et l'action ne doit exister
+   qu'une fois à l'écran. En deçà de 900 px, l'en-tête laisse donc faire la barre.
+
+   La règle vise le seul bouton de saisie, désigné par sa classe. Elle portait sur la
+   classe générique des boutons : le bouton d'actualisation, ajouté ensuite dans la même
+   barre, disparaissait avec lui en mobile — sur une application pensée pour le mobile,
+   la commande n'existait donc que sur grand écran. */
+@media (max-width: 899px) {
+  .patrimoine__outils > .patrimoine__ajout {
+    display: none;
+  }
 }
 
 .patrimoine__principal {
@@ -95,6 +119,14 @@
   font-size: var(--taille-corps);
 }
 
+/* Légende du graphe : elle qualifie la courbe sans lui disputer l'attention. */
+.patrimoine__legende {
+  margin: var(--espace-2) 0 0;
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-legende);
+  line-height: 1.4;
+}
+
 /* Chiffres de contexte : à plat, séparés par des filets. */
 .patrimoine__contexte {
   margin: 0;
@@ -142,18 +174,19 @@
 @media (min-width: 768px) {
   .patrimoine__principal {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    align-items: start;
+    /* Les deux blocs sont de même rang : ni l'un ni l'autre n'est un aparté. La
+       répartition demande un peu moins de place que le patrimoine, qui porte le plus
+       gros chiffre de l'application. */
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: stretch;
   }
 
   .patrimoine__total {
-    /* Le bloc dominant garde ses deux tiers, la courbe occupe le tiers restant. */
     grid-column: 1;
   }
 
-  .patrimoine__evolution {
+  .patrimoine__repartition {
     grid-column: 2;
-    grid-row: 1;
   }
 
   .patrimoine__contexte {

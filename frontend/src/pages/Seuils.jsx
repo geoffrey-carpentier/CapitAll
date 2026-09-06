@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
+import { useMouvement } from '../hooks/useMouvement';
 import { useSeuil } from '../hooks/useSeuil';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
@@ -11,6 +12,7 @@ import Carte from '../composants/Carte';
 import JetonClasse from '../composants/JetonClasse';
 import Montant from '../composants/Montant';
 import BarreProgression from '../composants/BarreProgression';
+import FeuilleMouvement from '../composants/FeuilleMouvement';
 import FeuilleSeuil from '../composants/FeuilleSeuil';
 import Confirmation from '../composants/Confirmation';
 import EtatVide from '../composants/EtatVide';
@@ -75,6 +77,10 @@ export default function Seuils() {
   const { jeton } = useAuthentification();
   const naviguer = useNavigate();
   const seuilFeuille = useSeuil();
+  // Le bouton flottant de la barre mobile ouvre la saisie d'un mouvement sur l'écran
+  // courant plutôt que d'y renvoyer depuis le Patrimoine : cet écran doit donc héberger
+  // la feuille, comme le font le tableau de bord, les positions et le détail.
+  const mouvement = useMouvement();
 
   const [seuils, setSeuils] = useState(null);
   const [portefeuille, setPortefeuille] = useState(null);
@@ -173,6 +179,25 @@ export default function Seuils() {
     charger();
   }
 
+  // Un mouvement change la valeur des positions et du patrimoine, donc l'écart restant
+  // affiché devant chaque seuil : l'écran se recharge, le serveur restant seul à
+  // recalculer. Aucun seuil n'est évalué pour autant — l'évaluation appartient à
+  // l'actualisation du tableau de bord (D50).
+  function apresMouvement({ resume }) {
+    mouvement.fermer();
+    setConfirmation(resume);
+    charger();
+  }
+
+  const feuilleMouvement = mouvement.ouvert && (
+    <FeuilleMouvement
+      actifs={portefeuille?.actifs ?? []}
+      actifInitialId={mouvement.actifInitialId}
+      surFermeture={mouvement.fermer}
+      surEnregistrement={apresMouvement}
+    />
+  );
+
   const feuille = seuilFeuille.ouvert && (
     <FeuilleSeuil
       actifs={portefeuille?.actifs ?? []}
@@ -223,6 +248,7 @@ export default function Seuils() {
           surAction={() => seuilFeuille.ouvrir()}
         />
         {feuille}
+        {feuilleMouvement}
       </div>
     );
   }
@@ -363,6 +389,7 @@ export default function Seuils() {
       )}
 
       {feuille}
+      {feuilleMouvement}
 
       {aRetirer && (
         <Confirmation

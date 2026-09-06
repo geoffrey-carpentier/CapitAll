@@ -15,7 +15,8 @@ const DUREES_VIE_SECONDES = {
   crypto: 120,
   devise: 3600,
   metal: 600,
-  // Préparé pour les actions, dont le fournisseur sera branché ultérieurement.
+  // Les actions sont cotées en continu, mais les quotas gratuits imposent un cache
+  // plus long que les cryptomonnaies.
   action: 300,
 };
 
@@ -39,8 +40,10 @@ function creerServiceCours({ adaptateurs, cache = cacheCours } = {}) {
   async function getCours(symbole, type) {
     const symboleNormalise = symbole.toUpperCase();
 
-    // 1. Le cache d'abord : un cours frais évite un appel sortant.
-    const enCache = await cache.lireCoursCache(symboleNormalise);
+    // 1. Le cache d'abord : un cours frais évite un appel sortant. La classe entre dans
+    // la clé au même titre que le symbole : les deux forment l'identité de l'instrument,
+    // et un cours de cryptomonnaie n'a rien à répondre à une demande de devise.
+    const enCache = await cache.lireCoursCache(type, symboleNormalise);
     if (enCache) {
       return { ...enCache, source: 'cache' };
     }
@@ -54,18 +57,23 @@ function creerServiceCours({ adaptateurs, cache = cacheCours } = {}) {
       // 3. Deux écritures : le cours frais avec son TTL, et le filet de sécurité sans
       // expiration qui servira si le fournisseur tombe.
       await cache.ecrireCoursCache(
+        type,
         symboleNormalise,
         cours,
         DUREES_VIE_SECONDES[type] ?? DUREE_VIE_PAR_DEFAUT
       );
-      await cache.ecrireDernierCoursConnu(symboleNormalise, cours);
+      await cache.ecrireDernierCoursConnu(type, symboleNormalise, cours);
 
       return { ...cours, source: 'fournisseur' };
     } catch (erreur) {
       // 4. Fournisseur indisponible : plutôt qu'une erreur, le dernier cours connu,
       // signalé comme tel avec son horodatage d'origine. Le front peut alors afficher
       // « dernier cours connu le ... », comportement prévu par cas-utilisation.md.
-      const dernierConnu = await cache.lireDernierCoursConnu(symboleNormalise);
+      //
+      // Le repli reste borné à la classe demandée. Un cours de repli emprunté à une
+      // autre classe serait un chiffre faux présenté comme une donnée d'archive, soit
+      // le pire des deux mondes.
+      const dernierConnu = await cache.lireDernierCoursConnu(type, symboleNormalise);
 
       if (dernierConnu) {
         console.error(

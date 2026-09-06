@@ -8,7 +8,7 @@
 
 const { query } = require('../db');
 
-const CHAMPS_PUBLICS = 'id, email, pseudo, role, actif, date_inscription';
+const CHAMPS_PUBLICS = 'id, email, pseudo, role, actif, jetons_invalides_avant, date_inscription';
 
 // La colonne role n'est jamais alimentée depuis une entrée utilisateur (D23) :
 // elle prend la valeur par défaut du schéma, donc 'utilisateur'.
@@ -58,14 +58,40 @@ async function trouverAvecHachageParId(id) {
   return rows[0] || null;
 }
 
+// Le changement de mot de passe pose la borne de révocation dans la même requête.
+//
+// Les deux vont ensemble et ne doivent pas pouvoir se dissocier : changer son mot de
+// passe parce qu'on le croit compromis n'aurait aucun effet si les jetons déjà émis
+// continuaient de fonctionner jusqu'à deux heures. Deux requêtes distinctes auraient
+// laissé une fenêtre où la première a réussi et la seconde non.
+//
+// La borne est prise sur l'horloge de la base et non sur celle du serveur applicatif :
+// c'est la même horloge que celle qui datera les comparaisons.
 async function mettreAJourMotDePasse(id, motDePasseHache) {
   const { rowCount } = await query(
     `UPDATE utilisateur
-     SET mot_de_passe_hache = $2
+     SET mot_de_passe_hache = $2, jetons_invalides_avant = now()
      WHERE id = $1`,
     [id, motDePasseHache]
   );
   return rowCount > 0;
+}
+
+// État d'autorisation d'un porteur de jeton, relu à chaque requête authentifiée.
+//
+// Une seule lecture par clé primaire, sans le hachage du mot de passe : c'est le prix de
+// la révocation immédiate. Un cache de trente secondes l'éviterait, au prix d'une
+// révocation différée d'autant — un compte désactivé resterait joignable une demi-minute.
+// Sur une application personnelle, la lecture est négligeable devant les requêtes que
+// sert la même route, et la garantie est plus simple à défendre qu'un délai.
+async function trouverPourAutorisation(id) {
+  const { rows } = await query(
+    `SELECT id, role, actif, jetons_invalides_avant
+     FROM utilisateur
+     WHERE id = $1`,
+    [id]
+  );
+  return rows[0] || null;
 }
 
 // La suppression s'arrête à cette ligne : actif, alerte et snapshot_valorisation
@@ -82,6 +108,7 @@ module.exports = {
   trouverParEmail,
   trouverParId,
   trouverAvecHachageParId,
+  trouverPourAutorisation,
   mettreAJourMotDePasse,
   supprimer,
 };

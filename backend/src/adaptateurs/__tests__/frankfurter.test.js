@@ -19,8 +19,13 @@ describe('adaptateur Frankfurter', () => {
   });
 
   it('inverse correctement un taux réel', () => {
-    // 1 / 1.1426 = 0.87519692... arrondi à 8 décimales
-    expect(inverserTaux(1.1426)).toBe('0.87519692');
+    // L'inversion se fait en entiers, à l'échelle des taux (D88), et non plus par une
+    // division flottante arrondie à huit décimales. Ce taux est appliqué à tout montant
+    // converti en dollars et sert à ramener en euros les cours des métaux et des
+    // actions : c'est la valeur la plus réutilisée de la chaîne.
+    // 1 / 1,1426 = 0,8751969193068440399... arrondi à dix-huit décimales. L'ancienne
+    // valeur, 0,87519692, en était l'arrondi à huit : le même nombre, moins de chiffres.
+    expect(inverserTaux('1.1426')).toBe('0.87519691930684404');
   });
 
   it('rend la forme commune et la source', async () => {

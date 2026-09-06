@@ -19,13 +19,11 @@ Architecture front / back séparée. Le client React ne parle qu'à l'API Expres
         |                        - CoinbaseAdapter    (crypto)
         |                        - FrankfurterAdapter (devises)
         |                        - GoldApiAdapter     (métaux)
-        |                        - FmpAdapter         (actions, principal)
-        |                        - FinnhubAdapter     (actions, secours 1)
-        |                        - AlphaVantageAdapter (actions, secours 2 + historique)
+        |                        - ActionsAdapter     (FMP -> Finnhub -> Alpha Vantage)
         |                                          |
         |                                          v
         |                              [ Redis - cache cours ]
-        |                              clé cours:{type}:{symbole}, TTL par classe
+        |                              cours:{symbole} + dernier connu, TTL par classe
         v
 [ PostgreSQL ]
   utilisateur / actif / transaction / alerte / snapshot_valorisation /
@@ -42,13 +40,28 @@ Architecture front / back séparée. Le client React ne parle qu'à l'API Expres
 
 **Cache des cours en Redis (D14, D21)**
 
-Le cache court côté serveur est implémenté avec Redis plutôt qu'avec une structure en mémoire du process Node. Le service de cours interroge d'abord Redis (clé `cours:{type}:{symbole}`) avant d'appeler l'adaptateur correspondant ; en cas d'échec de l'adaptateur, le dernier cours connu en cache est renvoyé avec son horodatage plutôt qu'une erreur, conformément à la règle déjà décrite dans cas-utilisation.md. Les durées de vie sont différenciées selon le rythme réel de chaque source (D21) : crypto 60-120 s, action 300 s, métal 300-600 s, devise 3600 s (les taux BCE de Frankfurter ne changent qu'une fois par jour ouvré). Ce choix, au-delà du bénéfice technique (résilience face aux indisponibilités et aux quotas des fournisseurs), constitue le composant NoSQL du projet : une structure clé-valeur, à durée de vie courte, sans schéma relationnel, qui n'a pas vocation à être portée par PostgreSQL.
+Le cache court côté serveur est implémenté avec Redis plutôt qu'avec une structure en
+mémoire du processus Node. Le service lit d'abord `cours:v2:{classe}:{SYMBOLE}` ; un cours
+frais y vit 120 secondes pour une cryptomonnaie, 3600 pour une devise, 600 pour un métal
+et 300 pour une action. Après un appel réussi, il écrit aussi
+`cours:v2:dernier-connu:{classe}:{SYMBOLE}`, sans expiration. La classe fait partie de la
+clé : un même symbole peut désigner une cryptomonnaie et une devise, et les confondre
+rendait le cours de l'une pour une demande portant sur l'autre. Le préfixe est versionné
+pour que les entrées écrites sous l'ancien format ne soient jamais relues. Si le fournisseur échoue, cette
+seconde clé permet de rendre la dernière valeur connue avec son horodatage. Redis reste
+une optimisation : son indisponibilité n'empêche pas l'appel direct aux fournisseurs.
 
 **Adaptateurs actions et conversion de devise (D20, D26, D27)**
 
-Les actions sont servies par FmpAdapter en principal, avec une chaîne de secours à deux niveaux : FinnhubAdapter puis AlphaVantageAdapter. Le périmètre est fermé par une liste blanche d'environ 85 valeurs américaines (celles accessibles sur le plan gratuit FMP), contrôlée côté serveur avant tout appel réseau : un symbole hors liste est refusé sans consommer de quota. Il n'y a pas de recherche libre de symboles.
+Les actions sont servies par un adaptateur unique qui essaie FMP en principal, puis
+Finnhub et Alpha Vantage. Le périmètre est fermé par une liste blanche d'environ 85
+valeurs américaines, contrôlée côté serveur avant tout appel réseau : un symbole hors
+liste est refusé sans consommer de quota. Il n'y a pas de recherche libre de symboles.
 
-FMP a été retenu en principal parce qu'un seul appel `/stable/quote` fournit à la fois le cours et les données de la fiche enrichie (capitalisation, fourchette 52 semaines, moyennes 50/200 jours), là où Finnhub imposerait un second appel pour moins d'informations. Contrepartie assumée : son quota est journalier (250/jour) quand celui de Finnhub se régénère chaque minute. Le cache Redis et la taille bornée de la liste suivie rendent cette contrainte acceptable, et la bascule vers Finnhub reste immédiate puisque les deux adaptateurs exposent la même interface.
+Le MVP exploite le cours courant de `/stable/quote`. Les données enrichies envisagées en
+D27 — capitalisation, fourchette annuelle, moyennes et secteur — ne sont pas exposées
+par le contrat actuel et restent une évolution. Ce bornage évite d'annoncer une fiche
+qui n'existe pas dans l'interface tout en livrant la valorisation des actions.
 
 Ces fournisseurs cotent en USD ; l'adaptateur convertit en euros via le taux EUR/USD de Frankfurter déjà présent en cache, ce qui fait de l'adaptateur actions une composition de deux sources. Les clés d'API résident exclusivement dans `.env`, jamais dans le code ni le dépôt.
 
@@ -82,7 +95,9 @@ Ce découpage isole la logique métier, qui devient testable unitairement sans b
 
 **Adaptateurs de cours**
 
-Chaque fournisseur implémente la même interface : `getCours(symbole) -> { symbole, cours_eur, horodatage }`. Ajouter la bourse plus tard (Finnhub ou Alpha Vantage) revient à écrire un adaptateur supplémentaire, sans toucher aux services ni au front.
+Chaque classe expose la même interface :
+`getCours(symbole) -> { symbole, cours_eur, horodatage }`. Pour les actions, l'ordre des
+fournisseurs est encapsulé dans l'adaptateur et reste invisible au service métier.
 
 ## Flux type : affichage du tableau de bord
 
@@ -103,6 +118,10 @@ Chaque fournisseur implémente la même interface : `getCours(symbole) -> { symb
 
 **Bascule d'affichage euro/dollar (D43)** : le tableau de bord peut présenter les montants en euro ou en dollar. La devise de référence de calcul et de stockage reste l'euro ; la bascule est une simple conversion à l'affichage, appliquée au taux EUR/USD de Frankfurter déjà présent en cache pour les actions, sans appel supplémentaire. Aucun montant en dollar n'est stocké, aucun PRU n'est recalculé par devise ; les snapshots restent enregistrés en euro et sont convertis au taux courant à la lecture. Le multi-devise de référence complet reste hors périmètre.
 
-**Annonces et autorisation par rôle (D22, D23)** : les annonces internes sont publiées par l'admin via un CRUD protégé par un middleware de rôle, troisième niveau de contrôle d'accès après l'authentification (JWT valide) et la propriété (la ressource appartient au demandeur). Le rôle admin est à moindre privilège strict : il ne donne jamais accès aux portefeuilles, transactions ou alertes d'autrui ; le champ `role` n'est accepté dans aucune entrée utilisateur (assignation par seed ou SQL direct uniquement).
+**Annonces et administration** : la table `annonce`, le rôle `admin` et le middleware de
+rôle existent dans le socle, mais aucune route ni interface d'administration n'est
+montée dans le MVP. La publication d'annonces et la gestion des comptes sont reportées
+en version 2. Le champ `role` reste refusé dans toutes les entrées utilisateur.
 
-**Fil d'actualités externes (D24, option de semaine 4)** : si réalisé, agrégation côté serveur de 2-3 flux RSS publics, stockée en cache Redis avec un TTL de l'ordre de 15-30 minutes, exposée par un endpoint de lecture simple. Aucune persistance PostgreSQL, aucune clé d'API.
+**Fil d'actualités externes** : abandonné pour le MVP. Il n'existe ni endpoint RSS ni
+composant d'interface correspondant.

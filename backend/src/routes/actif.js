@@ -33,6 +33,23 @@ routeur.post(
   valider(creationTransaction),
   controleur.simulerTransaction
 );
+// Correction d'un mouvement, et simulation de cette correction (D51 révisée). La
+// simulation est déclarée avant la route de correction elle-même, sans quoi
+// `simulation` serait interprété comme un identifiant de transaction.
+routeur.post(
+  '/:id/transactions/:idTransaction/simulation',
+  validerParamId('id'),
+  validerParamId('idTransaction'),
+  valider(creationTransaction),
+  controleur.simulerTransaction
+);
+routeur.patch(
+  '/:id/transactions/:idTransaction',
+  validerParamId('id'),
+  validerParamId('idTransaction'),
+  valider(creationTransaction),
+  controleur.modifierTransaction
+);
 routeur.delete(
   '/:id/transactions/:idTransaction',
   validerParamId('id'),

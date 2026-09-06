@@ -6,12 +6,16 @@ const serviceCompte = require('../services/compte');
 
 async function changerMotDePasse(req, res, next) {
   try {
-    await serviceCompte.changerMotDePasse({
+    const { token } = await serviceCompte.changerMotDePasse({
       utilisateurId: req.utilisateur.id,
       ancienMotDePasse: req.body.ancienMotDePasse,
       nouveauMotDePasse: req.body.nouveauMotDePasse,
     });
-    res.status(204).end();
+    // 200 et non 204 : le changement révoque les jetons antérieurs, dont celui de la
+    // requête en cours. Le jeton neuf remis ici est ce qui permet à la session courante
+    // de survivre à l'opération, comme la spécification l'exige, pendant que les autres
+    // sessions du compte tombent.
+    res.status(200).json({ token });
   } catch (erreur) {
     next(erreur);
   }

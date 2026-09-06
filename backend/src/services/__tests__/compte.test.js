@@ -211,10 +211,10 @@ async function exporter(mouvements) {
 }
 
 describe('export des mouvements (E7, D84)', () => {
-  it('rend les huit colonnes attendues, dans l’ordre', async () => {
+  it('rend les dix colonnes attendues, dans l’ordre', async () => {
     const { entete } = await exporter(MOUVEMENTS);
 
-    expect(entete).toBe('date;type;actif;classe;quantite;prix_unitaire;frais;montant');
+    expect(entete).toBe('date;type;actif;classe;quantite;prix_unitaire;frais;frais_montant;frais_unite;montant');
   });
 
   it('classe les mouvements de tous les actifs dans l’ordre chronologique', async () => {
@@ -232,7 +232,9 @@ describe('export des mouvements (E7, D84)', () => {
   it('écrit les dates en ISO 8601 et les nombres en décimal brut', async () => {
     const { lignes } = await exporter(MOUVEMENTS);
 
-    expect(lignes[0]).toBe('2026-07-15T10:00:00.000Z;achat;BTC;crypto;0.50000000;54000.00;12.50;27000.00');
+    expect(lignes[0]).toBe(
+      '2026-07-15T10:00:00.000Z;achat;BTC;crypto;0.50000000;54000.00;12.50;12.50;EUR;27000.00'
+    );
   });
 
   it('exporte le montant du moteur, frais exclus (D84)', async () => {
@@ -242,27 +244,29 @@ describe('export des mouvements (E7, D84)', () => {
     // plutôt que d'être additionnés au montant.
     const champs = lignes[0].split(';');
     expect(champs[6]).toBe('12.50');
-    expect(champs[7]).toBe('27000.00');
+    expect(champs[9]).toBe('27000.00');
 
     // Même règle sur une vente : 0,2 x 61 000 = 12 200, les 8,00 de frais à part.
     const vente = lignes[2].split(';');
     expect(vente[6]).toBe('8.00');
-    expect(vente[7]).toBe('12200.00');
+    expect(vente[9]).toBe('12200.00');
   });
 
   it('rend l’en-tête seul quand le compte n’a aucun mouvement', async () => {
     const { contenu, entete, lignes } = await exporter([]);
 
-    expect(entete).toBe('date;type;actif;classe;quantite;prix_unitaire;frais;montant');
+    expect(entete).toBe('date;type;actif;classe;quantite;prix_unitaire;frais;frais_montant;frais_unite;montant');
     expect(lignes).toEqual([]);
-    expect(contenu).toBe('date;type;actif;classe;quantite;prix_unitaire;frais;montant\r\n');
+    expect(contenu).toBe(
+      'date;type;actif;classe;quantite;prix_unitaire;frais;frais_montant;frais_unite;montant\r\n'
+    );
   });
 
   it('nomme le fichier avec la date du jour', async () => {
     const { nomFichier } = await exporter(MOUVEMENTS);
     const jour = new Date().toISOString().slice(0, 10);
 
-    expect(nomFichier).toBe(`capitall-mouvements-${jour}.csv`);
+    expect(nomFichier).toBe(`walletwatch-mouvements-${jour}.csv`);
   });
 
   it('ne demande que les mouvements du porteur du jeton', async () => {

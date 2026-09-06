@@ -18,8 +18,16 @@ function depotActifs(liste, actifUnique) {
   };
 }
 
-function depotTransactions(liste) {
-  return { listerParActifEtUtilisateur: vi.fn().mockResolvedValue(liste) };
+// Deux lectures, deux usages. Le tableau de bord charge désormais tous les mouvements
+// du compte en une requête et les regroupe en mémoire, au lieu d'en émettre une par
+// position ; l'écran de détail, lui, continue de lire une seule position.
+function depotTransactions(liste, actifId = ACTIF_BTC.id) {
+  return {
+    listerParActifEtUtilisateur: vi.fn().mockResolvedValue(liste),
+    listerParUtilisateur: vi
+      .fn()
+      .mockResolvedValue(liste.map((mouvement) => ({ ...mouvement, actif_id: actifId }))),
+  };
 }
 
 function depotAlertes(actives = []) {
@@ -84,7 +92,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.valeur_totale).toBe('150.00');
     expect(portefeuille.plus_value_latente).toBe('50.00');
@@ -104,7 +112,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.taux_affichage.usd_vers_eur).toBe('0.88');
     expect(portefeuille.taux_affichage.eur_vers_usd).not.toBeNull();
@@ -123,7 +131,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.cours_indisponibles).toContain('BTC');
     expect(portefeuille.actifs[0].valeur).toBeNull();
@@ -144,7 +152,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    await service.obtenirPortefeuille(2);
+    await service.actualiserPortefeuille(2);
 
     expect(snapshots.enregistrerSiAbsent).not.toHaveBeenCalled();
   });
@@ -168,7 +176,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.valeur_totale).toBe('150.00');
   });
@@ -185,7 +193,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(9);
+    const portefeuille = await service.actualiserPortefeuille(9);
 
     expect(portefeuille.valeur_totale).toBe('0.00');
     expect(portefeuille.actifs).toEqual([]);
@@ -209,7 +217,7 @@ describe('portefeuille consolidé', () => {
       transactions,
     });
 
-    await service.obtenirPortefeuille(2);
+    await service.actualiserPortefeuille(2);
 
     expect(serviceCours.getCoursMultiples).toHaveBeenCalledTimes(1);
   });
@@ -241,7 +249,7 @@ describe('évaluation des alertes au chargement', () => {
       alertes,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.alertes_declenchees).toHaveLength(1);
     expect(portefeuille.alertes_declenchees[0].valeur_observee).toBe('150.00');
@@ -273,7 +281,7 @@ describe('évaluation des alertes au chargement', () => {
       alertes,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.alertes_declenchees).toEqual([]);
     expect(alertes.marquerDeclenchees).not.toHaveBeenCalled();
@@ -298,10 +306,89 @@ describe('évaluation des alertes au chargement', () => {
       alertes,
     });
 
-    const portefeuille = await service.obtenirPortefeuille(2);
+    const portefeuille = await service.actualiserPortefeuille(2);
 
     expect(portefeuille.valeur_totale).toBe('150.00');
     expect(portefeuille.alertes_declenchees).toEqual([]);
+  });
+});
+
+// Lecture pure (IDEM-01).
+//
+// Ces tests protègent une propriété, pas une fonctionnalité : lire un portefeuille ne
+// change rien. Trois écrans l'appelaient et écrivaient donc en base à chaque affichage,
+// dont celui des seuils, que le code prétendait pourtant tenir à l'écart de ces effets.
+// Si quelqu'un remet un jour l'historisation dans la lecture « parce qu'elle y était
+// avant », c'est ici que cela se verra.
+describe('lecture pure du portefeuille', () => {
+  // Un seuil déjà franchi : l'actualisation le marquerait. C'est précisément ce que la
+  // lecture ne doit pas faire.
+  const SEUIL_FRANCHI = {
+    id: 7,
+    type_cible: 'capital_total',
+    actif_id: null,
+    sens_seuil: 'au_dessus',
+    valeur_seuil: '100.00',
+    statut: 'active',
+  };
+
+  function monter() {
+    const snapshots = snapshotsFactices();
+    const snapshotsCours = snapshotsCoursFactices();
+    const alertes = depotAlertes([SEUIL_FRANCHI]);
+
+    const service = creerServicePortefeuille({
+      serviceCours: serviceCoursFactice([
+        { symbole: 'BTC', cours_eur: '150.00', horodatage: '2026-07-30T10:00:00Z', source: 'cache' },
+      ]),
+      snapshots,
+      snapshotsCours,
+      actifs: depotActifs([ACTIF_BTC]),
+      transactions: depotTransactions(TRANSACTIONS_BTC),
+      alertes,
+    });
+
+    return { service, snapshots, snapshotsCours, alertes };
+  }
+
+  it('rend les mêmes chiffres que l\'actualisation', async () => {
+    const lecture = await monter().service.obtenirPortefeuille(2);
+    const actualisation = await monter().service.actualiserPortefeuille(2);
+
+    expect(lecture.valeur_totale).toBe(actualisation.valeur_totale);
+    expect(lecture.plus_value_latente).toBe(actualisation.plus_value_latente);
+    expect(lecture.actifs[0].symbole).toBe('BTC');
+  });
+
+  it("n'écrit ni le point du jour ni l'historique des cours", async () => {
+    const { service, snapshots, snapshotsCours } = monter();
+
+    await service.obtenirPortefeuille(2);
+
+    expect(snapshots.enregistrerSiAbsent).not.toHaveBeenCalled();
+    expect(snapshotsCours.enregistrerSiAbsent).not.toHaveBeenCalled();
+  });
+
+  it("n'évalue ni ne marque aucun seuil, même franchi", async () => {
+    const { service, alertes } = monter();
+
+    const portefeuille = await service.obtenirPortefeuille(2);
+
+    expect(alertes.listerActivesParUtilisateur).not.toHaveBeenCalled();
+    expect(alertes.marquerDeclenchees).not.toHaveBeenCalled();
+    // La liste part vide parce que rien n'a été évalué. Y faire figurer un
+    // franchissement qu'on n'a pas cherché serait une affirmation sans mesure.
+    expect(portefeuille.alertes_declenchees).toEqual([]);
+  });
+
+  it('sert quand même la tendance de chaque position', async () => {
+    // La tendance est une lecture : la retirer du chemin de lecture viderait la colonne
+    // du tableau des positions, qui n'actualise jamais.
+    const { service, snapshotsCours } = monter();
+
+    await service.obtenirPortefeuille(2);
+
+    expect(snapshotsCours.listerRecentsParUtilisateur).toHaveBeenCalledWith(2, 30);
   });
 });
 
@@ -446,7 +533,7 @@ describe('historique de cours par position', () => {
 
   it("historise les positions valorisees au meme point d'appel que le portefeuille", async () => {
     const snapshotsCours = snapshotsCoursFactices();
-    await service(snapshotsCours).obtenirPortefeuille(2);
+    await service(snapshotsCours).actualiserPortefeuille(2);
 
     expect(snapshotsCours.enregistrerSiAbsent).toHaveBeenCalledTimes(1);
     const [utilisateurId, positions] = snapshotsCours.enregistrerSiAbsent.mock.calls[0];
@@ -460,14 +547,14 @@ describe('historique de cours par position', () => {
     const snapshotsCours = snapshotsCoursFactices();
     snapshotsCours.enregistrerSiAbsent.mockRejectedValue(new Error('base indisponible'));
 
-    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+    const portefeuille = await service(snapshotsCours).actualiserPortefeuille(2);
 
     expect(portefeuille.valeur_totale).toBe('150.00');
   });
 
   it('expose la tendance de chaque position sur la fenetre de trente jours', async () => {
     const snapshotsCours = snapshotsCoursFactices(SERIE_BTC);
-    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+    const portefeuille = await service(snapshotsCours).actualiserPortefeuille(2);
 
     expect(snapshotsCours.listerRecentsParUtilisateur).toHaveBeenCalledWith(2, 30);
     // De 100 a 150, soit cinquante pour cent, verifiable de tete.
@@ -479,13 +566,13 @@ describe('historique de cours par position', () => {
   // l'interface affiche son etat << pas assez de points >> plutot qu'un zero.
   it('ne fabrique aucune tendance sur un historique trop court', async () => {
     const snapshotsCours = snapshotsCoursFactices([SERIE_BTC[0]]);
-    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+    const portefeuille = await service(snapshotsCours).actualiserPortefeuille(2);
 
     expect(portefeuille.actifs[0].tendance_30j.variation).toBeNull();
   });
 
   it("rend une tendance absente lorsque la position n'a aucun historique", async () => {
-    const portefeuille = await service(snapshotsCoursFactices()).obtenirPortefeuille(2);
+    const portefeuille = await service(snapshotsCoursFactices()).actualiserPortefeuille(2);
 
     expect(portefeuille.actifs[0].tendance_30j).toBeNull();
   });
@@ -496,7 +583,7 @@ describe('historique de cours par position', () => {
     const snapshotsCours = snapshotsCoursFactices();
     snapshotsCours.listerRecentsParUtilisateur.mockRejectedValue(new Error('base indisponible'));
 
-    const portefeuille = await service(snapshotsCours).obtenirPortefeuille(2);
+    const portefeuille = await service(snapshotsCours).actualiserPortefeuille(2);
 
     expect(portefeuille.valeur_totale).toBe('150.00');
     expect(portefeuille.actifs[0].tendance_30j).toBeNull();

@@ -1,0 +1,60 @@
+# Environnement de test isolé : base et cache dédiés aux tests d'intégration.
+#
+# Rigoureusement séparé de l'environnement de développement (docker-compose.yml,
+# projet « capitall », volume « donnees-postgres ») : nom de projet, conteneurs, volume
+# et ports sont tous distincts. Aucune commande lancée sur cet environnement ne peut
+# atteindre les données de travail, y compris un « down -v ».
+#
+# Le nom retenu est celui du projet renommé. L'environnement de développement conserve
+# provisoirement l'ancien nom : y toucher orphelinerait son volume et donc sa base.
+#
+# Les identifiants ci-dessous sont des valeurs de test écrites en clair, sans équivalent
+# réel nulle part. Ils ne sont volontairement pas lus depuis .env, pour qu'aucune
+# configuration de poste ne puisse rediriger les tests vers une base de travail.
+#
+#   docker compose -f docker-compose.test.yml up -d
+#   docker compose -f docker-compose.test.yml down -v     (ne touche que le volume de test)
+
+name: walletwatch-test
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: walletwatch-test-db
+    environment:
+      POSTGRES_USER: walletwatch_test
+      POSTGRES_PASSWORD: test_sans_equivalent_reel
+      POSTGRES_DB: walletwatch_test
+    # Lié à la boucle locale : le service n'est joignable que depuis ce poste.
+    #
+    # 5434 et non 5433 : la base de développement publie déjà 5433 sur l'hôte. Un test
+    # pointé sur 5433 aurait écrit dans les données de travail en croyant être isolé,
+    # exactement l'accident que cet environnement doit rendre impossible.
+    ports:
+      - '127.0.0.1:5434:5432'
+    volumes:
+      - donnees-postgres-test:/var/lib/postgresql/data
+      # Exécutés dans l'ordre lexicographique, uniquement sur un volume vide.
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+      - ./backend/db/seed-test.sql:/docker-entrypoint-initdb.d/20-seed-test.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U walletwatch_test -d walletwatch_test']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: walletwatch-test-redis
+    # 6381 : 6379 est pris par le cache de développement.
+    ports:
+      - '127.0.0.1:6381:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # Sans volume, comme en développement : un cache est jetable par nature.
+
+volumes:
+  donnees-postgres-test:

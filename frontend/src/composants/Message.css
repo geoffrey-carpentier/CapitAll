@@ -14,10 +14,12 @@
   font-weight: var(--graisse-forte);
 }
 
+/* Dernière occurrence de l'ancien rouge #F0564F recopié en rgb : le jeton vaut #F8645D
+   depuis la correction de contraste, et le fond ne suivait pas. */
 .message--erreur {
   color: var(--couleur-negatif);
   border-color: var(--couleur-negatif);
-  background: rgba(240, 86, 79, 0.08);
+  background: color-mix(in srgb, var(--couleur-negatif) 8%, transparent);
 }
 
 /*

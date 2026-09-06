@@ -21,8 +21,18 @@ function depotAlertes(liste = []) {
   };
 }
 
-function servicePortefeuilleFactice({ capitalTotal = '0', coursParActif = {} } = {}) {
-  return { obtenirValeursObservees: vi.fn().mockResolvedValue({ capitalTotal, coursParActif }) };
+// capitalComplet accompagne le total : une couverture incomplète rend le capital
+// inexploitable comme valeur observée, au même titre qu'un cours manquant sur un actif.
+function servicePortefeuilleFactice({
+  capitalTotal = '0',
+  capitalComplet = true,
+  coursParActif = {},
+} = {}) {
+  return {
+    obtenirValeursObservees: vi
+      .fn()
+      .mockResolvedValue({ capitalTotal, capitalComplet, coursParActif }),
+  };
 }
 
 function alerteActif({ id = 1, actifId = 10, sensSeuil = 'au_dessus', valeurSeuil = '70000.00', statut = 'active' } = {}) {

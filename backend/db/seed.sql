@@ -46,24 +46,29 @@ WHERE u.email = 'user@capitall.fr';
 -- Transactions d'achat et de vente. Les quantités vendues restent inférieures aux
 -- quantités détenues (la règle est vérifiée côté serveur, on la respecte ici par
 -- cohérence du jeu d'essai). jours = ancienneté en jours par rapport à aujourd'hui.
-INSERT INTO transaction (actif_id, sens, quantite, prix_unitaire, frais, date_transaction, note)
-SELECT a.id, t.sens, t.quantite, t.prix_unitaire, t.frais,
+-- Les frais sont donnés dans leur unité de prélèvement et dans leur contre-valeur en
+-- euros (D89) : les deux coïncident tant que l'unité est l'euro, ce qu'impose la
+-- contrainte de cohérence. Le renfort ETH porte le cas où elles diffèrent, et le
+-- transfert celui d'un mouvement qui n'est pas une vente.
+INSERT INTO transaction (actif_id, sens, quantite, prix_unitaire, frais, frais_montant, frais_unite, date_transaction, note)
+SELECT a.id, t.sens, t.quantite, t.prix_unitaire, t.frais, t.frais_montant, t.frais_unite,
        now() - t.jours * INTERVAL '1 day', t.note
 FROM actif a
 JOIN (VALUES
-    ('BTC',  'achat', 0.50,    54000.00, 15.00, 88, 'Achat initial'),
-    ('BTC',  'achat', 0.30,    61000.00, 10.00, 52, 'Renforcement'),
-    ('BTC',  'vente', 0.20,    63500.00,  8.00, 20, 'Prise de bénéfice partielle'),
-    ('ETH',  'achat', 4.00,     2750.00,  6.00, 80, NULL),
-    ('ETH',  'achat', 2.00,     3150.00,  5.00, 35, 'Renfort DCA'),
-    ('USD',  'achat', 5000.00,     0.92,  0.00, 75, 'Constitution poche dollar'),
-    ('XAU',  'achat', 2.00,     1780.00,  4.00, 70, 'Once d''or'),
-    ('XAU',  'achat', 1.00,     1950.00,  3.00, 25, NULL),
-    ('AAPL', 'achat', 20.00,     168.00,  1.00, 65, NULL),
-    ('AAPL', 'vente', 5.00,      182.00,  1.00, 18, 'Allègement'),
-    ('NVDA', 'achat', 10.00,     102.00,  1.00, 60, NULL),
-    ('NVDA', 'achat', 5.00,      118.00,  1.00, 22, 'Renfort thématique IA')
-) AS t(symbole, sens, quantite, prix_unitaire, frais, jours, note) ON a.symbole = t.symbole
+    ('BTC',  'achat',                0.50,  54000.00, 15.00, 15.00, 'EUR', 88, 'Achat initial'),
+    ('BTC',  'achat',                0.30,  61000.00, 10.00, 10.00, 'EUR', 52, 'Renforcement'),
+    ('BTC',  'vente',                0.20,  63500.00,  8.00,  8.00, 'EUR', 20, 'Prise de bénéfice partielle'),
+    ('ETH',  'achat',                4.00,   2750.00,  6.00,  6.00, 'EUR', 80, NULL),
+    ('ETH',  'achat',               1.998,   3150.00,  6.30, 0.002, 'ETH', 35, 'Renfort DCA, frais retenus en ETH par la plateforme'),
+    ('ETH',  'sortie_non_marchande', 0.10,      0.00,  0.00,  0.00, 'EUR', 12, 'Transfert vers un portefeuille personnel'),
+    ('USD',  'achat',             5000.00,      0.92,  0.00,  0.00, 'EUR', 75, 'Constitution poche dollar'),
+    ('XAU',  'achat',                2.00,   1780.00,  4.00,  4.00, 'EUR', 70, 'Once d''or'),
+    ('XAU',  'achat',                1.00,   1950.00,  3.00,  3.00, 'EUR', 25, NULL),
+    ('AAPL', 'achat',               20.00,    168.00,  1.00,  1.00, 'EUR', 65, NULL),
+    ('AAPL', 'vente',                5.00,    182.00,  1.00,  1.00, 'EUR', 18, 'Allègement'),
+    ('NVDA', 'achat',               10.00,    102.00,  1.00,  1.00, 'EUR', 60, NULL),
+    ('NVDA', 'achat',                5.00,    118.00,  1.00,  1.00, 'EUR', 22, 'Renfort thématique IA')
+) AS t(symbole, sens, quantite, prix_unitaire, frais, frais_montant, frais_unite, jours, note) ON a.symbole = t.symbole
 WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr');
 
 -- Alertes du compte utilisateur : une sur un actif, une sur le capital total.
@@ -95,23 +100,17 @@ JOIN (VALUES
 ) AS v(titre, contenu, epinglee) ON true
 WHERE u.email = 'admin@capitall.fr';
 
--- Historique de valorisation : 90 jours de snapshots journaliers pour le compte
--- utilisateur, afin que la courbe d'évolution du tableau de bord soit alimentée dès
--- le premier lancement (Q-C). Les cours passés des fournisseurs n'étant pas conservés,
--- ces valeurs ne seraient pas recalculables après coup : on les amorce donc ici.
--- La valeur suit une tendance haussière avec une ondulation et un léger bruit, pour
--- une courbe crédible sans être artificiellement lisse. Bornée à >= 0 par le schéma,
--- elle reste ici largement positive.
-INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur)
-SELECT (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr'),
-       jour::date,
-       ROUND((
-           24000
-           + (jour::date - (CURRENT_DATE - 89)) * 130
-           + SIN((jour::date - (CURRENT_DATE - 89)) / 7.0) * 1600
-           + (random() - 0.5) * 900
-       )::numeric, 2)
-FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour;
+-- Historique de valorisation : la somme des positions au cours du jour.
+--
+-- Il était auparavant produit par une formule indépendante — tendance, ondulation et bruit
+-- aléatoire — sans rapport avec les cours de la table voisine. Les deux courbes de
+-- l'application se contredisaient alors à l'écran : le patrimoine affichait 76 800 € au
+-- sommet d'une courbe qui plafonnait à 37 500 €. Une valorisation est une somme de
+-- positions, pas une seconde série inventée ; elle se calcule donc à partir de la première,
+-- écrite juste après, ce qui impose d'insérer les deux blocs dans cet ordre.
+--
+-- La raison d'être de la table ne change pas : les cours passés des fournisseurs ne sont
+-- pas conservés, ces valeurs ne seraient donc pas recalculables après coup.
 
 -- Historique de cours par position : les mêmes quatre-vingt-dix jours, déclinés actif
 -- par actif, pour alimenter le graphe de cours de l'écran de détail et la colonne de
@@ -122,8 +121,7 @@ FROM generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour;
 -- La série est déterministe : aucune fonction aléatoire n'y intervient, l'ondulation
 -- venant d'un sinus décalé par l'identifiant de l'actif. Deux exécutions du seed
 -- produisent donc exactement les mêmes courbes, ce qui permet de s'y appuyer dans une
--- vérification. Le bloc de valorisation totale, antérieur, conserve son bruit
--- aléatoire : le rendre déterministe ne relève pas de ce lot.
+-- vérification.
 --
 -- Le cours part du prix du premier achat réel de l'actif et progresse d'environ
 -- dix-huit pour cent sur la période. Il reste ainsi cohérent avec le prix de revient
@@ -157,3 +155,12 @@ JOIN LATERAL (
 ) AS premier ON true
 CROSS JOIN generate_series(CURRENT_DATE - 89, CURRENT_DATE, INTERVAL '1 day') AS jour
 WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr');
+
+INSERT INTO snapshot_valorisation (utilisateur_id, date_snapshot, valeur_totale_eur)
+SELECT (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr'),
+       sc.date_snapshot,
+       ROUND(SUM(sc.cours_eur * sc.quantite), 2)
+FROM snapshot_cours sc
+JOIN actif a ON a.id = sc.actif_id
+WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'user@capitall.fr')
+GROUP BY sc.date_snapshot;

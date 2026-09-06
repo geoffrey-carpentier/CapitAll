@@ -1,6 +1,10 @@
 .bascule-devise {
   display: inline-flex;
-  border: 1px solid var(--couleur-bordure);
+  /* Le contrôle ne se comprime pas : son overflow: hidden, nécessaire pour que le fond
+     de l'état actif épouse la pilule, masquerait sinon un des deux choix sans laisser
+     de barre de défilement pour le retrouver. */
+  flex: none;
+  border: 1px solid var(--couleur-contour-controle);
   border-radius: var(--rayon-pilule);
   overflow: hidden;
 }

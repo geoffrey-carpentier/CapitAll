@@ -5,6 +5,8 @@ import { useMouvement } from '../hooks/useMouvement';
 import { api, ErreurApi } from '../services/api';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
+import { formaterInstant } from '../utils/duree';
+import { fenetreDePeriode } from '../utils/serie';
 import Bouton from '../composants/Bouton';
 import Carte from '../composants/Carte';
 import FeuilleMouvement from '../composants/FeuilleMouvement';
@@ -48,7 +50,9 @@ const Courbe = lazy(() => import('../composants/Courbe'));
 // le module de formatage. La seule opération numérique de l'écran est l'application du
 // taux d'affichage, en arithmétique exacte, sans requête supplémentaire.
 
-const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: undefined };
+// Nombre de jours retenus pour chaque plage. Le découpage se fait à l'affichage, sur la
+// série entière déjà reçue : changer de plage ne demande plus rien au serveur.
+const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: null };
 
 // Période par défaut : le mois, plus proche du rythme réel de consultation. L'année
 // reste à un clic.
@@ -86,30 +90,34 @@ export default function Patrimoine() {
   // distingue un premier lancement d'un portefeuille devenu vide.
   const premierLancement = emplacement.state?.premierLancement === true;
 
-  const charger = useCallback(
-    async (periodeDemandee) => {
-      setChargement(true);
-      setErreur(null);
+  // Actualisation du tableau de bord : elle relève le point du jour et évalue les seuils
+  // (D49, D50). C'est une commande explicite, et le seul appel de l'application qui
+  // écrive quelque chose en consultant.
+  //
+  // Elle ne dépend pas de la période : la série arrive entière et le sélecteur ne fait
+  // qu'en découper une fenêtre. Auparavant, chaque changement de plage rechargeait le
+  // portefeuille complet, donc rappelait les fournisseurs de cours et réécrivait tout.
+  const actualiser = useCallback(async () => {
+    setChargement(true);
+    setErreur(null);
 
-      try {
-        const [donnees, serie] = await Promise.all([
-          api.portefeuille(jeton),
-          api.historique(jeton, JOURS_PAR_PERIODE[periodeDemandee]),
-        ]);
-        setPortefeuille(donnees);
-        setHistorique(serie);
-      } catch (echec) {
-        setErreur(echec);
-      } finally {
-        setChargement(false);
-      }
-    },
-    [jeton]
-  );
+    try {
+      const [donnees, serie] = await Promise.all([
+        api.actualiserPortefeuille(jeton),
+        api.historique(jeton),
+      ]);
+      setPortefeuille(donnees);
+      setHistorique(serie);
+    } catch (echec) {
+      setErreur(echec);
+    } finally {
+      setChargement(false);
+    }
+  }, [jeton]);
 
   useEffect(() => {
-    charger(periode);
-  }, [charger, periode]);
+    actualiser();
+  }, [actualiser]);
 
   const taux = portefeuille?.taux_affichage?.eur_vers_usd ?? null;
 
@@ -127,14 +135,25 @@ export default function Patrimoine() {
     [devise, taux]
   );
 
+  // Points du graphe : la fenêtre de la plage choisie, puis la conversion d'affichage.
+  // La conversion vient après le découpage, convertir des points qu'on ne trace pas
+  // étant du travail perdu.
   const points = useMemo(
     () =>
-      (historique?.points ?? []).map((point) => ({
+      fenetreDePeriode(historique?.points ?? [], JOURS_PAR_PERIODE[periode]).map((point) => ({
         date: point.date_snapshot,
         valeur: afficher(point.valeur_totale_eur) ?? point.valeur_totale_eur,
       })),
-    [historique, afficher]
+    [historique, periode, afficher]
   );
+
+  // Heure du dernier relevé. Le point du jour est écrit à la première actualisation de la
+  // journée : son heure dépend de l'utilisateur, et la courbe doit le dire plutôt que de
+  // laisser croire à un relevé de clôture.
+  const dernierReleve = useMemo(() => {
+    const serie = historique?.points ?? [];
+    return serie.length > 0 ? formaterInstant(serie[serie.length - 1].heure_releve) : null;
+  }, [historique]);
 
   const actifs = portefeuille?.actifs ?? [];
   const enRepli = actifs.filter((actif) => actif.source_cours === 'repli');
@@ -147,7 +166,7 @@ export default function Patrimoine() {
   function apresEnregistrement({ resume }) {
     mouvement.fermer();
     setConfirmation(resume);
-    charger(periode);
+    actualiser();
   }
 
   const feuille = mouvement.ouvert && (
@@ -161,7 +180,22 @@ export default function Patrimoine() {
 
   const outils = (
     <div className="patrimoine__outils">
-      <Bouton onClick={() => mouvement.ouvrir()}>+ Mouvement</Bouton>
+      <Bouton className="patrimoine__ajout" onClick={() => mouvement.ouvrir()}>
+        + Mouvement
+      </Bouton>
+      {/* L'actualisation était implicite : le simple affichage de l'écran relevait les
+          cours du jour et marquait les seuils franchis. Elle est désormais demandée,
+          ici et au chargement de l'écran, et nulle part ailleurs. */}
+      {/* `enCours` du composant Bouton impose le libellé « Envoi en cours… », qui
+          conviendrait à une soumission de formulaire, pas à une relève de cours. */}
+      <Bouton
+        variante="secondaire"
+        onClick={actualiser}
+        desactive={chargement}
+        aria-busy={chargement || undefined}
+      >
+        {chargement ? 'Actualisation…' : 'Actualiser'}
+      </Bouton>
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
@@ -180,8 +214,9 @@ export default function Patrimoine() {
     </div>
   );
 
-  // Le squelette reprend la composition de l'écran : un grand bloc, une zone de graphe,
-  // trois lignes, un cercle. Le contenu remplace la forme sans rien déplacer.
+  // Le squelette reprend la composition de l'écran : le bloc de patrimoine et la
+  // répartition côte à côte, le graphe sur toute la largeur, puis les trois chiffres de
+  // contexte. Le contenu remplace la forme sans rien déplacer.
   if (chargement && !portefeuille) {
     return (
       <div className="patrimoine" aria-busy="true">
@@ -192,19 +227,19 @@ export default function Patrimoine() {
         <div className="patrimoine__principal">
           <Squelette forme="bloc" />
           <Carte>
-            <Squelette forme="graphe" />
+            <Squelette forme="ligne" />
+            <Squelette forme="ligne" />
+            <Squelette forme="ligne" />
           </Carte>
         </div>
+        <Carte>
+          <Squelette forme="graphe" />
+        </Carte>
         <div className="patrimoine__contexte">
           <Squelette forme="ligne" />
           <Squelette forme="ligne" />
           <Squelette forme="ligne" />
         </div>
-        <Carte>
-          <Squelette forme="ligne" />
-          <Squelette forme="ligne" />
-          <Squelette forme="ligne" />
-        </Carte>
       </div>
     );
   }
@@ -220,7 +255,7 @@ export default function Patrimoine() {
           message={nature === 'api' ? erreur.message : undefined}
           libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
           surAction={
-            nature === 'session' ? () => naviguer('/connexion') : () => charger(periode)
+            nature === 'session' ? () => naviguer('/connexion') : () => actualiser()
           }
         />
       </div>
@@ -240,7 +275,7 @@ export default function Patrimoine() {
           }
           explication={
             premierLancement
-              ? "CapitAll réunit vos cryptomonnaies, devises, métaux et actions en une seule vue, calcule votre prix de revient et suit vos plus-values. Commencez par enregistrer une première position."
+              ? "WalletWatch réunit vos cryptomonnaies, devises, métaux et actions en une seule vue, calcule votre prix de revient et suit vos plus-values. Commencez par enregistrer une première position."
               : "Votre portefeuille ne contient aucune position. Enregistrez un achat pour voir apparaître votre patrimoine et son évolution."
           }
           libelleAction="Ajouter votre première position"
@@ -265,7 +300,7 @@ export default function Patrimoine() {
       {erreur && (
         <MessageErreur
           nature={natureDeLErreur(erreur)}
-          surAction={() => charger(periode)}
+          surAction={() => actualiser()}
           className="patrimoine__incident"
         />
       )}
@@ -318,32 +353,56 @@ export default function Patrimoine() {
             {portefeuille.pourcentage_variation !== null && (
               <Variation valeur={portefeuille.pourcentage_variation} />
             )}
-            <span className="patrimoine__depuis">depuis l'origine</span>
+            {/* Ce chiffre est la plus-value latente rapportée au coût des positions
+                encore détenues. Il portait la mention « depuis l'origine », que le
+                sélecteur de période emploie aussi pour l'évolution de la valeur suivie :
+                deux calculs différents sous un même mot, sur le même écran. */}
+            <span className="patrimoine__depuis">sur le coût des positions détenues</span>
           </p>
         </section>
 
-        <Carte className="patrimoine__evolution">
-          <SelecteurPeriode
-            periode={periode}
-            performances={historique?.performances ?? {}}
-            surChangement={setPeriode}
-            identifiantPanneau="panneau-evolution"
-          />
-          <div id="panneau-evolution" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
-            {/* Une courbe à un seul point ne trace rien et laisse croire à une perte de
-                données : un message prend sa place tant que le suivi est trop jeune. */}
-            {points.length < 2 ? (
-              <p className="patrimoine__evolution-absente">
-                L'évolution s'affichera après quelques jours de suivi.
-              </p>
-            ) : (
-              <Suspense fallback={<Squelette forme="graphe" />}>
-                <Courbe points={points} devise={devise} masque={masque} sens={sens} />
-              </Suspense>
-            )}
-          </div>
-        </Carte>
+        {/* Une répartition n'a de sens qu'à partir de deux positions. */}
+        {actifs.length > 1 && portefeuille.repartition.length > 0 && (
+          <Carte titre="Répartition" className="patrimoine__repartition">
+            <Repartition repartition={portefeuille.repartition} devise={devise} masque={masque} />
+          </Carte>
+        )}
       </div>
+
+      <Carte className="patrimoine__evolution">
+        <SelecteurPeriode
+          periode={periode}
+          performances={historique?.performances ?? {}}
+          surChangement={setPeriode}
+          identifiantPanneau="panneau-evolution"
+        />
+        <div id="panneau-evolution" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
+          {/* Une courbe à un seul point ne trace rien et laisse croire à une perte de
+              données : un message prend sa place tant que le suivi est trop jeune. */}
+          {points.length < 2 ? (
+            <p className="patrimoine__evolution-absente">
+              L'évolution s'affichera après quelques jours de suivi.
+            </p>
+          ) : (
+            <Suspense fallback={<Squelette forme="graphe" />}>
+              <Courbe points={points} devise={devise} masque={masque} sens={sens} />
+            </Suspense>
+          )}
+        </div>
+
+        {/* Le pas de la courbe n'est pas régulier, et le taire serait mentir sur un
+            chiffre. Le point du jour est relevé à la première actualisation de la
+            journée : deux points voisins peuvent être distants de trente-huit heures
+            autant que de vingt-quatre. Un relevé à heure fixe demanderait un processus
+            de fond, que D49 écarte du périmètre ; l'annoncer ne coûte rien. */}
+        {points.length >= 2 && (
+          <p className="patrimoine__legende">
+            Relevé quotidien, pris à l'heure de votre consultation : l'écart entre deux
+            points n'est pas exactement d'un jour.
+            {dernierReleve && ` Dernier relevé le ${dernierReleve}.`}
+          </p>
+        )}
+      </Carte>
 
       <dl className="patrimoine__contexte">
         <div className="patrimoine__ligne">
@@ -386,13 +445,6 @@ export default function Patrimoine() {
           </dd>
         </div>
       </dl>
-
-      {/* Une répartition n'a de sens qu'à partir de deux positions. */}
-      {actifs.length > 1 && portefeuille.repartition.length > 0 && (
-        <Carte titre="Répartition">
-          <Repartition repartition={portefeuille.repartition} devise={devise} masque={masque} />
-        </Carte>
-      )}
 
       {/* Le bloc disparaît entièrement lorsqu'aucun seuil n'est franchi : une carte
           vide intitulée « Seuils franchis » inquiéterait pour rien. */}

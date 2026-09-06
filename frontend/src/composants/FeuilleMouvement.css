@@ -56,12 +56,23 @@
 
 .mouvement__choix--achat.mouvement__choix--actif {
   color: var(--couleur-positif);
-  background: rgba(52, 199, 123, 0.16);
+  background: color-mix(in srgb, var(--couleur-positif) 16%, transparent);
 }
 
+/* Le fond portait encore rgba(240, 86, 79), l'ancien rouge abandonné quand le jeton est
+   passé à #F8645D : une valeur recopiée ne suit pas la correction du jeton dont elle
+   dérive. Même correctif qu'au bouton de danger. */
 .mouvement__choix--vente.mouvement__choix--actif {
   color: var(--couleur-negatif);
-  background: rgba(240, 86, 79, 0.16);
+  background: color-mix(in srgb, var(--couleur-negatif) 16%, transparent);
+}
+
+/* Une sortie non marchande n'est ni un gain ni une perte : elle emprunte le registre
+   neutre de l'avertissement plutôt que le rouge des ventes, qui annoncerait un
+   résultat que ce mouvement ne produit pas. */
+.mouvement__choix--sortie_non_marchande.mouvement__choix--actif {
+  color: var(--couleur-avertissement);
+  background: color-mix(in srgb, var(--couleur-avertissement) 16%, transparent);
 }
 
 /* Le bouton radio est masqué visuellement, jamais retiré de l'ordre de tabulation :

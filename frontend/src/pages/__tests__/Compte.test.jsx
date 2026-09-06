@@ -17,6 +17,7 @@ const PROFIL = {
 };
 
 const deconnecter = vi.fn();
+const remplacerJeton = vi.fn();
 
 let adresse;
 let etatDeNavigation;
@@ -34,6 +35,7 @@ function rendre() {
     utilisateur: { pseudo: 'Camille' },
     estConnecte: true,
     deconnecter,
+    remplacerJeton,
   });
 
   return render(
@@ -51,11 +53,11 @@ async function rendreCharge() {
 
 beforeEach(() => {
   vi.spyOn(api, 'profil').mockResolvedValue(PROFIL);
-  vi.spyOn(api, 'changerMotDePasse').mockResolvedValue(null);
+  vi.spyOn(api, 'changerMotDePasse').mockResolvedValue({ token: 'jeton-renouvele' });
   vi.spyOn(api, 'supprimerCompte').mockResolvedValue(null);
   vi.spyOn(api, 'exporterMouvements').mockResolvedValue({
     blob: new Blob(['date;type\r\n'], { type: 'text/csv' }),
-    nomFichier: 'capitall-mouvements-2026-08-27.csv',
+    nomFichier: 'walletwatch-mouvements-2026-08-27.csv',
   });
   // jsdom ne fournit pas ces deux fonctions : le téléchargement s'appuie dessus.
   URL.createObjectURL = vi.fn(() => 'blob:faux');
@@ -90,12 +92,16 @@ describe('composition', () => {
     expect(screen.getByText(/12 mai 2026/)).toBeTruthy();
   });
 
-  it('annonce la source des cours sans en inventer pour les actions', async () => {
+  it('annonce la source des cours de chaque classe, actions comprises', async () => {
     await rendreCharge();
 
     expect(screen.getByText(/Coinbase/)).toBeTruthy();
     expect(screen.getByText(/Frankfurter/)).toBeTruthy();
-    expect(screen.getByText(/Fournisseur non branché/)).toBeTruthy();
+    // Le texte affirmait que le fournisseur d'actions n'était pas branché. Il l'est
+    // depuis D85, et l'écran décrit maintenant la chaîne réelle ainsi que sa condition :
+    // la valorisation dépend d'une clé configurée côté serveur.
+    expect(screen.getByText(/Financial Modeling Prep/)).toBeTruthy();
+    expect(screen.getByText(/clé de fournisseur est configurée/)).toBeTruthy();
     expect(screen.getByText(/aucun conseil en investissement/)).toBeTruthy();
   });
 });
@@ -108,7 +114,7 @@ describe('changement de mot de passe', () => {
     await utilisateur.click(screen.getByRole('button', { name: 'Changer le mot de passe' }));
   }
 
-  it('transmet les deux mots de passe et confirme que la session reste ouverte', async () => {
+  it('transmet les deux mots de passe et retient le jeton renouvelé', async () => {
     const utilisateur = userEvent.setup();
     await rendreCharge();
 
@@ -122,7 +128,13 @@ describe('changement de mot de passe', () => {
       ancienMotDePasse: 'ancien-solide',
       nouveauMotDePasse: 'nouveau-solide',
     });
-    expect(await screen.findByText(/votre session reste ouverte/i)).toBeTruthy();
+
+    // Le changement pose une borne de révocation qui invalide le jeton courant : sans
+    // la reprise du jeton neuf, l'utilisateur serait déconnecté par l'opération qu'il
+    // vient de réussir.
+    expect(remplacerJeton).toHaveBeenCalledWith('jeton-renouvele');
+    expect(await screen.findByText(/cette session reste ouverte/i)).toBeTruthy();
+    expect(await screen.findByText(/autres sessions ont été fermées/i)).toBeTruthy();
   });
 
   // La spécification demande que le message se pose sur le champ concerné, et non en

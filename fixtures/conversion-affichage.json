@@ -1,6 +1,6 @@
 {
   "_objet": "Jeu d'essai partage de la conversion d'affichage (D69). Consomme par les tests du serveur et par ceux de l'interface : les deux implementations doivent rendre exactement les memes chaines.",
-  "_regle_arrondi": "arrondi au plus proche, les demis s'ecartant de zero, sur 2 decimales",
+  "_regle_arrondi": "arrondi au plus proche, les demis s'ecartant de zero. Le resultat porte autant de decimales que le montant recu, avec un plancher de 2 : la meme fonction sert les montants du patrimoine et les cours, qui descendent sous le centime.",
   "cas": [
     {
       "libelle": "montant courant",
@@ -55,6 +55,24 @@
       "montant": "12345.67",
       "taux": "1",
       "attendu": "12345.67"
+    },
+    {
+      "libelle": "cours sous le centime, la precision de l entree est conservee",
+      "montant": "0.0000123",
+      "taux": "1.1",
+      "attendu": "0.0000135"
+    },
+    {
+      "libelle": "cours au demi centime, qui valait zero avant le contrat numerique",
+      "montant": "0.005",
+      "taux": "1.1",
+      "attendu": "0.006"
+    },
+    {
+      "libelle": "cours tres faible converti vers l euro",
+      "montant": "0.00001234",
+      "taux": "0.85298",
+      "attendu": "0.00001053"
     }
   ]
 }

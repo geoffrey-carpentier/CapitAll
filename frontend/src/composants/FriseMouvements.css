@@ -105,6 +105,16 @@
   font-weight: var(--graisse-normale);
 }
 
+/* Les deux commandes d'un mouvement, sur une même ligne. L'écart les sépare assez pour
+   qu'un doigt ne prenne pas l'une pour l'autre : elles ne font pas la même chose, et
+   l'une des deux est irréversible. */
+.frise-mouvements__actions {
+  display: flex;
+  gap: var(--espace-4);
+  align-items: center;
+}
+
+.frise-mouvements__correction,
 .frise-mouvements__suppression {
   font-family: var(--police);
   font-size: var(--taille-legende);
@@ -117,6 +127,10 @@
   padding: var(--espace-3) 0;
   min-height: 44px;
   text-decoration: underline;
+}
+
+.frise-mouvements__correction:hover {
+  color: var(--couleur-accent);
 }
 
 .frise-mouvements__suppression:hover {
@@ -139,8 +153,27 @@
     padding-top: 0;
   }
 
+  .frise-mouvements__correction,
   .frise-mouvements__suppression {
     min-height: 0;
     padding: var(--espace-2) 0;
   }
+}
+
+/* Le montant réellement prélevé, rappelé entre parenthèses derrière sa contre-valeur en
+   euros. Il éclaire le chiffre principal sans lui disputer la lecture. */
+.frise-mouvements__frais-origine {
+  color: var(--couleur-texte-attenue);
+  font-size: var(--taille-legende);
+}
+
+/* Une sortie non marchande n'est ni un achat ni une vente : elle prend le registre
+   neutre de l'avertissement, qui n'annonce ni gain ni perte. */
+.frise-mouvements__evenement--sortie_non_marchande::before {
+  background: var(--couleur-avertissement);
+}
+
+.frise-mouvements__etiquette--sortie_non_marchande {
+  color: var(--couleur-avertissement);
+  border-color: var(--couleur-avertissement);
 }

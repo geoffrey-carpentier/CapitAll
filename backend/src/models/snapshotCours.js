@@ -32,8 +32,8 @@ async function enregistrerSiAbsent(utilisateurId, positions) {
   }
 
   const { rows } = await query(
-    `INSERT INTO snapshot_cours (actif_id, date_snapshot, cours_eur, quantite)
-     SELECT a.id, CURRENT_DATE, entree.cours_eur, entree.quantite
+    `INSERT INTO snapshot_cours (actif_id, date_snapshot, cours_eur, quantite, heure_releve)
+     SELECT a.id, CURRENT_DATE, entree.cours_eur, entree.quantite, now()
      FROM unnest($2::integer[], $3::numeric[], $4::numeric[])
           AS entree(actif_id, cours_eur, quantite)
      JOIN actif a ON a.id = entree.actif_id AND a.utilisateur_id = $1
@@ -65,7 +65,8 @@ async function listerParActif(actifId, utilisateurId, nombreDeJours) {
   const { rows } = await query(
     `SELECT to_char(sc.date_snapshot, 'YYYY-MM-DD') AS date_snapshot,
             sc.cours_eur,
-            sc.quantite
+            sc.quantite,
+            sc.heure_releve
      FROM snapshot_cours sc
      JOIN actif a ON a.id = sc.actif_id
      WHERE sc.actif_id = $1 AND a.utilisateur_id = $2 ${conditionDeDate}

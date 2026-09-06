@@ -13,11 +13,17 @@ import { useSearchParams } from 'react-router-dom';
 // actif présélectionné, `?mouvement=12` l'ouvre sur la position 12. C'est la même
 // convention que les filtres et le tri de l'écran des positions.
 //
+// La correction d'un mouvement enregistré (D51 révisée) suit la même règle et ajoute
+// `?mouvement=12&correction=7` : la feuille s'ouvre sur la position 12 pour corriger son
+// mouvement 7. Deux paramètres plutôt qu'un seul surchargé, parce que la feuille a
+// besoin des deux identifiants et qu'une valeur composée obligerait à la découper.
+//
 // L'ouverture et la fermeture remplacent l'entrée d'historique au lieu d'en empiler une
 // nouvelle : le bouton de retour du navigateur quitte alors l'écran, comme on l'attend,
 // plutôt que de rejouer l'ouverture et la fermeture de la feuille.
 
 export const PARAMETRE_MOUVEMENT = 'mouvement';
+export const PARAMETRE_CORRECTION = 'correction';
 export const MOUVEMENT_NOUVEAU = 'nouveau';
 
 export function useMouvement() {
@@ -33,9 +39,20 @@ export function useMouvement() {
     [parametres, setParametres]
   );
 
+  const corriger = useCallback(
+    (actifId, idMouvement) => {
+      const suivants = new URLSearchParams(parametres);
+      suivants.set(PARAMETRE_MOUVEMENT, String(actifId));
+      suivants.set(PARAMETRE_CORRECTION, String(idMouvement));
+      setParametres(suivants, { replace: true });
+    },
+    [parametres, setParametres]
+  );
+
   const fermer = useCallback(() => {
     const suivants = new URLSearchParams(parametres);
     suivants.delete(PARAMETRE_MOUVEMENT);
+    suivants.delete(PARAMETRE_CORRECTION);
     setParametres(suivants, { replace: true });
   }, [parametres, setParametres]);
 
@@ -43,7 +60,10 @@ export function useMouvement() {
     ouvert: ouvert !== null,
     // Un identifiant d'actif, ou null lorsque la feuille s'ouvre sans présélection.
     actifInitialId: ouvert === MOUVEMENT_NOUVEAU ? null : ouvert,
+    // Identifiant du mouvement à corriger, ou null lorsque la feuille sert à en créer un.
+    idCorrection: parametres.get(PARAMETRE_CORRECTION),
     ouvrir,
+    corriger,
     fermer,
   };
 }

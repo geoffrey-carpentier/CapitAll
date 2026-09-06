@@ -1,5 +1,11 @@
 // Orchestration du portefeuille consolidé : charge les données de l'utilisateur,
-// demande les cours, applique le moteur de calcul, consolide, puis historise.
+// demande les cours, applique le moteur de calcul et consolide.
+//
+// Deux entrées pour un même calcul. `obtenirPortefeuille` lit et ne fait que lire.
+// `actualiserPortefeuille` y ajoute les deux effets attachés à la consultation du
+// tableau de bord — l'écriture du point du jour (D49) et l'évaluation des seuils (D50).
+// La séparation est le fond de la correction : une lecture ne doit rien changer, et
+// tout, du préchargeur au bouton de rechargement, rejoue les lectures.
 //
 // Le moteur (calculPortefeuille.js) reste pur : c'est ici, et seulement ici, que la
 // base et le service de cours sont sollicités.
@@ -19,7 +25,13 @@ const {
   calculerPerformances,
   performanceSurPeriode,
 } = require('./calculPortefeuille');
-const { ECHELLE_PRU, versUnites, versChaine, diviser } = require('../utils/decimal');
+const {
+  ECHELLE_TAUX,
+  ECHELLE_QUANTITE,
+  versUnites,
+  versChaine,
+  diviser,
+} = require('../utils/decimal');
 const { ErreurIntrouvable } = require('../erreurs');
 
 // Fenêtre de la tendance affichée en regard de chaque position dans le tableau des
@@ -42,7 +54,7 @@ function creerServicePortefeuille({
     const actifs = await depotActifs.listerParUtilisateur(utilisateurId);
 
     if (actifs.length === 0) {
-      return { positions: [], coursIndisponibles: [] };
+      return { positions: [], coursIndisponibles: [], capitalComplet: true };
     }
 
     // Un seul aller-retour pour tous les cours : getCoursMultiples déduplique les
@@ -52,40 +64,60 @@ function creerServicePortefeuille({
     );
     const coursParSymbole = new Map(cours.map((c) => [c.symbole, c]));
 
+    // Une seule requête pour tous les mouvements du compte, regroupés ensuite en
+    // mémoire. La lecture par actif en déclenchait une par ligne du tableau : sur un
+    // portefeuille de vingt positions, vingt allers-retours là où un seul suffit. Le
+    // moteur retrie de toute façon chaque série chronologiquement (règle 6 de D54),
+    // l'ordre de la requête n'a donc pas à être conservé.
+    const mouvements = await depotTransactions.listerParUtilisateur(utilisateurId);
+    const mouvementsParActif = new Map();
+    for (const mouvement of mouvements) {
+      const serie = mouvementsParActif.get(mouvement.actif_id) ?? [];
+      serie.push(mouvement);
+      mouvementsParActif.set(mouvement.actif_id, serie);
+    }
+
     const coursIndisponibles = [];
 
-    const positions = await Promise.all(
-      actifs.map(async (actif) => {
-        const transactions = await depotTransactions.listerParActifEtUtilisateur(
-          actif.id,
-          utilisateurId
-        );
+    const positions = actifs.map((actif) => {
+      const position = calculerPosition(mouvementsParActif.get(actif.id) ?? []);
+      const coursActif = coursParSymbole.get(actif.symbole);
 
-        const position = calculerPosition(transactions);
-        const coursActif = coursParSymbole.get(actif.symbole);
+      // Un cours manquant n'invalide pas la réponse : l'actif est renvoyé sans
+      // valorisation et son symbole est signalé au front.
+      if (!coursActif || coursActif.erreur) {
+        coursIndisponibles.push(actif.symbole);
+      }
 
-        // Un cours manquant n'invalide pas la réponse : l'actif est renvoyé sans
-        // valorisation et son symbole est signalé au front.
-        if (!coursActif || coursActif.erreur) {
-          coursIndisponibles.push(actif.symbole);
-        }
+      const valorisee = valoriser(position, coursActif?.erreur ? null : coursActif?.cours_eur);
 
-        const valorisee = valoriser(position, coursActif?.erreur ? null : coursActif?.cours_eur);
+      return {
+        id: actif.id,
+        type: actif.type,
+        symbole: actif.symbole,
+        nom: actif.nom,
+        cours_eur: coursActif?.erreur ? null : (coursActif?.cours_eur ?? null),
+        source_cours: coursActif?.erreur ? null : (coursActif?.source ?? null),
+        horodatage_cours: coursActif?.erreur ? null : (coursActif?.horodatage ?? null),
+        ...valorisee,
+      };
+    });
 
-        return {
-          id: actif.id,
-          type: actif.type,
-          symbole: actif.symbole,
-          nom: actif.nom,
-          cours_eur: coursActif?.erreur ? null : (coursActif?.cours_eur ?? null),
-          source_cours: coursActif?.erreur ? null : (coursActif?.source ?? null),
-          horodatage_cours: coursActif?.erreur ? null : (coursActif?.horodatage ?? null),
-          ...valorisee,
-        };
-      })
+    return { positions, coursIndisponibles, capitalComplet: capitalEstComplet(positions) };
+  }
+
+  // Le total consolidé est-il le capital, ou seulement une part de celui-ci ?
+  //
+  // La question n'est pas « manque-t-il un cours ? » mais « manque-t-il un cours qui
+  // compte ? ». Une position soldée ne pèse rien quel que soit son cours : la déclarer
+  // lacunaire priverait l'utilisateur de son capital pour une ligne qui vaut zéro. Seule
+  // une position réellement détenue et non valorisée rend le total incomplet.
+  function capitalEstComplet(positions) {
+    return positions.every(
+      (position) =>
+        position.cours_eur !== null ||
+        versUnites(position.quantite_detenue ?? '0', ECHELLE_QUANTITE) === 0n
     );
-
-    return { positions, coursIndisponibles };
   }
 
   // Taux de change exposé pour la bascule d'affichage euro/dollar (D43).
@@ -101,11 +133,20 @@ function creerServicePortefeuille({
       // getCours rend la valeur d'un dollar en euros ; le front convertit des euros
       // vers des dollars, il a donc besoin de l'inverse. Les deux sens sont exposés
       // pour lever toute ambiguïté sur celui à appliquer.
-      const usdVersEur = versUnites(cours.cours_eur, ECHELLE_PRU);
+      const usdVersEur = versUnites(cours.cours_eur, ECHELLE_TAUX);
       const eurVersUsd =
         usdVersEur === 0n
           ? null
-          : versChaine(diviser(versUnites('1', ECHELLE_PRU), usdVersEur, ECHELLE_PRU), ECHELLE_PRU);
+          : versChaine(
+              diviser(
+                versUnites('1', ECHELLE_TAUX),
+                ECHELLE_TAUX,
+                usdVersEur,
+                ECHELLE_TAUX,
+                ECHELLE_TAUX
+              ),
+              ECHELLE_TAUX
+            );
 
       return {
         eur_vers_usd: eurVersUsd,
@@ -118,13 +159,48 @@ function creerServicePortefeuille({
     }
   }
 
+  // Lecture du portefeuille, sans aucune écriture.
+  //
+  // C'est la forme qu'aurait toujours dû avoir cette fonction. Elle historisait et
+  // marquait les alertes à chaque appel : trois écrans l'appelaient, dont celui des
+  // seuils, que le commentaire d'`obtenirValeursObservees` prétendait pourtant tenir à
+  // l'écart de ces effets. Un préchargeur de navigateur, un antivirus qui rejoue une
+  // requête ou un simple rafraîchissement suffisaient à déclencher les mêmes écritures.
   async function obtenirPortefeuille(utilisateurId) {
-    const { positions, coursIndisponibles } = await construirePositions(utilisateurId);
+    return composerPortefeuille(utilisateurId, { avecEffets: false });
+  }
+
+  // Actualisation : la même lecture, augmentée des deux effets que D49 et D50 attachent
+  // à la consultation du tableau de bord — l'écriture paresseuse du point du jour et
+  // l'évaluation des seuils.
+  //
+  // Les deux décisions sont conservées telles quelles : aucune tâche planifiée n'est
+  // introduite, c'est toujours la consultation qui déclenche. Seul le déclencheur change
+  // de nature — une commande explicite, que rien ne rejoue à l'insu de l'utilisateur, au
+  // lieu d'une lecture que tout peut rejouer.
+  async function actualiserPortefeuille(utilisateurId) {
+    return composerPortefeuille(utilisateurId, { avecEffets: true });
+  }
+
+  async function composerPortefeuille(utilisateurId, { avecEffets }) {
+    const { positions, coursIndisponibles, capitalComplet } =
+      await construirePositions(utilisateurId);
     const totaux = consolider(positions);
     const tauxAffichage = await obtenirTauxAffichage();
 
-    await historiser(utilisateurId, totaux.valeur_totale, positions, coursIndisponibles);
-    const alertesDeclenchees = await traiterAlertes(utilisateurId, totaux.valeur_totale, positions);
+    // Sur une lecture, la liste part vide : aucune alerte n'a été évaluée, et annoncer
+    // un franchissement qu'on n'a pas cherché serait faux. Le tableau de bord, qui seul
+    // affiche ces franchissements, passe par l'actualisation.
+    let alertesDeclenchees = [];
+
+    if (avecEffets) {
+      await historiser(utilisateurId, totaux.valeur_totale, positions, capitalComplet);
+      alertesDeclenchees = await traiterAlertes(
+        utilisateurId,
+        capitalComplet ? totaux.valeur_totale : null,
+        positions
+      );
+    }
 
     // L'historisation précède la lecture des tendances : le point du jour vient d'être
     // écrit et doit compter dans la fenêtre, sans quoi la tendance affichée s'arrêterait
@@ -138,6 +214,10 @@ function creerServicePortefeuille({
         tendance_30j: tendances.get(position.id) ?? null,
       })),
       cours_indisponibles: coursIndisponibles,
+      // Le front en a besoin pour qualifier le montant dominant : un sous-total reste
+      // utile à voir, à condition d'être annoncé comme tel plutôt que présenté comme le
+      // patrimoine.
+      capital_complet: capitalComplet,
       taux_affichage: tauxAffichage,
       alertes_declenchees: alertesDeclenchees,
     };
@@ -148,6 +228,17 @@ function creerServicePortefeuille({
   // Comme l'historisation, c'est un effet de bord : un échec est journalisé et la
   // réponse part quand même. Priver l'utilisateur de son portefeuille parce qu'une
   // alerte n'a pas pu être évaluée serait disproportionné.
+  //
+  // capitalTotal vaut null lorsque la couverture est incomplète. D56 prévoit qu'une
+  // alerte dont la valeur observée est indisponible n'est pas évaluée du tout, et
+  // evaluerAlertes applique cette règle ; encore faut-il lui dire que la valeur est
+  // indisponible. Un sous-total transmis comme s'il était le capital rendait la garde
+  // inatteignable pour la cible capital_total : un seuil bas se déclenchait dès qu'un
+  // fournisseur tombait, sur un patrimoine amputé de la position manquante.
+  //
+  // Les alertes portant sur un actif restent évaluées normalement : leur valeur
+  // observée est le cours de cet actif, pas le capital, et elle est disponible ou non
+  // indépendamment des autres positions.
   async function traiterAlertes(utilisateurId, capitalTotal, positions) {
     try {
       const actives = await depotAlertes.listerActivesParUtilisateur(utilisateurId);
@@ -176,24 +267,38 @@ function creerServicePortefeuille({
     }
   }
 
-  // Écriture paresseuse du snapshot du jour (D49) : déclenchée par la consultation,
-  // sans tâche planifiée à maintenir.
-  async function historiser(utilisateurId, valeurTotale, positions, coursIndisponibles) {
-    // Un portefeuille dont aucun cours n'a pu être obtenu vaudrait zéro dans
-    // l'historique. Un trou dans la courbe est préférable à un point faux.
-    if (positions.length > 0 && coursIndisponibles.length === positions.length) {
+  // Écriture paresseuse du snapshot du jour (D49) : déclenchée par l'actualisation du
+  // tableau de bord, sans tâche planifiée à maintenir.
+  //
+  // Le point porte désormais son heure de relevé. Elle ne corrige pas l'irrégularité du
+  // pas — seul un relevé à heure fixe le ferait, et il demanderait le processus de fond
+  // que D49 écarte — mais elle la rend lisible : l'interface annonce un relevé à l'heure
+  // de la consultation au lieu de laisser croire à une clôture quotidienne.
+  async function historiser(utilisateurId, valeurTotale, positions, capitalComplet) {
+    // Le total du jour n'est enregistré que s'il est le capital, et non une part de
+    // celui-ci. Le garde-fou précédent ne refusait que le cas où *tous* les cours
+    // manquaient : une seule position non valorisée suffisait à faire entrer dans la
+    // série un point inférieur à la réalité, indiscernable d'une baisse.
+    //
+    // L'unicité (utilisateur_id, date_snapshot) aggravait la conséquence. Le point du
+    // jour s'écrit à la première consultation, et ON CONFLICT DO NOTHING laisse les
+    // suivantes sans effet : un sous-total écrit le matin, alors qu'un fournisseur était
+    // en panne, restait figé pour la journée entière même une fois le cours revenu.
+    //
+    // Un trou dans la courbe reste préférable à un point faux.
+    if (capitalComplet) {
+      try {
+        await snapshots.enregistrerSiAbsent(utilisateurId, valeurTotale);
+      } catch (erreur) {
+        // L'historisation est un effet de bord : son échec ne doit jamais priver
+        // l'utilisateur de son portefeuille.
+        console.error("Enregistrement du snapshot impossible :", erreur.message);
+      }
+    } else {
       console.error(
-        "Snapshot non enregistré : aucun cours disponible, la valeur du jour serait fausse."
+        'Snapshot de valorisation non enregistré : au moins une position détenue est sans ' +
+          'cours, la valeur du jour serait inférieure au patrimoine réel.'
       );
-      return;
-    }
-
-    try {
-      await snapshots.enregistrerSiAbsent(utilisateurId, valeurTotale);
-    } catch (erreur) {
-      // L'historisation est un effet de bord : son échec ne doit jamais priver
-      // l'utilisateur de son portefeuille.
-      console.error("Enregistrement du snapshot impossible :", erreur.message);
     }
 
     // Historique par position (D81), alimenté par le même déclencheur et au même
@@ -201,6 +306,11 @@ function creerServicePortefeuille({
     // introduite. Les positions sans cours sont écartées par le modèle plutôt que
     // enregistrées à zéro, pour la même raison qu'au-dessus : un trou dans la courbe
     // est préférable à un point faux.
+    //
+    // Cette écriture ne dépend pas de la complétude du total, et c'est délibéré. Le
+    // cours d'une position obtenu aujourd'hui ne se retrouvera plus demain ; renoncer à
+    // le conserver parce qu'une *autre* position manque à l'appel perdrait une donnée
+    // exacte pour une raison qui ne la concerne pas. Chaque série est indépendante.
     try {
       await snapshotsCours.enregistrerSiAbsent(utilisateurId, positions);
     } catch (erreur) {
@@ -320,17 +430,33 @@ function creerServicePortefeuille({
   // alertes, déjà faits au chargement du tableau de bord, D50). Un seuil ne fait que
   // lire ces valeurs pour afficher son écart restant, il ne les fait pas exister.
   async function obtenirValeursObservees(utilisateurId) {
-    const { positions } = await construirePositions(utilisateurId);
+    const { positions, coursIndisponibles, capitalComplet } =
+      await construirePositions(utilisateurId);
     const totaux = consolider(positions);
 
     const coursParActif = Object.fromEntries(
       positions.filter((position) => position.cours_eur !== null).map((p) => [p.id, p.cours_eur])
     );
 
-    return { capitalTotal: totaux.valeur_totale, coursParActif };
+    // La complétude accompagne le total partout où il circule, pas seulement au tableau
+    // de bord. L'écran Seuils lit ces valeurs pour afficher l'écart restant avant
+    // franchissement : sans ce drapeau, il présentait un sous-total comme le patrimoine,
+    // et l'écart annoncé portait sur une valeur qui n'était pas celle du seuil.
+    return {
+      capitalTotal: totaux.valeur_totale,
+      capitalComplet,
+      coursIndisponibles,
+      coursParActif,
+    };
   }
 
-  return { obtenirPortefeuille, obtenirDetailActif, obtenirHistorique, obtenirValeursObservees };
+  return {
+    obtenirPortefeuille,
+    actualiserPortefeuille,
+    obtenirDetailActif,
+    obtenirHistorique,
+    obtenirValeursObservees,
+  };
 }
 
 module.exports = { creerServicePortefeuille };

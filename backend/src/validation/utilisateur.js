@@ -44,6 +44,34 @@ const schemaConnexion = z
   })
   .strict();
 
+// Demande de récupération : l'adresse seule. La réponse est la même que l'adresse
+// corresponde ou non à un compte, ce qui interdit d'en faire un outil d'énumération.
+const schemaDemandeRecuperation = z.object({ email }).strict();
+
+// Longueur du jeton rendu par le service : trente-deux octets en hexadécimal. Le motif
+// refuse tout ce qui n'a pas cette forme avant même d'interroger la base.
+const LONGUEUR_JETON_HEXADECIMAL = 64;
+
+const schemaReinitialisation = z
+  .object({
+    jeton: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .length(LONGUEUR_JETON_HEXADECIMAL, 'Cette demande de réinitialisation est invalide.')
+      .regex(/^[0-9a-f]+$/, 'Cette demande de réinitialisation est invalide.'),
+    // Le nouveau mot de passe obéit à la règle de l'inscription : une réinitialisation
+    // ne doit pas être un chemin pour poser un mot de passe plus faible qu'à la création.
+    nouveauMotDePasse: motDePasse,
+  })
+  .strict();
+
 // motDePasse est exporté pour que le changement de mot de passe (validation/compte.js)
 // applique exactement la même règle de longueur qu'à l'inscription, sans la recopier.
-module.exports = { schemaInscription, schemaConnexion, motDePasse };
+module.exports = {
+  schemaInscription,
+  schemaConnexion,
+  schemaDemandeRecuperation,
+  schemaReinitialisation,
+  motDePasse,
+};

@@ -27,7 +27,7 @@ function creerReponse() {
   };
 }
 
-const requete = { method: 'PATCH', originalUrl: '/api/compte/mot-de-passe' };
+const requete = { method: 'PATCH', originalUrl: '/api/compte/mot-de-passe', path: '/api/compte/mot-de-passe' };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -84,5 +84,60 @@ describe('erreurs inattendues', () => {
 
     expect(res.statut).toBe(500);
     expect(res.corps).toEqual({ erreur: 'Une erreur interne est survenue.' });
+  });
+});
+
+// Ce que le journal du serveur ne doit pas contenir.
+//
+// Le gestionnaire est le seul endroit du back-end qui journalise une erreur inattendue :
+// c'est donc ici, et nulle part ailleurs, que se joue ce qui finit dans les journaux.
+describe('ce qui part au journal', () => {
+  function capturer(erreur, req = requete) {
+    const lignes = [];
+    vi.spyOn(console, 'error').mockImplementation((...args) => lignes.push(args.join(' ')));
+    gestionErreurs(erreur, req, creerReponse(), vi.fn());
+    return lignes.join(' | ');
+  }
+
+  it('ne recopie pas la chaîne de requête', () => {
+    // Elle porte des valeurs saisies par l'appelant. Le chemin suffit à situer
+    // l'incident, et c'est tout ce qu'on en attend.
+    const avecParametres = {
+      method: 'GET',
+      path: '/api/portefeuille/historique',
+      originalUrl: '/api/portefeuille/historique?jours=30&trace=valeur-saisie',
+    };
+
+    const journal = capturer(new Error('échec'), avecParametres);
+
+    expect(journal).toContain('/api/portefeuille/historique');
+    expect(journal).not.toContain('valeur-saisie');
+    expect(journal).not.toContain('jours=30');
+  });
+
+  it("ne recopie pas le détail d'une erreur PostgreSQL", () => {
+    // Une violation d'unicité rend un `detail` de la forme
+    // « Key (email)=(camille@exemple.test) already exists ». Journaliser l'objet entier
+    // déposait donc une adresse d'utilisateur dans les journaux à chaque conflit.
+    const erreurSql = new Error('duplicate key value violates unique constraint');
+    erreurSql.code = '23505';
+    erreurSql.detail = 'Key (email)=(camille@exemple.test) already exists.';
+    erreurSql.where = 'SQL statement "INSERT INTO utilisateur ..."';
+
+    const journal = capturer(erreurSql);
+
+    expect(journal).toContain('duplicate key value');
+    expect(journal).not.toContain('camille@exemple.test');
+    expect(journal).not.toContain('INSERT INTO utilisateur');
+  });
+
+  it('conserve de quoi diagnostiquer', () => {
+    // Expurger n'est pas taire : sans le message ni la pile, l'incident deviendrait
+    // introuvable.
+    const journal = capturer(new TypeError('lecture de undefined'));
+
+    expect(journal).toContain('TypeError');
+    expect(journal).toContain('lecture de undefined');
+    expect(journal).toContain('PATCH');
   });
 });

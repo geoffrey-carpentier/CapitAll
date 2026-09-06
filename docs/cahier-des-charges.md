@@ -6,6 +6,7 @@
 | 1.1 | 21/07/2026 | fournisseurs de cours révisés, fiche d'actif enrichie |
 | 1.2 | 29/07/2026 | plus-value réalisée, bascule d'affichage euro/dollar, routes du portefeuille |
 | 2.0 | 30/07/2026 | restructuration complète : acteurs, règles de gestion, exigences non fonctionnelles détaillées, critères de recette, matrice de traçabilité, glossaire |
+| 2.1 | 31/08/2026 | alignement sur le MVP livré : actions courantes retenues, annonces et administration reportées en V2 (D85), contrat API constaté |
 
 ## 1. Objet et portée du document
 
@@ -42,11 +43,12 @@ Comment offrir à un particulier une vue consolidée, à jour et fiable de son p
 | Acteur | Description | Ce qu'il peut faire | Ce qu'il ne peut pas faire |
 |---|---|---|---|
 | **Visiteur** | personne non authentifiée | créer un compte, se connecter | accéder à la moindre donnée patrimoniale |
-| **Utilisateur** | particulier gérant un patrimoine diversifié, à l'aise avec une application web, sans formation financière particulière | gérer ses actifs, ses transactions, ses alertes ; consulter son portefeuille et les annonces | accéder aux données d'un autre utilisateur |
-| **Administrateur** | responsable du service | publier et gérer les annonces, lister et désactiver des comptes | consulter les portefeuilles, transactions ou alertes d'autrui |
+| **Utilisateur** | particulier gérant un patrimoine diversifié, à l'aise avec une application web, sans formation financière particulière | gérer ses actifs, ses transactions, ses alertes ; consulter son portefeuille | accéder aux données d'un autre utilisateur |
 | **Fournisseur de cours** | acteur externe, non humain | fournir un cours sur interrogation | rien d'autre : l'application ne lui transmet aucune donnée |
 
-Le modèle de rôles est volontairement minimal. Deux rôles suffisent au besoin réel, et le rôle d'administration est conçu à moindre privilège strict : il ouvre des capacités de gestion du service, jamais d'accès aux données patrimoniales (D23).
+Le schéma conserve les rôles `utilisateur` et `admin`, mais le MVP ne monte aucun
+parcours d'administration. Un compte `admin` reste cloisonné à ses propres données
+patrimoniales ; les capacités de gestion du service sont reportées en version 2 (D85).
 
 ## 3. Périmètre
 
@@ -63,9 +65,7 @@ Le modèle de rôles est volontairement minimal. Deux rôles suffisent au besoin
 | Affichage | bascule euro ou dollar, à l'affichage uniquement | D43 |
 | Alertes | seuils sur un actif ou sur le capital total, évaluation automatique | D15, D50, D56 |
 | Historique | instantané de valorisation journalier | D16, D49 |
-| Annonces | fil d'annonces internes publiées par l'administration | D22 |
-| Actions | liste blanche de valeurs américaines, fiche d'actif enrichie | D20, D26, D27 |
-| Administration | gestion des annonces, liste et désactivation de comptes | D23, D60 |
+| Actions | cours courant d'une liste blanche de valeurs américaines, avec repli entre fournisseurs | D20, D26, D27, D85 |
 
 ### 3.2 Fonctionnalités écartées
 
@@ -80,6 +80,9 @@ Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
 | Notifications par courriel ou notification poussée | infrastructure supplémentaire sans valeur ajoutée pour le besoin exprimé |
 | Publications par les utilisateurs | le produit n'est pas un réseau social |
 | Widget de marché externe embarqué | dépendance réseau supplémentaire et exception de sécurité contraires aux principes retenus (D24) |
+| Annonces internes | table conservée dans le socle, mais aucune route ni interface dans le MVP ; report en version 2 (D85) |
+| Administration du service | rôle et intergiciel conservés, mais routes et interface reportées en version 2 faute d'un lot rapide et sans impact (D85) |
+| Fiche action enrichie | le MVP livre le cours courant ; les métadonnées de marché restent une évolution (D85) |
 
 ### 3.3 Hypothèses retenues
 
@@ -111,6 +114,13 @@ Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
 ### 4.3 Gestion des transactions
 
 - En tant qu'utilisateur connecté, je veux enregistrer un achat ou une vente en précisant la quantité, le prix unitaire, les frais et la date, afin que mon prix de revient et mes plus-values soient recalculés. Contraintes : quantité strictement positive, prix positif ou nul, frais positifs ou nuls, date non postérieure au jour courant, impossibilité de vendre plus que la quantité détenue.
+- En tant qu'utilisateur connecté, je veux indiquer les frais dans l'unité où ma plateforme les a réellement prélevés — euros, actif échangé, ou autre actif — afin que mon relevé dise ce qui m'a été retenu et non seulement ce que cela valait. La contre-valeur en euros est calculée au prix de l'opération lorsque les frais sont retenus dans l'actif échangé, et demandée explicitement sinon.
+- En tant qu'utilisateur connecté, je veux enregistrer un transfert ou un retrait vers un compte qui m'appartient, afin que ma quantité détenue reste juste sans qu'une vente que je n'ai pas faite apparaisse dans mes plus-values.
+- En tant qu'utilisateur connecté, je veux corriger un mouvement déjà enregistré, afin de réparer une saisie fautive sans détruire les mouvements qui en dépendent. Contraintes : la correction est refusée si elle rend un mouvement postérieur impossible, l'actif du mouvement n'est pas modifiable, et un refus ne modifie rien.
+- En tant qu'utilisateur connecté, je veux renommer une position, afin que la liste porte les noms que j'y reconnais. Le symbole et la classe restent inchangés.
+- En tant qu'utilisateur connecté, je veux savoir quels symboles l'application accepte avant de saisir, afin de ne pas découvrir un refus après coup.
+- En tant que visiteur ayant oublié mon mot de passe, je veux en choisir un nouveau moi-même, afin de retrouver l'accès à mon compte sans qu'un administrateur ait à intervenir sur mes données (D23).
+- En tant qu'utilisateur, je veux que changer mon mot de passe ferme mes autres sessions, afin qu'un accès dérobé cesse au moment où je réagis, sans que la session depuis laquelle j'agis soit interrompue.
 - En tant qu'utilisateur connecté, je veux supprimer une transaction saisie par erreur, afin que mes calculs redeviennent justes. Sans cette possibilité, une saisie erronée fausserait définitivement le prix de revient (D51).
 
 ### 4.4 Portefeuille et valorisation
@@ -127,14 +137,11 @@ Un périmètre se définit autant par ce qu'il exclut que par ce qu'il inclut.
 - En tant qu'utilisateur connecté, je veux consulter mes alertes et savoir lesquelles ont été franchies, ainsi que la date du franchissement.
 - En tant qu'utilisateur connecté, je veux désactiver une alerte, afin de garder une liste pertinente.
 
-### 4.6 Annonces
+### 4.6 Pistes de version 2 : annonces et administration
 
-- En tant qu'utilisateur connecté, je veux consulter les annonces publiées par l'administration, afin d'être informé des évolutions du service. Contrainte : lecture seule, les annonces épinglées apparaissant en tête.
-
-### 4.7 Administration
-
-- En tant qu'administrateur, je veux publier, modifier, épingler et supprimer des annonces, afin de communiquer avec les utilisateurs. Contraintes : titre et contenu obligatoires, action réservée au rôle d'administration.
-- En tant qu'administrateur, je veux lister les comptes et désactiver un compte en cas d'abus, afin d'assurer la gestion du service. Contraintes : aucune donnée patrimoniale n'est visible dans cette liste ; la désactivation est logique et réversible, elle ne supprime aucune donnée et empêche seulement la connexion (D60). Le refus intervient après la vérification du mot de passe, afin de ne pas révéler par un temps de réponse plus court qu'un compte existe.
+Ces récits — consultation et publication d'annonces, liste et désactivation de
+comptes — sont conservés comme pistes de version 2. Ils ne constituent pas des
+critères de recette du MVP livré (D85).
 
 ### 4.8 Règles de gestion
 
@@ -144,10 +151,15 @@ Ces règles s'appliquent en toute circonstance et sont vérifiées côté serveu
 |---|---|---|
 | RG1 | Un utilisateur n'accède qu'à ses propres données, en lecture comme en écriture | toutes les ressources patrimoniales |
 | RG2 | Un même symbole ne peut être suivi deux fois par le même utilisateur | actifs |
-| RG3 | On ne peut pas vendre une quantité supérieure à celle détenue | transactions |
+| RG3 | On ne peut pas faire sortir d'une position une quantité supérieure à celle détenue, que ce soit par vente ou par sortie non marchande | transactions |
 | RG4 | Une transaction ne peut pas être datée dans le futur | transactions |
 | RG5 | Le prix de revient et les plus-values ne sont jamais conservés en base, ils sont recalculés depuis les transactions | valorisation |
-| RG6 | Le prix de revient intègre les frais d'achat ; une vente ne le modifie pas | valorisation |
+| RG6 | Le prix de revient intègre les frais d'achat, quelle que soit l'unité dans laquelle ils ont été prélevés ; une vente ne le modifie pas | valorisation |
+| RG6 bis | Une sortie non marchande — transfert, retrait — retire de la quantité sans dégager de produit : elle ne modifie pas le prix de revient unitaire et ne produit aucune plus-value réalisée | valorisation |
+| RG6 ter | Un mouvement peut être corrigé, jamais déplacé vers une autre position ; une correction qui rendrait un mouvement postérieur impossible est refusée sans rien écrire | transactions |
+| RG12 | Un jeton reste soumis à l'état du compte : un compte désactivé ou supprimé, et un jeton émis avant la borne de révocation du compte, ferment la session immédiatement | accès |
+| RG13 | Les tentatives de connexion sont plafonnées par adresse électronique et non par adresse réseau ; une connexion réussie remet le compteur à zéro | accès |
+| RG14 | Une clé de réinitialisation vaut une heure, ne sert qu'une fois, et n'est jamais conservée en clair | accès |
 | RG7 | Les transactions sont prises en compte dans l'ordre chronologique, indépendamment de leur ordre de saisie | valorisation |
 | RG8 | Un instantané de valorisation est unique par utilisateur et par jour | historique |
 | RG9 | Une alerte cible soit un actif, soit le capital total, jamais les deux ni aucun des deux | alertes |
@@ -270,6 +282,7 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 
 | Méthode | Route | Accès | Description | Codes de statut |
 |---|---|---|---|---|
+| GET | `/api/sante` | public | état de santé HTTP de l'API | 200 |
 | POST | `/api/auth/inscription` | public | création de compte | 201, 400, 409 |
 | POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401, 403 |
 | PATCH | `/api/compte/mot-de-passe` | authentifié | changement de mot de passe, ancien exigé | 204, 400, 401 |
@@ -283,24 +296,19 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 | DELETE | `/api/actifs/:id` | propriétaire | suppression, en cascade sur les transactions et alertes liées | 204, 401, 404 |
 | POST | `/api/actifs/:id/transactions` | propriétaire | enregistrement d'une transaction | 201, 400, 401, 404 |
 | POST | `/api/actifs/:id/transactions/simulation` | propriétaire | effet d'une transaction sur la position, avant enregistrement et sans écriture | 200, 400, 401, 404 |
-| DELETE | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | suppression d'une transaction | 204, 401, 404 |
+| DELETE | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | suppression d'une transaction, refusée si elle rend l'historique invalide | 204, 400, 401, 404 |
 | GET | `/api/portefeuille` | authentifié | consolidation : valeur totale, coût de revient, plus-values, répartition, taux de change, alertes franchies | 200, 401 |
 | GET | `/api/portefeuille/historique` | authentifié | instantanés de valorisation | 200, 401 |
 | GET | `/api/alertes` | authentifié | liste des alertes, chacune enrichie de la valeur actuellement observée sur sa cible et de l'écart restant avant franchissement en pourcentage | 200, 401 |
 | POST | `/api/alertes` | authentifié | création d'une alerte | 201, 400, 401, 404 |
 | PATCH | `/api/alertes/:id` | propriétaire | désactivation | 200, 400, 401, 404 |
-| GET | `/api/annonces` | authentifié | liste des annonces, épinglées en tête | 200, 401 |
-| POST | `/api/annonces` | administrateur | publication | 201, 400, 401, 403 |
-| PATCH | `/api/annonces/:id` | administrateur | modification ou épinglage | 200, 400, 401, 403, 404 |
-| DELETE | `/api/annonces/:id` | administrateur | suppression | 204, 401, 403, 404 |
-| GET | `/api/admin/comptes` | administrateur | liste des comptes, sans aucune donnée patrimoniale | 200, 401, 403 |
-| PATCH | `/api/admin/comptes/:id` | administrateur | activation ou désactivation d'un compte | 200, 400, 401, 403, 404 |
+**Statut à la date de cette version.** Le tableau ci-dessus décrit les vingt points
+d'entrée effectivement montés par le serveur. Les routes d'annonces et
+d'administration ne font pas partie du contrat du MVP ; elles sont reportées en
+version 2 (D85). Les corps et réponses sont documentés dans `api/README.md`, avec
+une collection rejouable dans `api/capitall.http`.
 
-Les routes d'administration renvoient 403 et non 404 : contrairement au cloisonnement entre utilisateurs, il n'y a ici aucun intérêt à masquer l'existence de la ressource, et un refus explicite est plus clair.
-
-**Statut à la date de cette version.** Les routes d'authentification, de compte, d'actifs, de transactions, de portefeuille et d'alertes sont développées et vérifiées. Les six routes d'annonces et d'administration constituent des engagements du présent cahier des charges, non encore développés à la date de la version 2.0. Ce tableau décrit la cible contractuelle du produit, l'état d'avancement relevant du suivi de projet.
-
-Les structures de données échangées par chaque point d'entrée seront documentées dans une collection d'appels rejouable, constituée au fil du développement et versionnée avec le projet.
+Les structures de données échangées par chaque point d'entrée sont documentées dans une collection d'appels rejouable, versionnée avec le projet.
 
 ## 9. Interface utilisateur
 
@@ -324,7 +332,10 @@ Toute route privée atteinte sans jeton valide redirige vers la connexion.
 
 ### 9.2 Principes d'interface
 
-Interface sombre et sobre, conçue pour la lecture de chiffres. Direction artistique complète, palette et principes de mise en page : `conception/direction-artistique.md`. Cinq écrans sont maquettés en 375 et en 1440 pixels.
+Interface sombre et sobre, conçue pour la lecture de chiffres. Direction artistique
+complète, palette et principes de mise en page :
+`conception/direction-artistique.md`. La maquette comporte sept écrans en mobile
+375 pixels et trois déclinaisons structurelles en bureau 1440 pixels (D66).
 
 ## 10. Contraintes de réalisation
 
@@ -363,8 +374,6 @@ Correspondance entre les besoins exprimés, les moyens techniques et les compét
 | Consulter une vue consolidée | portefeuille | RG5 | CP4, CP7 |
 | Suivre l'évolution dans le temps | historique | RG8 | CP5, CP7 |
 | Être averti au franchissement d'un seuil | alertes | RG9, RG10, RG11 | CP7 |
-| Être informé des évolutions du service | annonces | aucune | CP3, CP7 |
-| Administrer le service sans accéder aux données patrimoniales | administration | RG1, RG12, RG13 | CP7 |
 | Consulter depuis un mobile | interface complète | aucune | CP2, CP3, CP4 |
 | Installer et redéployer l'application | composition de services et documentation | aucune | CP1, CP8 |
 

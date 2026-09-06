@@ -22,7 +22,7 @@
   font-size: var(--taille-corps);
   color: var(--couleur-texte);
   background: var(--couleur-fond);
-  border: 1px solid var(--couleur-bordure);
+  border: 1px solid var(--couleur-contour-controle);
   border-radius: var(--rayon-carte);
   padding: var(--espace-3);
 }

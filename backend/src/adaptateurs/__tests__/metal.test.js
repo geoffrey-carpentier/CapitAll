@@ -24,7 +24,7 @@ describe('adaptateur gold-api', () => {
 
     const cours = await adaptateur.getCours('XAU');
 
-    expect(cours.cours_eur).toBe('1600.00');
+    expect(cours.cours_eur).toBe('1600');
     expect(cours.symbole).toBe('XAU');
     expect(cours.source).toBe('gold-api');
   });

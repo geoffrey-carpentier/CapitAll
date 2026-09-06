@@ -48,6 +48,18 @@ const config = Object.freeze({
   // en production, le domaine qui sert l'interface. La valeur par défaut évite d'avoir
   // à renseigner la variable sur un poste de développement.
   origineAutorisee: process.env.ORIGINE_AUTORISEE || 'http://localhost:5173',
+  // Clés optionnelles : l'API reste utilisable pour les trois autres classes d'actif
+  // lorsqu'aucun fournisseur boursier n'est configuré. L'adaptateur actions applique
+  // FMP -> Finnhub -> Alpha Vantage parmi les clés réellement disponibles.
+  fmpApiKey: process.env.FMP_API_KEY || '',
+  finnhubApiKey: process.env.FINNHUB_API_KEY || '',
+  alphaVantageApiKey: process.env.ALPHA_VANTAGE_API_KEY || '',
+  // Affiche le jeton de réinitialisation dans la réponse au lieu de l'envoyer par
+  // courriel, le projet n'ayant pas de service d'envoi. C'est une commodité de
+  // démonstration, et elle a un coût qu'il faut nommer : la présence ou l'absence du
+  // jeton dans la réponse révèle si l'adresse correspond à un compte. Elle est donc
+  // fermée par défaut, et n'a rien à faire sur un déploiement réel.
+  afficherJetonReinitialisation: process.env.AFFICHER_JETON_REINITIALISATION === 'true',
 });
 
 module.exports = config;

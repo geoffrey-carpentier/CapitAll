@@ -83,11 +83,39 @@
   opacity: 0.5;
 }
 
-/* Le corps défile, l'en-tête et le pied restent visibles : le bouton d'enregistrement
-   ne doit pas se trouver hors de portée sur un petit écran. */
+/*
+  Le corps défile, l'en-tête et le pied restent visibles : le bouton d'enregistrement ne
+  doit pas se trouver hors de portée sur un petit écran.
+
+  Le défilement est réel et n'est pas supprimé : le formulaire de mouvement dépasse
+  franchement la hauteur disponible sur un écran de téléphone, et masquer la barre
+  rendrait les derniers champs inatteignables à la souris. Ce qui était en cause, c'est
+  son dessin : le navigateur posait sa barre système, large de 15 px et claire, sur une
+  interface sombre — elle se lisait comme un défaut d'affichage plutôt que comme une
+  zone qui défile. Elle reprend ici les couleurs de l'interface, en largeur fine.
+*/
 .feuille__corps {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--couleur-contour-controle) transparent;
+  /* Le défilement reste dans la feuille : arrivé en bout de course, il ne se propage
+     pas à la page qui se trouve derrière. */
+  overscroll-behavior: contain;
+}
+
+/* WebKit ne connaît pas encore scrollbar-color. Même dessin, même largeur. */
+.feuille__corps::-webkit-scrollbar {
+  width: 8px;
+}
+
+.feuille__corps::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.feuille__corps::-webkit-scrollbar-thumb {
+  background-color: var(--couleur-contour-controle);
+  border-radius: 4px;
 }
 
 /* Actions de la feuille. Elles vivent dans le formulaire qu'elles valident, et non dans
@@ -112,7 +140,11 @@
 
   .feuille {
     max-width: 520px;
-    max-height: 88vh;
+    /* 92vh et non 88 : sur une fenêtre de 780 px, le formulaire de mouvement dépassait
+       de 61 px la hauteur autorisée, alors que 94 px restaient inutilisés au-dessus et
+       au-dessous du dialogue. Il tient désormais d'un seul tenant aux hauteurs de
+       fenêtre courantes, et continue de défiler en dessous. */
+    max-height: 92vh;
     border-radius: var(--rayon-carte);
     padding: var(--espace-6);
   }

@@ -13,24 +13,36 @@
 
 /*
   Trois poids visuels, selon le tableau des amplitudes de la politique de formatage.
-  Au-delà de dix pour cent, la pastille pleine ; entre un et dix, le texte coloré seul ;
+  Au-delà de dix pour cent, la pastille cerclée ; entre un et dix, le texte coloré seul ;
   en deçà, le texte atténué. La couleur n'ajoute jamais d'information : elle appuie un
   signe et une flèche déjà présents.
+
+  La pastille était auparavant pleine, texte sombre sur aplat vert ou rouge. Le contraste
+  y était bon, mais elle avait deux défauts. Elle pesait plus lourd à l'écran que le
+  montant qu'elle qualifiait, sur des tableaux où chaque ligne en porte une ou deux. Et
+  sa largeur ne se réduisait pas : sous 480 px, deux pastilles voisines finissaient bord
+  à bord, et le sélecteur de plages avait dû se voir poser une exception pour la
+  supprimer — un correctif qui traitait le symptôme là où il apparaissait.
+
+  Le fond cède donc la place à un contour neutre d'un pixel, celui-là même qui sépare
+  déjà les cartes, et le chiffre reprend la couleur du sens. Aucune couleur n'est ajoutée
+  à la palette. Le texte gagne en lisibilité plutôt qu'il n'en perd : 6,65:1 pour le vert
+  et 4,83:1 pour le rouge sur le plus clair des trois fonds, contre 4,5 exigés — ce sont
+  les valeurs déjà mesurées en direction artistique pour ces deux teintes.
 */
 .variation--forte {
-  padding: var(--espace-1) var(--espace-2);
+  padding: 1px var(--espace-2);
+  border: 1px solid var(--couleur-bordure);
   border-radius: var(--rayon-pilule);
   font-weight: var(--graisse-forte);
 }
 
 .variation--forte.variation--hausse {
-  color: var(--couleur-fond);
-  background-color: var(--couleur-positif);
+  color: var(--couleur-positif);
 }
 
 .variation--forte.variation--baisse {
-  color: var(--couleur-fond);
-  background-color: var(--couleur-negatif);
+  color: var(--couleur-negatif);
 }
 
 .variation--moyenne {

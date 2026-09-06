@@ -33,6 +33,23 @@ async function trouverParIdEtUtilisateur(id, utilisateurId) {
   return rows[0] || null;
 }
 
+// Le verrou de ligne sérialise les écritures de mouvements d'un même actif. Deux
+// requêtes concurrentes ne peuvent ainsi jamais valider une vente sur le même solde :
+// la seconde attend la fin de la première, puis relit l'historique à jour.
+//
+// La fonction d'exécution est fournie par la transaction PostgreSQL ouverte dans le
+// service. Elle reste paramétrée et conserve le cloisonnement par propriétaire.
+async function verrouillerParIdEtUtilisateur(id, utilisateurId, executer) {
+  const { rows } = await executer(
+    `SELECT ${CHAMPS}
+     FROM actif
+     WHERE id = $1 AND utilisateur_id = $2
+     FOR UPDATE`,
+    [id, utilisateurId]
+  );
+  return rows[0] || null;
+}
+
 async function creer({ utilisateurId, type, symbole, nom }) {
   try {
     const { rows } = await query(
@@ -74,6 +91,7 @@ async function supprimer(id, utilisateurId) {
 module.exports = {
   listerParUtilisateur,
   trouverParIdEtUtilisateur,
+  verrouillerParIdEtUtilisateur,
   creer,
   mettreAJourNom,
   supprimer,

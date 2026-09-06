@@ -16,7 +16,7 @@ describe("schéma d'inscription", () => {
   });
 
   it('accepte une inscription sans pseudo', () => {
-    const { pseudo, ...sansPseudo } = inscriptionValide;
+    const { pseudo: _pseudo, ...sansPseudo } = inscriptionValide;
     expect(schemaInscription.safeParse(sansPseudo).success).toBe(true);
   });
 

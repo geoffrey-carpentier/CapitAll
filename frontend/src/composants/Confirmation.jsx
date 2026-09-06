@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import './Confirmation.css';
 import Bouton from './Bouton';
 
@@ -36,6 +36,15 @@ export default function Confirmation({
 }) {
   const dialogue = useRef(null);
   const declencheur = useRef(null);
+
+  // Identifiants engendrés par React plutôt qu'écrits en dur. Les précédents étaient
+  // fixes : deux confirmations montées en même temps auraient produit deux fois le même
+  // id dans le document, et aria-labelledby de la seconde aurait désigné le titre de la
+  // première. Le cas ne se produit pas aujourd'hui, aucun écran n'en ouvrant deux ; il
+  // suffit qu'un écran le fasse un jour pour que le lecteur d'écran annonce la mauvaise
+  // action avant une suppression.
+  const identifiantTitre = useId();
+  const identifiantConsequence = useId();
 
   useEffect(() => {
     // L'élément actif au moment de l'ouverture est le bouton qui a demandé la
@@ -92,15 +101,15 @@ export default function Confirmation({
         className="confirmation"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="titre-confirmation"
-        aria-describedby="consequence-confirmation"
+        aria-labelledby={identifiantTitre}
+        aria-describedby={identifiantConsequence}
         ref={dialogue}
         onKeyDown={auClavier}
       >
-        <h2 id="titre-confirmation" className="confirmation__titre">
+        <h2 id={identifiantTitre} className="confirmation__titre">
           {titre}
         </h2>
-        <p id="consequence-confirmation" className="confirmation__consequence">
+        <p id={identifiantConsequence} className="confirmation__consequence">
           {consequence}
         </p>
         {children}

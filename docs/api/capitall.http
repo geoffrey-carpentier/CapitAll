@@ -1,0 +1,238 @@
+@baseUrl = http://localhost:5000
+@token = REMPLACER_PAR_UN_JETON_LOCAL
+@actifId = 1
+@transactionId = 1
+@alerteId = 1
+
+### Santé
+GET {{baseUrl}}/api/sante
+
+### Inscription
+POST {{baseUrl}}/api/auth/inscription
+Content-Type: application/json
+
+{
+  "email": "api-doc@invalid.example",
+  "motDePasse": "mot-de-passe-local",
+  "pseudo": "Documentation"
+}
+
+### Connexion — recopier le champ token dans la variable ci-dessus
+POST {{baseUrl}}/api/auth/connexion
+Content-Type: application/json
+
+{
+  "email": "api-doc@invalid.example",
+  "motDePasse": "mot-de-passe-local"
+}
+
+### Demander une cle de reinitialisation
+# Rend toujours 202 et le meme message, que l'adresse existe ou non. La cle n'apparait
+# dans la reponse que si AFFICHER_JETON_REINITIALISATION vaut true.
+POST {{baseUrl}}/api/auth/mot-de-passe-oublie
+Content-Type: application/json
+
+{
+  "email": "api-doc@invalid.example"
+}
+
+### Choisir un nouveau mot de passe
+# Ne connecte pas, et ferme toutes les sessions du compte.
+POST {{baseUrl}}/api/auth/reinitialisation
+Content-Type: application/json
+
+{
+  "jeton": "REMPLACER_PAR_LA_CLE_RECUE",
+  "nouveauMotDePasse": "nouveau-mot-de-passe-local"
+}
+
+### Profil
+GET {{baseUrl}}/api/auth/moi
+Authorization: Bearer {{token}}
+
+### Liste des actifs
+GET {{baseUrl}}/api/actifs
+Authorization: Bearer {{token}}
+
+### Créer un actif
+POST {{baseUrl}}/api/actifs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "action",
+  "symbole": "AAPL",
+  "nom": "Apple"
+}
+
+### Détail d'un actif
+GET {{baseUrl}}/api/actifs/{{actifId}}
+Authorization: Bearer {{token}}
+
+### Renommer un actif
+PATCH {{baseUrl}}/api/actifs/{{actifId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nom": "Apple Inc."
+}
+
+### Simuler un mouvement sans écriture
+POST {{baseUrl}}/api/actifs/{{actifId}}/transactions/simulation
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sens": "achat",
+  "quantite": "1",
+  "prix_unitaire": "200.00",
+  "frais": "1.00",
+  "date_transaction": "2026-08-31T08:00:00.000Z"
+}
+
+### Enregistrer un mouvement
+POST {{baseUrl}}/api/actifs/{{actifId}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sens": "achat",
+  "quantite": "1",
+  "prix_unitaire": "200.00",
+  "frais": "1.00",
+  "date_transaction": "2026-08-31T08:00:00.000Z"
+}
+
+### Enregistrer un mouvement dont les frais sont prélevés dans l'actif échangé
+# La quantité est celle qui est reçue, frais déduits. La contre-valeur en euros est
+# calculée au prix de l'opération : 0,002 x 2 500 = 5,00 EUR.
+POST {{baseUrl}}/api/actifs/{{actifId}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sens": "achat",
+  "quantite": "0.398",
+  "prix_unitaire": "2500",
+  "frais_montant": "0.002",
+  "frais_unite": "ETH",
+  "date_transaction": "2026-08-31T08:00:00.000Z"
+}
+
+### Enregistrer un transfert vers un compte personnel
+# Aucun prix : la quantité sort sans contrepartie en euros, et le mouvement ne dégage
+# aucune plus-value réalisée.
+POST {{baseUrl}}/api/actifs/{{actifId}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sens": "sortie_non_marchande",
+  "quantite": "0.05",
+  "date_transaction": "2026-08-31T08:00:00.000Z",
+  "note": "Transfert vers portefeuille personnel"
+}
+
+### Simuler la correction d'un mouvement
+# La position « avant » est celle d'aujourd'hui : l'écart annoncé est ce que la
+# correction change, et non ce qu'un mouvement ajouté produirait.
+POST {{baseUrl}}/api/actifs/{{actifId}}/transactions/{{transactionId}}/simulation
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sens": "achat",
+  "quantite": "1",
+  "prix_unitaire": "195.00",
+  "frais": "1.00",
+  "date_transaction": "2026-08-31T08:00:00.000Z"
+}
+
+### Corriger un mouvement
+# PATCH et non PUT : le corps ne porte que les champs modifiables, jamais la
+# représentation complète de la ressource. Peut répondre 400 si la correction rend un
+# mouvement postérieur impossible.
+PATCH {{baseUrl}}/api/actifs/{{actifId}}/transactions/{{transactionId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sens": "achat",
+  "quantite": "1",
+  "prix_unitaire": "195.00",
+  "frais": "1.00",
+  "date_transaction": "2026-08-31T08:00:00.000Z"
+}
+
+### Supprimer un mouvement
+# Peut répondre 400 si supprimer ce mouvement rend un mouvement ultérieur impossible.
+DELETE {{baseUrl}}/api/actifs/{{actifId}}/transactions/{{transactionId}}
+Authorization: Bearer {{token}}
+
+### Portefeuille consolidé
+GET {{baseUrl}}/api/portefeuille
+Authorization: Bearer {{token}}
+
+### Historique sur 30 jours
+GET {{baseUrl}}/api/portefeuille/historique?jours=30
+Authorization: Bearer {{token}}
+
+### Liste des alertes
+GET {{baseUrl}}/api/alertes
+Authorization: Bearer {{token}}
+
+### Créer une alerte de capital total
+POST {{baseUrl}}/api/alertes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type_cible": "capital_total",
+  "sens_seuil": "au_dessus",
+  "valeur_seuil": "100000.00"
+}
+
+### Désactiver une alerte
+PATCH {{baseUrl}}/api/alertes/{{alerteId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "statut": "desactivee"
+}
+
+### Couverture des symboles par classe
+# Aucun appel fournisseur : la route décrit ce que l'application accepte, elle
+# n'interroge pas les cotations.
+GET {{baseUrl}}/api/symboles
+Authorization: Bearer {{token}}
+
+### Exporter les mouvements (CSV)
+GET {{baseUrl}}/api/compte/export-mouvements
+Authorization: Bearer {{token}}
+
+### Changer le mot de passe — opération réelle sur le compte local
+# Rend 200 avec un jeton neuf : le changement revoque les jetons anterieurs, celui de la
+# requete compris. Recopier le nouveau jeton dans la variable ci-dessus.
+PATCH {{baseUrl}}/api/compte/mot-de-passe
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ancienMotDePasse": "mot-de-passe-local",
+  "nouveauMotDePasse": "nouveau-mot-de-passe-local"
+}
+
+### Supprimer l'actif — opération destructive sur les données du compte local
+DELETE {{baseUrl}}/api/actifs/{{actifId}}
+Authorization: Bearer {{token}}
+
+### Supprimer le compte — opération irréversible, à exécuter uniquement sur un compte de test
+DELETE {{baseUrl}}/api/compte
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "motDePasse": "mot-de-passe-local"
+}

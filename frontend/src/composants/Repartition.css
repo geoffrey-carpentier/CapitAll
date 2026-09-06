@@ -1,8 +1,51 @@
+/*
+  L'anneau et sa légende. En dessous de 480 px ils s'empilent, au-dessus l'anneau prend
+  la gauche et la liste occupe le reste : c'est la seule mise en page qui garde les deux
+  colonnes de chiffres alignées quelle que soit la largeur.
+*/
 .repartition {
   display: flex;
+  align-items: center;
+  gap: var(--espace-6);
+}
+
+.repartition__anneau {
+  flex: none;
+  width: 132px;
+  height: 132px;
+}
+
+/*
+  Les quatre teintes de classe (D98). Elles ne sont posées qu'ici et sur le jeton : aucun
+  autre élément de l'interface ne les emploie, et aucune n'est un jeton sémantique.
+*/
+.repartition__segment {
+  stroke: var(--couleur-accent);
+}
+
+.repartition__segment--crypto {
+  stroke: var(--couleur-classe-crypto);
+}
+
+.repartition__segment--metal {
+  stroke: var(--couleur-classe-metal);
+}
+
+.repartition__segment--devise {
+  stroke: var(--couleur-classe-devise);
+}
+
+.repartition__segment--action {
+  stroke: var(--couleur-classe-action);
+}
+
+.repartition__liste {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
-  /* 12 px entre éléments liés, selon le rythme vertical de la grammaire visuelle. */
-  gap: var(--espace-3);
+  /* Les entrées portant désormais leur propre marge intérieure, l'écart se resserre. */
+  gap: var(--espace-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -19,6 +62,34 @@
   align-items: baseline;
   gap: var(--espace-4);
   font-size: var(--taille-corps);
+  /* Chaque entrée mène aux positions de sa classe. Le lien n'est pas souligné au repos :
+     quatre lignes soulignées dans une carte de synthèse se liraient comme un formulaire.
+     Il se signale au survol et au clavier, et sa zone reste haute de 44 px, comme toute
+     zone interactive en mobile (D77). */
+  padding: var(--espace-1) var(--espace-2);
+  margin: 0 calc(-1 * var(--espace-2));
+  min-height: 44px;
+  border-radius: var(--rayon-carte);
+  color: inherit;
+  text-decoration: none;
+}
+
+.repartition__entree:hover,
+.repartition__entree:focus-visible {
+  background-color: var(--couleur-carte-haute);
+}
+
+.repartition__entree:hover .jeton-classe__libelle {
+  color: var(--couleur-texte);
+  text-decoration: underline;
+}
+
+/* Au-dessus du point de rupture, la souris vise juste : la hauteur minimale retombe à
+   24 px, comme les autres zones interactives de bureau. */
+@media (min-width: 768px) {
+  .repartition__entree {
+    min-height: 24px;
+  }
 }
 
 .repartition__part {
@@ -32,4 +103,18 @@
   min-width: 8ch;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Sur les écrans les plus étroits, l'anneau et la liste ne tiennent pas côte à côte
+   sans écraser les montants : l'anneau passe au-dessus, centré. */
+@media (max-width: 479px) {
+  .repartition {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--espace-4);
+  }
+
+  .repartition__anneau {
+    align-self: center;
+  }
 }

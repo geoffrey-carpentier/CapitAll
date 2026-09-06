@@ -52,8 +52,9 @@ export default function Connexion() {
         <h1 className="authentification__titre">Connexion</h1>
         <p className="authentification__intro">Accédez au suivi de votre patrimoine.</p>
 
-        {/* Le jeton ne vit qu'en mémoire : une session expirée ramène ici. Le dire
-            explicitement évite que la reconnexion passe pour une anomalie. */}
+        {/* Une session close — expiration, compte désactivé, mot de passe changé
+            ailleurs — ramène ici. Le dire explicitement évite que la reconnexion passe
+            pour une anomalie. */}
         {messageArrivee && <Message variante="information">{messageArrivee}</Message>}
         {sessionExpiree && !erreur && !messageArrivee && (
           <Message variante="information">
@@ -85,6 +86,10 @@ export default function Connexion() {
             Se connecter
           </Bouton>
         </form>
+
+        <p className="authentification__bascule">
+          <Link to="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+        </p>
 
         <p className="authentification__bascule">
           Pas encore de compte ? <Link to="/inscription">Créer un compte</Link>

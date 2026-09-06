@@ -26,9 +26,15 @@ export function symboleDevise(devise) {
 }
 
 // Précisions par classe d'actif (catégorie 2 de la politique).
+// L'unité des métaux est l'once troy, celle dans laquelle le fournisseur cote et dans
+// laquelle les quantités sont saisies (D88). Elle s'affichait auparavant en grammes,
+// alors qu'aucune conversion n'était faite nulle part : une position de deux onces d'or
+// s'annonçait « 2 g » tout en étant valorisée au prix de deux onces, soit un libellé
+// faux d'un facteur 31,1034768. Les quantités déjà enregistrées ne sont pas converties,
+// c'est le libellé qui est remis en accord avec elles.
 const FORMATS_QUANTITE = {
   crypto: { decimales: 8, unite: (symbole) => symbole },
-  metal: { decimales: 3, unite: () => 'g' },
+  metal: { decimales: 4, unite: () => 'oz' },
   devise: { decimales: 2, unite: (symbole) => symbole },
   action: { decimales: 6, unite: (_, valeur) => (estSingulier(valeur) ? 'titre' : 'titres') },
 };
@@ -37,9 +43,37 @@ const FORMATS_QUANTITE = {
 // Manipulation de chaînes décimales
 // ---------------------------------------------------------------------------
 
+// Notation scientifique vers notation positionnelle.
+//
+// Le module ne reçoit normalement que des chaînes venues du serveur, écrites en toutes
+// lettres. Une exception : les graduations que la bibliothèque de graphes calcule
+// elle-même et transmet sous forme de nombres, que JavaScript écrit en exposant sous
+// 1e-6. Sans ce traitement, l'axe d'une série de cours très faibles n'aurait affiché que
+// des valeurs refusées comme illisibles.
+export function versNotationPositionnelle(chaine) {
+  const texte = String(chaine ?? '').trim();
+  const correspondance = /^([+-]?)(\d*)(?:\.(\d*))?[eE]([+-]?\d+)$/.exec(texte);
+
+  if (!correspondance) {
+    return texte;
+  }
+
+  const [, signe, entiere, decimale = '', exposant] = correspondance;
+  const chiffres = `${entiere}${decimale}`;
+  const virgule = entiere.length + Number(exposant);
+
+  if (virgule <= 0) {
+    return `${signe}0.${'0'.repeat(-virgule)}${chiffres}`;
+  }
+  if (virgule >= chiffres.length) {
+    return `${signe}${chiffres}${'0'.repeat(virgule - chiffres.length)}`;
+  }
+  return `${signe}${chiffres.slice(0, virgule)}.${chiffres.slice(virgule)}`;
+}
+
 // Découpe une chaîne décimale en ses trois composants, sans jamais l'évaluer.
 function decomposer(chaine) {
-  const texte = String(chaine ?? '').trim();
+  const texte = versNotationPositionnelle(chaine);
   const negatif = texte.startsWith('-') || texte.startsWith(MOINS);
   const absolu = negatif ? texte.slice(1) : texte;
   const [entiere = '', decimale = ''] = absolu.split('.');
@@ -50,7 +84,8 @@ function decomposer(chaine) {
 // Une chaîne est exploitable si elle ne contient que des chiffres, un signe et au plus
 // un séparateur décimal. Toute autre entrée est refusée plutôt que devinée.
 function estDecimaleValide(chaine) {
-  return /^[-−]?\d*(\.\d*)?$/.test(String(chaine ?? '').trim()) && /\d/.test(String(chaine ?? ''));
+  const texte = versNotationPositionnelle(chaine);
+  return /^[-−]?\d*(\.\d*)?$/.test(texte) && /\d/.test(texte);
 }
 
 // En français, le pluriel commence à deux : on écrit « 0,5 titre » et « 1,5 titre »,
@@ -159,6 +194,10 @@ export function formaterMontant(chaine, { symbole = '€' } = {}) {
 // Catégorie 2 : quantités d'actifs
 // ---------------------------------------------------------------------------
 
+// Échelle de stockage des quantités (D88). Elle borne l'affichage d'une quantité dont
+// la classe n'est pas connue : au-delà, la valeur ne vient pas de la base.
+const DECIMALES_QUANTITE_MAXIMALES = 18;
+
 export function formaterQuantite(chaine, classeActif, symbole = '') {
   const format = FORMATS_QUANTITE[classeActif];
 
@@ -172,9 +211,38 @@ export function formaterQuantite(chaine, classeActif, symbole = '') {
   return unite ? `${composer(arrondi)}${ESPACE_SYMBOLE}${unite}` : composer(arrondi);
 }
 
+// Quantité dont on connaît l'unité mais pas la classe.
+//
+// Le cas est celui des frais prélevés en nature (D89) : un mouvement porte le symbole
+// dans lequel la plateforme a retenu sa part, jamais la classe de l'actif correspondant.
+// Deviner cette classe pour choisir un nombre de décimales reviendrait à afficher une
+// quantité d'ETH avec la règle des métaux dès que l'utilisateur paie ses frais dans un
+// jeton tiers.
+//
+// La règle est donc la plus prudente possible : on n'arrondit pas, on se contente de
+// retirer les zéros de fin, comme partout ailleurs. Le plafond reprend l'échelle de
+// stockage, au-delà de laquelle la valeur ne vient pas de la base.
+export function formaterQuantiteEnNature(chaine, unite = '') {
+  const formatee = formaterDecimale(chaine, DECIMALES_QUANTITE_MAXIMALES);
+
+  if (formatee === null) {
+    return null;
+  }
+
+  return unite ? `${formatee}${ESPACE_SYMBOLE}${unite}` : formatee;
+}
+
 // ---------------------------------------------------------------------------
 // Catégorie 3 : cours unitaires
 // ---------------------------------------------------------------------------
+
+// Chiffres significatifs conservés sous l'unité. Quatre suffisent à lire un cours et à
+// le distinguer d'un autre, quel que soit son ordre de grandeur.
+const CHIFFRES_SIGNIFICATIFS = 4;
+
+// Plafond de décimales, aligné sur l'échelle de stockage des prix : au-delà, la valeur
+// ne vient pas de la base.
+const DECIMALES_MAXIMALES = 18;
 
 // La précision suit l'ordre de grandeur. Celui-ci se lit sur la longueur de la partie
 // entière et sur la position du premier chiffre significatif : aucune conversion n'est
@@ -188,9 +256,19 @@ function decimalesSelonOrdreDeGrandeur({ entiere, decimale }) {
     return entiereUtile.length >= 2 ? 2 : 4;
   }
 
-  // Sous l'unité : la valeur est ≥ 0,01 si l'un des deux premiers chiffres décimaux
-  // est significatif, sinon elle est inférieure et demande six décimales.
-  return /[1-9]/.test(decimale.slice(0, 2)) ? 4 : 6;
+  // Sous l'unité, la précision se compte en chiffres significatifs et non en décimales.
+  //
+  // La règle précédente s'arrêtait à six décimales : un cours de 0,000000012 euro
+  // s'affichait « 0 € », soit exactement ce que la politique de formatage interdit
+  // ailleurs. Le nombre de zéros qui précèdent le premier chiffre utile décide donc
+  // désormais du nombre de décimales à conserver.
+  const premierSignificatif = decimale.search(/[1-9]/);
+
+  if (premierSignificatif === -1) {
+    return DECIMALES_MAXIMALES;
+  }
+
+  return Math.min(premierSignificatif + CHIFFRES_SIGNIFICATIFS, DECIMALES_MAXIMALES);
 }
 
 export function formaterCours(chaine, { symbole = '€' } = {}) {
@@ -200,8 +278,18 @@ export function formaterCours(chaine, { symbole = '€' } = {}) {
 
   const composants = decomposer(chaine);
   const decimales = decimalesSelonOrdreDeGrandeur(composants);
+  const arrondi = arrondir(composants, decimales);
 
-  return `${composer(arrondir(composants, decimales))}${ESPACE_SYMBOLE}${symbole}`;
+  // Un cours qui existe ne s'affiche jamais comme un cours nul. Le cas ne devrait plus
+  // se présenter, la règle des chiffres significatifs conservant le premier chiffre
+  // utile jusqu'à dix-huit décimales ; la garde couvre une valeur venue d'ailleurs que
+  // de la base, et dit alors ce qu'elle sait plutôt que de mentir par un zéro.
+  if (estNul(arrondi) && !estNul(composants)) {
+    const plancher = `0,${'0'.repeat(DECIMALES_MAXIMALES - 1)}1`;
+    return `<${ESPACE_SYMBOLE}${plancher}${ESPACE_SYMBOLE}${symbole}`;
+  }
+
+  return `${composer(arrondi)}${ESPACE_SYMBOLE}${symbole}`;
 }
 
 // ---------------------------------------------------------------------------

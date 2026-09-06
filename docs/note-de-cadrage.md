@@ -21,8 +21,7 @@ Fonctionnalités couvertes :
 - tableau de bord de répartition du patrimoine et d'évolution de sa valeur
 - alertes de seuil (sur un actif ou sur le capital total)
 - historique de valorisation journalière du portefeuille
-- fil d'annonces internes publiées par un administrateur
-- fiche d'actif enrichie (capitalisation, fourchette 52 semaines, moyennes mobiles)
+- cours courant des actions d'une liste blanche, avec repli entre fournisseurs
 
 Hors périmètre du MVP, pistes d'évolution à mentionner à l'oral :
 
@@ -33,10 +32,17 @@ Hors périmètre du MVP, pistes d'évolution à mentionner à l'oral :
 - notifications par email
 - partage social, paiement, règles automatiques de trading
 - publications par les utilisateurs, widget Coin360
+- fil d'annonces internes et espace d'administration (reportés en version 2, D85)
+- enrichissement de la fiche action (capitalisation, fourchette 52 semaines,
+  moyennes mobiles)
 
 ## Rôles utilisateurs
 
-Deux rôles : utilisateur inscrit (défaut) et administrateur à moindre privilège. Le cloisonnement des données patrimoniales repose sur une vérification de propriété systématique côté serveur. Le rôle administrateur permet la publication d'annonces, la liste et la désactivation de comptes, sans jamais accéder aux portefeuilles d'autrui.
+Le MVP expose le parcours de l'utilisateur inscrit. Le schéma conserve un rôle
+`admin` et le serveur un intergiciel de rôle, mais aucune route ni interface
+d'administration n'est montée ; annonces et administration sont reportées en version 2
+(D85). Le cloisonnement des données patrimoniales repose sur une vérification de
+propriété systématique côté serveur, y compris pour un compte portant le rôle `admin`.
 
 ## Choix technique et justification
 
@@ -54,7 +60,7 @@ Ce choix est cohérent avec la nature du projet : un tableau de bord interactif 
 | Devises | Frankfurter (taux BCE) | non | Testée le 09/07/2026, réponse JSON conforme. |
 | Métaux précieux | gold-api.com | non | Testée le 09/07/2026, réponse JSON conforme. |
 | Cryptomonnaies | Coinbase (principal), CoinGecko Demo (repli) | non (Coinbase), oui (CoinGecko Demo) | Coinbase testé le 09/07/2026. CoinGecko Demo avec clé (D25). |
-| Actions | FMP (principal), Finnhub (secours 1), Alpha Vantage (secours 2 + historique) | oui | Testés, FMP fournit le plus de données en un appel (D26). Liste blanche d'environ 85 valeurs américaines (D27). |
+| Actions | FMP (principal), Finnhub (secours 1), Alpha Vantage (secours 2) | oui | Cours courant uniquement dans le MVP ; liste blanche d'environ 85 valeurs américaines (D27, D85). |
 
 Chaque fournisseur est encapsulé derrière une interface commune côté serveur, pour ne pas coupler la logique métier (calcul du prix de revient, calcul de la plus-value) à un fournisseur en particulier.
 

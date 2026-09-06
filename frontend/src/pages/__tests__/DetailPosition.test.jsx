@@ -392,6 +392,27 @@ describe('suppression', () => {
     expect(api.supprimerTransaction).toHaveBeenCalledWith('jeton-de-test', '1', 2);
     expect(api.actif).toHaveBeenCalledTimes(2);
   });
+
+  // Un retrait refusé par la règle des ventes n'est pas une panne : le serveur a
+  // répondu. L'écran doit donc rendre son motif, et surtout ne pas proposer de
+  // réessayer une demande qui sera refusée à l'identique.
+  it('affiche le motif du refus de retrait, sans proposer de réessayer', async () => {
+    const utilisateur = userEvent.setup();
+    const motif = 'Ce mouvement ne peut pas être retiré : une vente postérieure deviendrait impossible.';
+    vi.spyOn(api, 'supprimerTransaction').mockRejectedValue(new ErreurApi(motif, 400));
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+
+    await utilisateur.click(screen.getAllByRole('button', { name: /Supprimer achat/ })[0]);
+    await utilisateur.click(screen.getByRole('button', { name: 'Supprimer le mouvement' }));
+
+    expect(await screen.findByText(motif)).toBeTruthy();
+    expect(screen.getByText('Opération refusée')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Réessayer' })).toBeNull();
+    expect(screen.queryByText(/n'a pas pu répondre/)).toBeNull();
+    // La fiche reste affichée : un refus ne vide pas l'écran.
+    expect(screen.getByRole('heading', { name: 'Bitcoin', level: 1 })).toBeTruthy();
+  });
 });
 
 describe('graphe de cours', () => {
@@ -570,6 +591,112 @@ describe('saisie d’un seuil depuis l’onglet Seuils', () => {
     expect(await screen.findByText(/Seuil créé pour Bitcoin \(BTC\)/)).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(api.actif).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Renommage d'une position (S-26). La route existait depuis la création des actifs, et
+// aucun écran ne l'exposait : le nom d'une position, que l'utilisateur a lui-même saisi,
+// était définitif.
+describe('renommage de la position', () => {
+  it('propose de renommer, et rend le champ prérempli du nom actuel', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin' });
+
+    await utilisateur.click(screen.getByRole('button', { name: /Renommer Bitcoin/ }));
+
+    expect(screen.getByLabelText(/Nouveau nom de BTC/).value).toBe('Bitcoin');
+  });
+
+  it('affiche le nom que la base rend, pas celui qui a été tapé', async () => {
+    // La distinction porte à conséquence : le serveur découpe les espaces de bord, et
+    // afficher la saisie brute laisserait croire qu'un nom se termine par une espace.
+    vi.spyOn(api, 'renommerActif').mockResolvedValue({
+      id: 1,
+      utilisateur_id: 2,
+      type: 'crypto',
+      symbole: 'BTC',
+      nom: 'Bitcoin long terme',
+      date_ajout: '2026-05-01T10:00:00.000Z',
+    });
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin' });
+
+    await utilisateur.click(screen.getByRole('button', { name: /Renommer Bitcoin/ }));
+    await utilisateur.clear(screen.getByLabelText(/Nouveau nom de BTC/));
+    await utilisateur.type(screen.getByLabelText(/Nouveau nom de BTC/), '  Bitcoin long terme  ');
+    await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByRole('heading', { name: 'Bitcoin long terme' })).toBeTruthy();
+    expect(api.renommerActif).toHaveBeenCalledWith('jeton-de-test', '1', 'Bitcoin long terme');
+  });
+
+  it('laisse le nom en place quand le serveur refuse', async () => {
+    const motif = 'Le nom ne peut pas dépasser 100 caractères.';
+    vi.spyOn(api, 'renommerActif').mockRejectedValue(new ErreurApi(motif, 400));
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin' });
+
+    await utilisateur.click(screen.getByRole('button', { name: /Renommer Bitcoin/ }));
+    await utilisateur.type(screen.getByLabelText(/Nouveau nom de BTC/), 'x');
+    await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText(motif)).toBeTruthy();
+    // Le formulaire reste ouvert sur la saisie refusée : la corriger vaut mieux que la
+    // ressaisir.
+    expect(screen.getByLabelText(/Nouveau nom de BTC/)).toBeTruthy();
+  });
+
+  it('renonce sans rien envoyer', async () => {
+    vi.spyOn(api, 'renommerActif').mockResolvedValue(null);
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin' });
+
+    await utilisateur.click(screen.getByRole('button', { name: /Renommer Bitcoin/ }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Annuler' }));
+
+    expect(screen.getByRole('heading', { name: 'Bitcoin' })).toBeTruthy();
+    expect(api.renommerActif).not.toHaveBeenCalled();
+  });
+});
+
+// Correction d'un mouvement depuis la frise (D51 révisée). L'écran doit ouvrir la
+// feuille sur le bon mouvement, et l'adresse doit le dire.
+describe('correction d’un mouvement depuis la frise', () => {
+  it('ouvre la feuille de correction sur le mouvement choisi', async () => {
+    vi.spyOn(api, 'simulerModificationTransaction').mockResolvedValue({
+      sens: 'achat',
+      montant: '27000.00',
+      frais: '15.00',
+      frais_montant: '15.00',
+      frais_unite: 'EUR',
+      quantite_detenue_avant: '0.6',
+      quantite_detenue_apres: '0.6',
+      pru_avant: '56656.25',
+      pru_apres: '56656.25',
+      effet_pru: '0',
+      plus_value_realisee: null,
+      cout_sortie: null,
+      cout_total_apres: '33993.75',
+    });
+
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin' });
+
+    await utilisateur.click(screen.getByRole('button', { name: /Corriger achat du 27 mai 2026/ }));
+
+    const dialogue = await screen.findByRole('dialog');
+    expect(within(dialogue).getByRole('heading', { name: 'Corriger le mouvement' })).toBeTruthy();
+    // Les champs portent les valeurs du mouvement choisi, et non celles du plus récent.
+    expect(within(dialogue).getByLabelText(/^Quantité/).value).toBe('0.50000000');
+    expect(within(dialogue).getByLabelText(/^Prix unitaire/).value).toBe('54000.00');
   });
 });
 

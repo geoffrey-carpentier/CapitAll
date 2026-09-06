@@ -1,8 +1,8 @@
 # Politique de formatage des nombres
 
-Règles d'affichage des valeurs numériques dans l'interface de CapitAll. Ce document est la référence unique : toute valeur affichée passe par l'une des six catégories ci-dessous, sans exception locale.
+Règles d'affichage des valeurs numériques dans l'interface de WalletWatch. Ce document est la référence unique : toute valeur affichée passe par l'une des catégories ci-dessous, sans exception locale.
 
-Le besoin est particulier à l'application : quatre classes d'actifs qui ne se mesurent pas de la même façon cohabitent sur un même écran. Une cryptomonnaie se compte en unités à huit décimales, un métal en grammes, une action en titres entiers, une devise en unités monétaires. Une règle unique produirait soit des colonnes illisibles, soit des arrondis faux.
+Le besoin est particulier à l'application : quatre classes d'actifs qui ne se mesurent pas de la même façon cohabitent sur un même écran. Une cryptomonnaie se compte en unités à huit décimales, un métal en onces troy, une action en titres entiers, une devise en unités monétaires. Une règle unique produirait soit des colonnes illisibles, soit des arrondis faux.
 
 ## Principe fondateur
 
@@ -16,7 +16,7 @@ Ce choix a un coût, une trentaine de lignes de code, et deux bénéfices. Il re
 
 - **Locale française** : virgule décimale, espace insécable fine comme séparateur de milliers (`12 480,65`), symbole après la valeur avec espace insécable (`12 480,65 €`).
 - **Chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sur toute valeur numérique, pour que les colonnes s'alignent verticalement.
-- **Zéros de fin toujours supprimés**, dans les six catégories. `20,00 €` s'écrit `20 €`, `0,60000000 BTC` s'écrit `0,6 BTC`.
+- **Zéros de fin toujours supprimés**, dans toutes les catégories. `20,00 €` s'écrit `20 €`, `0,60000000 BTC` s'écrit `0,6 BTC`.
 - **Jamais de troncature silencieuse d'une valeur significative.** Si une valeur ne tient pas dans le format prévu, on élargit le format, on ne rogne pas le chiffre.
 
 ## 1. Montants en devise fiduciaire
@@ -44,7 +44,7 @@ Le nombre d'unités détenues. Le format dépend de la classe.
 | Classe | Décimales maximum | Unité affichée | Exemple |
 |---|---|---|---|
 | Cryptomonnaie | 8 | symbole | `0,6 BTC`, `0,60000001 BTC` |
-| Métal précieux | 3 | `g` | `18 g`, `620,5 g` |
+| Métal précieux | 4 | `oz` | `18 oz`, `620,5 oz` |
 | Devise | 2 | code ISO | `1 500 USD` |
 | Action | 6 | `titre` / `titres` | `12 titres`, `0,5 titre` |
 
@@ -59,9 +59,19 @@ Le nombre d'unités détenues. Le format dépend de la classe.
 
 *Motivation.* La précision d'une quantité est une donnée, pas une décoration : elle résulte d'un achat réel et l'arrondir fausserait la vérification manuelle du calcul par l'utilisateur. Mais afficher huit décimales quand six sont nulles produit une colonne illisible. Supprimer les zéros de fin conserve l'exactitude et rend la lecture possible.
 
-*Sur l'unité affichée.* L'unité n'est jamais omise ni convertie. Un gramme d'or reste un gramme, il n'est pas ramené à une once ni à un pourcentage. Cette hétérogénéité assumée est un parti pris de l'application : elle donne à voir la nature réelle de chaque position.
+*Sur l'unité affichée.* L'unité n'est jamais omise ni convertie. Une once d'or reste une once, elle n'est ramenée ni au gramme ni à un pourcentage. Cette hétérogénéité assumée est un parti pris de l'application : elle donne à voir la nature réelle de chaque position. L'once troy est retenue parce que c'est l'unité dans laquelle le fournisseur cote : afficher des grammes sur des quantités qui sont des onces faisait mentir le libellé d'un facteur 31,1034768, sans qu'aucune conversion ne soit faite nulle part (D88).
 
 *Accord en nombre.* `1 titre`, `2 titres`. Le pluriel ne s'applique qu'aux unités nommées en français, jamais aux symboles ni aux codes ISO (`1 BTC` et non `1 BTCs`).
+
+## 2 bis. Quantités dont la classe est inconnue
+
+Les frais prélevés en nature (D89). Un mouvement porte le symbole dans lequel la plateforme a retenu sa part, jamais la classe de l'actif correspondant : les frais d'un achat d'ETH peuvent être réglés en BNB, que l'utilisateur ne suit pas nécessairement.
+
+**Dix-huit décimales maximum, zéros de fin supprimés, unité accolée.** `0,002 ETH`, `0,000021 ETH`.
+
+*Motivation.* Deviner la classe pour choisir un nombre de décimales reviendrait à afficher une quantité de cryptomonnaie avec la règle des métaux dès que l'utilisateur paie ses frais dans un jeton tiers. La règle est donc la plus prudente possible : on n'arrondit pas, on retire seulement les zéros de fin, et le plafond reprend l'échelle de stockage des quantités, au-delà de laquelle la valeur ne vient pas de la base.
+
+*Où elle apparaît.* Toujours en second, entre parenthèses derrière la contre-valeur en euros, qui reste le chiffre principal : c'est elle que le calcul consomme. La frise des mouvements et le récapitulatif de saisie sont les deux seuls endroits concernés.
 
 ## 3. Cours unitaires
 
@@ -76,7 +86,7 @@ Le prix d'une unité d'actif, et le prix de revient unitaire.
 | ≥ 0,01 et < 10 | 4 | `1,1523 €`, `0,9152 €` |
 | < 0,01 | 6 | `0,000842 €` |
 
-*Motivation.* C'est le point où une règle unique à deux décimales échoue. Le gramme d'argent vaut environ `1,1523 €` : arrondi à `1,15`, l'erreur atteint 0,2 % sur une valorisation, soit un écart visible entre le cours affiché et le total affiché. L'utilisateur qui refait le calcul à la main ne retrouve pas ses chiffres, et la confiance tombe. La règle par ordre de grandeur conserve toujours quatre chiffres significatifs au minimum.
+*Motivation.* C'est le point où une règle unique à deux décimales échoue. Un jeton coté `1,1523 €` arrondi à `1,15` porte déjà une erreur de 0,2 % sur une valorisation, soit un écart visible entre le cours affiché et le total affiché ; sous le centime, l'arrondi ne laisse plus rien du tout. L'utilisateur qui refait le calcul à la main ne retrouve pas ses chiffres, et la confiance tombe. La règle par ordre de grandeur conserve toujours quatre chiffres significatifs au minimum, quel que soit le nombre de zéros qui les précèdent.
 
 *Cohérence avec le total.* Le total affiché est toujours calculé à partir de la valeur exacte, jamais à partir de la valeur arrondie affichée. Le formatage est une couche de présentation, il n'entre jamais dans un calcul.
 
@@ -135,12 +145,13 @@ Module unique `frontend/src/utils/formatage.js`, sans dépendance externe :
 ```
 formaterMontant(chaine)                  → catégorie 1
 formaterQuantite(chaine, typeActif)      → catégorie 2
+formaterQuantiteEnNature(chaine, unite)  → catégorie 2 bis
 formaterCours(chaine)                    → catégorie 3
 formaterTaux(chaine)                     → catégorie 4
 formaterPourcentage(chaine)              → catégorie 5
 formaterVariation(chaine, mode)          → catégorie 6, mode 'absolue' ou 'relative'
 ```
 
-Aucun composant ne formate un nombre par lui-même. Toute valeur numérique affichée dans l'interface provient de l'une de ces six fonctions, ce qui rend la politique vérifiable par une simple recherche dans le code.
+Aucun composant ne formate un nombre par lui-même. Toute valeur numérique affichée dans l'interface provient de l'une de ces fonctions, ce qui rend la politique vérifiable par une simple recherche dans le code.
 
 Les fonctions sont couvertes par des tests unitaires portant explicitement sur les cas limites listés dans ce document : zéros de fin, valeur nulle, valeur inférieure au seuil d'affichage, changement d'ordre de grandeur, signe des variations.

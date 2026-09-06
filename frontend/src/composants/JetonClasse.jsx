@@ -11,7 +11,13 @@ import { LIBELLES_CLASSE } from '../utils/classesActifs';
 // La forme seule ne se prononce pas : le nom de la classe accompagne toujours le jeton,
 // visible lorsque l'appelant le demande, restitué à la voix dans tous les cas.
 
-export default function JetonClasse({ classe, avecLibelle = false, ...proprietes }) {
+function monogramme(classe, symbole) {
+  if (!symbole) return '';
+  const connus = { BTC: '₿', ETH: 'Ξ', XAU: 'Au', XAG: 'Ag', USD: '$', EUR: '€' };
+  return connus[symbole] ?? (classe === 'action' ? symbole.slice(0, 1) : symbole.slice(0, 2));
+}
+
+export default function JetonClasse({ classe, symbole, avecLibelle = false, ...proprietes }) {
   if (!CLASSES_QUANTITE.includes(classe)) {
     return null;
   }
@@ -20,7 +26,13 @@ export default function JetonClasse({ classe, avecLibelle = false, ...proprietes
 
   return (
     <span className="jeton-classe" {...proprietes}>
-      <span className={`jeton-classe__forme jeton-classe__forme--${classe}`} aria-hidden="true" />
+      <span
+        className={`jeton-classe__forme jeton-classe__forme--${classe}${symbole ? ' jeton-classe__forme--actif' : ''}`}
+        data-symbole={symbole}
+        aria-hidden="true"
+      >
+        {monogramme(classe, symbole)}
+      </span>
       <span className={avecLibelle ? 'jeton-classe__libelle' : 'lecteur-ecran-seulement'}>
         {libelle}
       </span>

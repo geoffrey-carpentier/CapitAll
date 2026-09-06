@@ -21,7 +21,10 @@ const PLAGES = [
   { code: 'semaine', libelle: 'Semaine', description: 'Sur sept jours' },
   { code: 'mois', libelle: 'Mois', description: 'Sur trente jours' },
   { code: 'annee', libelle: 'Année', description: 'Sur un an' },
-  { code: 'origine', libelle: 'Origine', description: 'Depuis le début du suivi' },
+  // « Origine » désigne ici le premier relevé enregistré, pas le premier achat : c'est
+  // l'évolution de la valeur suivie, distincte de la plus-value latente que le montant
+  // dominant affiche à côté. Les deux portaient le même mot.
+  { code: 'origine', libelle: 'Suivi', description: 'Depuis le premier relevé' },
 ];
 
 export default function SelecteurPeriode({

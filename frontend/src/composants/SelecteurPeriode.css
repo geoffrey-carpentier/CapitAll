@@ -29,9 +29,13 @@
 }
 
 /* L'onglet actif se marque par la bordure et par le contraste du libellé : la couleur
-   seule ne suffirait pas à le désigner. */
+   seule ne suffirait pas à le désigner.
+
+   Son fond vaut celui de la carte qui l'accueille : mesuré au navigateur, il ne
+   distingue donc rien, et la bordure porte seule la sélection. Elle prend le contour des
+   contrôles, où l'ancien filet décoratif n'atteignait que 1,51. */
 .selecteur-periode__onglet--actif {
-  border-color: var(--couleur-bordure);
+  border-color: var(--couleur-contour-controle);
   background-color: var(--couleur-carte);
   color: var(--couleur-texte);
 }
@@ -42,4 +46,26 @@
 
 .selecteur-periode__absente {
   color: var(--couleur-texte-attenue);
+}
+
+@media (max-width: 480px) {
+  /* 315 px utiles sur la carte de la maquette 375 px : les cinq plages restent
+     visibles simultanément, sans rogner « Origine » ni les fortes variations.
+
+     Les pastilles de variation occupaient toute la largeur de leur colonne : deux
+     pastilles voisines finissaient bord à bord, et la dernière sortait de sa carte. La
+     largeur se regagne sur deux réglages, sans toucher au nombre de plages ni aux
+     libellés : une marge intérieure sur chaque onglet et une variation d'un point plus
+     petite. Le troisième, qui retirait ici le fond de la pastille, n'a plus d'objet
+     depuis que la pastille n'en a plus. */
+  .selecteur-periode__onglet {
+    min-width: 0;
+    padding: var(--espace-2) 3px;
+    font-size: 11px;
+  }
+
+  .selecteur-periode .variation {
+    gap: 1px;
+    font-size: 10px;
+  }
 }

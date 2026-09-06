@@ -64,12 +64,18 @@ function creerServiceAlerte({
       return [];
     }
 
-    const { capitalTotal, coursParActif } = await servicePortefeuille.obtenirValeursObservees(
-      utilisateurId
-    );
+    const { capitalTotal, capitalComplet, coursParActif } =
+      await servicePortefeuille.obtenirValeursObservees(utilisateurId);
 
     return alertesUtilisateur.map((alerte) => {
-      const observee = valeurObservee(alerte, { capitalTotal, coursParActif });
+      // Un capital amputé d'une position détenue est traité comme une valeur observée
+      // indisponible, exactement comme un cours manquant sur une alerte d'actif. L'écart
+      // restant se calculerait sinon contre un sous-total, et annoncerait une distance au
+      // seuil qui n'est pas la bonne. L'écran porte déjà la mention prévue pour ce cas.
+      const observee = valeurObservee(alerte, {
+        capitalTotal: capitalComplet ? capitalTotal : null,
+        coursParActif,
+      });
 
       return {
         ...alerte,

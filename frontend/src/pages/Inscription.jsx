@@ -10,6 +10,44 @@ import './Authentification.css';
 // qu'un confort, elle évite un aller-retour réseau pour une erreur évidente.
 const LONGUEUR_MINIMALE_MOT_DE_PASSE = 10;
 
+// Robustesse du mot de passe, évaluée à la frappe (spécification E1). Quatre critères
+// indépendants, simplement comptés : il ne s'agit pas de prétendre mesurer une entropie,
+// mais de dire à l'utilisateur ce qui manque pendant qu'il saisit.
+//
+// Le serveur reste l'autorité et n'exige que la longueur minimale : cet indicateur
+// conseille, il ne bloque pas. Un mot de passe long et sans chiffre reste acceptable.
+const CRITERES_MOT_DE_PASSE = [
+  {
+    cle: 'longueur',
+    libelle: `${LONGUEUR_MINIMALE_MOT_DE_PASSE} caractères`,
+    satisfait: (valeur) => valeur.length >= LONGUEUR_MINIMALE_MOT_DE_PASSE,
+  },
+  {
+    cle: 'casse',
+    libelle: 'une minuscule et une majuscule',
+    satisfait: (valeur) => /[a-z]/.test(valeur) && /[A-Z]/.test(valeur),
+  },
+  {
+    cle: 'chiffre',
+    libelle: 'un chiffre',
+    satisfait: (valeur) => /[0-9]/.test(valeur),
+  },
+  {
+    cle: 'symbole',
+    libelle: 'un caractère spécial',
+    satisfait: (valeur) => /[^A-Za-z0-9]/.test(valeur),
+  },
+];
+
+const NIVEAUX_ROBUSTESSE = ['très faible', 'faible', 'moyenne', 'bonne', 'excellente'];
+
+function evaluerRobustesse(motDePasse) {
+  const manquants = CRITERES_MOT_DE_PASSE.filter((critere) => !critere.satisfait(motDePasse));
+  const score = CRITERES_MOT_DE_PASSE.length - manquants.length;
+
+  return { score, niveau: NIVEAUX_ROBUSTESSE[score], manquants };
+}
+
 function validerLocalement({ email, motDePasse }) {
   const erreurs = {};
 
@@ -33,6 +71,8 @@ export default function Inscription() {
   const [erreursChamps, setErreursChamps] = useState({});
   const [erreur, setErreur] = useState(null);
   const [enCours, setEnCours] = useState(false);
+
+  const robustesse = evaluerRobustesse(motDePasse);
 
   if (estConnecte) {
     return <Navigate to="/patrimoine" replace />;
@@ -101,6 +141,32 @@ export default function Inscription() {
             aide={`${LONGUEUR_MINIMALE_MOT_DE_PASSE} caractères minimum.`}
             obligatoire
           />
+
+          {/* La jauge ne fait que redire ce que la phrase énonce déjà : elle est donc
+              masquée aux technologies d'assistance, et aucune information ne repose sur
+              la seule couleur. Le nombre de segments remplis double la teinte pour ceux
+              qui ne la perçoivent pas. */}
+          {motDePasse.length > 0 && (
+            <div className="robustesse">
+              <div className="robustesse__jauge" aria-hidden="true">
+                {CRITERES_MOT_DE_PASSE.map((critere, rang) => (
+                  <span
+                    key={critere.cle}
+                    className={`robustesse__segment${
+                      rang < robustesse.score ? ' robustesse__segment--acquis' : ''
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="robustesse__resume" aria-live="polite">
+                Robustesse {robustesse.niveau}.
+                {robustesse.manquants.length > 0 &&
+                  ` Il manque ${robustesse.manquants
+                    .map((critere) => critere.libelle)
+                    .join(', ')}.`}
+              </p>
+            </div>
+          )}
 
           <Champ
             label="Pseudonyme"

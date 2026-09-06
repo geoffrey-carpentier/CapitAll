@@ -1,7 +1,12 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../services/api';
-import { comparerDecimales, formaterQuantite, CLASSES_QUANTITE } from '../utils/formatage';
+import {
+  comparerDecimales,
+  formaterQuantite,
+  formaterQuantiteEnNature,
+  CLASSES_QUANTITE,
+} from '../utils/formatage';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
 import Feuille from './Feuille';
 import Champ from './Champ';
@@ -36,13 +41,41 @@ import './FeuilleMouvement.css';
 const SENS = [
   { code: 'achat', libelle: 'Achat' },
   { code: 'vente', libelle: 'Vente' },
+  { code: 'sortie_non_marchande', libelle: 'Sortie' },
 ];
 
-// Précisions admises par les colonnes NUMERIC du schéma : 8 décimales pour une
-// quantité, 2 pour un montant. Ces contrôles reprennent ceux des schémas Zod du
-// serveur, qui reste seul décisionnaire.
-const MOTIF_QUANTITE = /^\d+(\.\d{1,8})?$/;
-const MOTIF_MONTANT = /^\d+(\.\d{1,2})?$/;
+// Précisions admises par les colonnes NUMERIC du schéma : dix-huit décimales pour une
+// quantité comme pour un prix depuis D88, deux pour un montant en euros. Ces contrôles
+// reprennent ceux des schémas Zod du serveur, qui reste seul décisionnaire.
+//
+// Les deux premiers plafonnaient encore à huit et deux décimales, ce qui refusait à la
+// saisie les valeurs mêmes que le contrat numérique venait rendre possibles : un cours
+// de 0,0000123 euro était rejeté par le formulaire avant d'atteindre le serveur, qui
+// l'accepte.
+const DECIMALES_QUANTITE = 18;
+const DECIMALES_PRIX = 18;
+const DECIMALES_MONTANT = 2;
+
+const MOTIF_QUANTITE = new RegExp(`^\\d+(\\.\\d{1,${DECIMALES_QUANTITE}})?$`);
+const MOTIF_PRIX = new RegExp(`^\\d+(\\.\\d{1,${DECIMALES_PRIX}})?$`);
+const MOTIF_MONTANT = new RegExp(`^\\d+(\\.\\d{1,${DECIMALES_MONTANT}})?$`);
+
+// Unité de prélèvement des frais. L'euro est le cas courant ; l'actif échangé est celui
+// des plateformes de cryptomonnaies, qui retiennent leur part dans ce qu'elles vendent ;
+// le tiers actif est le cas où aucun taux ne se lit dans le mouvement, et où la
+// contre-valeur doit donc être demandée.
+const FRAIS_EN_EUROS = 'EUR';
+const FRAIS_EN_ACTIF = 'actif';
+const FRAIS_EN_TIERS = 'tiers';
+
+// Confirmation remise à l'écran d'origine. Le mot compte : « vente » sur un transfert
+// est précisément ce que D89 corrige, et une confirmation est ce que l'utilisateur
+// relit le lendemain pour se rappeler ce qu'il a saisi.
+const RESUMES = {
+  achat: (quantite) => `Achat de ${quantite} enregistré.`,
+  vente: (quantite) => `Vente de ${quantite} enregistrée.`,
+  sortie_non_marchande: (quantite) => `Sortie de ${quantite} enregistrée.`,
+};
 
 // Délai d'inactivité avant de demander le récapitulatif. Assez court pour que le chiffre
 // suive la frappe, assez long pour ne pas envoyer une requête par caractère.
@@ -88,6 +121,9 @@ const CHAMPS_SERVEUR = [
   'quantite',
   'prix_unitaire',
   'frais',
+  'frais_montant',
+  'frais_unite',
+  'frais_contre_valeur_eur',
   'date_transaction',
   'type',
   'symbole',
@@ -115,11 +151,17 @@ export default function FeuilleMouvement({
   // le cours du jour arrivent avec elles.
   actifs = [],
   actifInitialId = null,
+  // Mouvement à corriger, le cas échéant (D51 révisée). Sa présence fait basculer la
+  // feuille en édition : les champs partent de ses valeurs, l'actif n'est plus
+  // sélectionnable — un mouvement ne se déplace pas d'une position à une autre — et la
+  // validation corrige au lieu de créer.
+  mouvement = null,
   surFermeture,
   surEnregistrement,
 }) {
   const { jeton } = useAuthentification();
   const identifiant = useId();
+  const edition = mouvement !== null;
 
   // Actifs créés depuis la feuille, tant que l'écran d'origine n'a pas rechargé sa
   // liste. Sans eux, l'actif que l'on vient d'ajouter disparaîtrait du sélecteur.
@@ -138,20 +180,57 @@ export default function FeuilleMouvement({
     return actifs.length === 1 ? String(actifs[0].id) : '';
   }, [actifs, actifInitialId]);
 
-  const [sens, setSens] = useState('achat');
+  // Origine des frais du mouvement corrigé, déduite de son unité : elle vaut l'euro,
+  // le symbole de sa position, ou un tiers actif. La déduire ici évite de stocker en
+  // base une information que l'unité porte déjà.
+  const origineInitiale = useMemo(() => {
+    const unite = mouvement?.frais_unite;
+    if (!unite || unite === FRAIS_EN_EUROS) {
+      return FRAIS_EN_EUROS;
+    }
+    const position = actifs.find((element) => String(element.id) === String(actifInitialId));
+    return unite === position?.symbole ? FRAIS_EN_ACTIF : FRAIS_EN_TIERS;
+  }, [mouvement, actifs, actifInitialId]);
+
+  const [sens, setSens] = useState(() => mouvement?.sens ?? 'achat');
   const [actifId, setActifId] = useState(idInitial);
-  const [quantite, setQuantite] = useState('');
-  const [prixUnitaire, setPrixUnitaire] = useState(
-    () => actifs.find((position) => String(position.id) === idInitial)?.cours_eur ?? ''
+  const [quantite, setQuantite] = useState(() => mouvement?.quantite ?? '');
+  const [prixUnitaire, setPrixUnitaire] = useState(() => {
+    if (mouvement) {
+      return mouvement.prix_unitaire ?? '';
+    }
+    return actifs.find((position) => String(position.id) === idInitial)?.cours_eur ?? '';
+  });
+  const [date, setDate] = useState(() =>
+    mouvement ? new Date(mouvement.date_transaction).toISOString().slice(0, 10) : aujourdhui()
   );
-  const [date, setDate] = useState(aujourdhui);
-  const [frais, setFrais] = useState('');
+  // En édition, le champ porte le montant réellement prélevé, pas sa contre-valeur :
+  // c'est ce que l'utilisateur avait saisi, et c'est donc ce qu'il doit relire.
+  const [frais, setFrais] = useState(() => {
+    if (!mouvement) {
+      return '';
+    }
+    const montant = mouvement.frais_montant ?? mouvement.frais ?? '0';
+    return comparerDecimales(montant, '0') === 0 ? '' : montant;
+  });
+  const [origineFrais, setOrigineFrais] = useState(origineInitiale);
+  const [symboleFrais, setSymboleFrais] = useState(() =>
+    origineInitiale === FRAIS_EN_TIERS ? (mouvement?.frais_unite ?? '') : ''
+  );
+  const [contreValeurFrais, setContreValeurFrais] = useState(() =>
+    origineInitiale === FRAIS_EN_TIERS ? (mouvement?.frais ?? '') : ''
+  );
 
   // Un portefeuille vide n'a rien à sélectionner : la feuille s'ouvre alors directement
   // sur la création, sans quoi le tout premier mouvement serait impossible à saisir.
-  const [creation, setCreation] = useState(actifs.length === 0);
+  // Une correction porte sur une position qui existe : la question ne s'y pose pas.
+  const [creation, setCreation] = useState(!edition && actifs.length === 0);
   const [nouvelActif, setNouvelActif] = useState({ type: 'crypto', symbole: '', nom: '' });
   const [creationEnCours, setCreationEnCours] = useState(false);
+  // Couverture des symboles par classe, telle que le serveur la déclare (D27). Elle
+  // n'est demandée qu'à l'ouverture du panneau de création : la grande majorité des
+  // saisies porte sur une position déjà suivie et n'en a aucun besoin.
+  const [couvertures, setCouvertures] = useState(null);
 
   // Un message d'erreur n'apparaît pas pendant qu'on remplit un champ, mais lorsqu'on
   // le quitte, ou à la validation : signaler « 0, n'est pas un nombre » à la deuxième
@@ -172,6 +251,51 @@ export default function FeuilleMouvement({
 
   const quantiteDetenue = actif?.quantite_detenue ?? null;
 
+  useEffect(() => {
+    if (!creation || couvertures !== null) {
+      return undefined;
+    }
+
+    let annule = false;
+    api
+      .symboles(jeton)
+      .then((catalogue) => {
+        if (!annule) {
+          setCouvertures(catalogue.classes ?? []);
+        }
+      })
+      // Le catalogue est un confort, pas une condition : s'il n'arrive pas, le champ
+      // reste une saisie libre et le serveur reste seul juge, comme avant.
+      .catch(() => {
+        if (!annule) {
+          setCouvertures([]);
+        }
+      });
+
+    return () => {
+      annule = true;
+    };
+  }, [creation, couvertures, jeton]);
+
+  const couvertureChoisie = useMemo(
+    () => couvertures?.find((entree) => entree.type === nouvelActif.type) ?? null,
+    [couvertures, nouvelActif.type]
+  );
+
+  const aideCouverture = useMemo(() => {
+    if (!couvertureChoisie) {
+      return 'Le code du marché, par exemple BTC, XAU ou USD.';
+    }
+    // La provenance et la date accompagnent la liste : une liste sans date est une liste
+    // dont personne ne peut dire si elle est encore vraie.
+    const date = new Date(couvertureChoisie.constate_le).toLocaleDateString('fr-FR');
+    return `${couvertureChoisie.note} Source : ${couvertureChoisie.provenance}, constaté le ${date}.`;
+  }, [couvertureChoisie]);
+
+  // Une sortie non marchande — retrait, transfert — ne dégage aucun produit : elle n'a
+  // ni prix ni montant, et le formulaire ne les demande donc pas (D89).
+  const sortie = sens === 'sortie_non_marchande';
+
   // Contrôles de forme, repris de ceux du serveur. Les messages nomment le champ et la
   // règle : un code d'erreur n'apprendrait rien à qui saisit.
   const validation = useMemo(() => {
@@ -179,6 +303,8 @@ export default function FeuilleMouvement({
     const quantiteNormalisee = normaliser(quantite);
     const prixNormalise = normaliser(prixUnitaire);
     const fraisNormalises = normaliser(frais);
+    const contreValeurNormalisee = normaliser(contreValeurFrais);
+    const enEuros = origineFrais === FRAIS_EN_EUROS;
 
     if (!actifId) {
       trouvees.actif = "Choisissez l'actif concerné par ce mouvement.";
@@ -187,20 +313,43 @@ export default function FeuilleMouvement({
     if (quantiteNormalisee === '') {
       trouvees.quantite = 'La quantité est obligatoire.';
     } else if (!MOTIF_QUANTITE.test(quantiteNormalisee)) {
-      trouvees.quantite = 'La quantité doit être un nombre positif, avec au plus 8 décimales.';
+      trouvees.quantite = `La quantité doit être un nombre positif, avec au plus ${DECIMALES_QUANTITE} décimales.`;
     } else if (comparerDecimales(quantiteNormalisee, '0') <= 0) {
       trouvees.quantite = 'La quantité doit être supérieure à zéro.';
     }
 
-    if (prixNormalise === '') {
-      trouvees.prix_unitaire = 'Le prix unitaire est obligatoire.';
-    } else if (!MOTIF_MONTANT.test(prixNormalise)) {
-      trouvees.prix_unitaire =
-        'Le prix unitaire doit être un montant positif, avec au plus 2 décimales.';
+    if (!sortie) {
+      if (prixNormalise === '') {
+        trouvees.prix_unitaire = 'Le prix unitaire est obligatoire.';
+      } else if (!MOTIF_PRIX.test(prixNormalise)) {
+        trouvees.prix_unitaire = `Le prix unitaire doit être un montant positif, avec au plus ${DECIMALES_PRIX} décimales.`;
+      }
     }
 
-    if (fraisNormalises !== '' && !MOTIF_MONTANT.test(fraisNormalises)) {
-      trouvees.frais = 'Les frais doivent être un montant positif ou nul, avec au plus 2 décimales.';
+    // Les frais réglés en euros se comptent au centime ; prélevés dans un actif, ils
+    // sont une quantité et en gardent la précision.
+    if (fraisNormalises !== '') {
+      const motif = enEuros ? MOTIF_MONTANT : MOTIF_QUANTITE;
+      if (!motif.test(fraisNormalises)) {
+        trouvees.frais = enEuros
+          ? `Les frais doivent être un montant positif ou nul, avec au plus ${DECIMALES_MONTANT} décimales.`
+          : `Les frais doivent être une quantité positive ou nulle, avec au plus ${DECIMALES_QUANTITE} décimales.`;
+      }
+    }
+
+    if (origineFrais === FRAIS_EN_TIERS && fraisNormalises !== '') {
+      if (!symboleFrais.trim()) {
+        trouvees.frais_unite = "Indiquez l'actif dans lequel les frais ont été prélevés.";
+      }
+      // Aucun taux ne se lit dans le mouvement : le serveur refusera de le deviner, et
+      // l'annoncer ici évite un aller-retour pour une information que l'utilisateur a
+      // sous les yeux.
+      if (contreValeurNormalisee === '') {
+        trouvees.frais_contre_valeur_eur =
+          'Indiquez la contre-valeur en euros de ces frais au moment de l’opération.';
+      } else if (!MOTIF_MONTANT.test(contreValeurNormalisee)) {
+        trouvees.frais_contre_valeur_eur = `La contre-valeur doit être un montant positif ou nul, avec au plus ${DECIMALES_MONTANT} décimales.`;
+      }
     }
 
     if (!date) {
@@ -210,7 +359,17 @@ export default function FeuilleMouvement({
     }
 
     return trouvees;
-  }, [actifId, quantite, prixUnitaire, frais, date]);
+  }, [
+    actifId,
+    quantite,
+    prixUnitaire,
+    frais,
+    origineFrais,
+    symboleFrais,
+    contreValeurFrais,
+    sortie,
+    date,
+  ]);
 
   // Bornage de la vente à la quantité réellement détenue.
   //
@@ -221,8 +380,14 @@ export default function FeuilleMouvement({
   const depassement = useMemo(() => {
     const quantiteNormalisee = normaliser(quantite);
 
+    // En correction, la quantité détenue comprend déjà le mouvement que l'on modifie :
+    // la comparer à la nouvelle valeur refuserait à tort une vente qu'on augmente
+    // légitimement. Le seul juge est alors le récapitulatif du serveur, qui rejoue toute
+    // l'histoire de la position avec le mouvement remplacé — et il tourne à chaque
+    // frappe.
     if (
-      sens !== 'vente' ||
+      edition ||
+      sens === 'achat' ||
       quantiteDetenue === null ||
       !MOTIF_QUANTITE.test(quantiteNormalisee) ||
       comparerDecimales(quantiteNormalisee, quantiteDetenue) <= 0
@@ -230,23 +395,61 @@ export default function FeuilleMouvement({
       return null;
     }
 
-    return `Vous détenez ${formaterQuantite(quantiteDetenue, actif?.type, actif?.symbole)} : une vente ne peut pas dépasser cette quantité.`;
-  }, [sens, quantite, quantiteDetenue, actif]);
+    // La règle vaut pour toute sortie de quantité, vente ou non : elle ne dépend pas de
+    // ce que le mouvement rapporte.
+    const mouvement = sens === 'vente' ? 'une vente' : 'une sortie';
+    return `Vous détenez ${formaterQuantite(quantiteDetenue, actif?.type, actif?.symbole)} : ${mouvement} ne peut pas dépasser cette quantité.`;
+  }, [edition, sens, quantite, quantiteDetenue, actif]);
 
   const complet = Object.keys(validation).length === 0 && !depassement;
 
   // Corps envoyé au serveur, identique pour la simulation et pour l'enregistrement : les
   // deux routes partagent le même schéma de validation.
-  const corps = useMemo(
-    () => ({
+  // Les trois formes de frais du serveur sont mutuellement exclusives : le corps en
+  // porte une seule, celle que l'utilisateur a choisie. Envoyer la forme courte et la
+  // forme longue ensemble obligerait le serveur à décider laquelle prime, et il refuse
+  // — à raison — de le faire.
+  const corps = useMemo(() => {
+    const montantFrais = normaliser(frais);
+    const commun = {
       sens,
       quantite: normaliser(quantite),
-      prix_unitaire: normaliser(prixUnitaire),
-      frais: normaliser(frais) === '' ? '0' : normaliser(frais),
       date_transaction: versHorodatage(date),
-    }),
-    [sens, quantite, prixUnitaire, frais, date]
-  );
+    };
+
+    if (sens !== 'sortie_non_marchande') {
+      commun.prix_unitaire = normaliser(prixUnitaire);
+    }
+
+    if (origineFrais === FRAIS_EN_EUROS) {
+      return { ...commun, frais: montantFrais === '' ? '0' : montantFrais };
+    }
+
+    if (montantFrais === '') {
+      return { ...commun, frais: '0' };
+    }
+
+    if (origineFrais === FRAIS_EN_ACTIF) {
+      return { ...commun, frais_montant: montantFrais, frais_unite: actif?.symbole ?? '' };
+    }
+
+    return {
+      ...commun,
+      frais_montant: montantFrais,
+      frais_unite: symboleFrais.trim().toUpperCase(),
+      frais_contre_valeur_eur: normaliser(contreValeurFrais),
+    };
+  }, [
+    sens,
+    quantite,
+    prixUnitaire,
+    frais,
+    origineFrais,
+    symboleFrais,
+    contreValeurFrais,
+    actif,
+    date,
+  ]);
 
   // Récapitulatif recalculé à chaque modification, après un court délai d'inactivité.
   //
@@ -265,7 +468,9 @@ export default function FeuilleMouvement({
 
     const minuteur = setTimeout(async () => {
       try {
-        const effet = await api.simulerTransaction(jeton, actifId, corps);
+        const effet = edition
+          ? await api.simulerModificationTransaction(jeton, actifId, mouvement.id, corps)
+          : await api.simulerTransaction(jeton, actifId, corps);
         if (!annule) {
           setRecapitulatif(effet);
           setErreurRecapitulatif(null);
@@ -286,7 +491,7 @@ export default function FeuilleMouvement({
       annule = true;
       clearTimeout(minuteur);
     };
-  }, [jeton, actifId, complet, corps]);
+  }, [jeton, actifId, complet, corps, edition, mouvement?.id]);
 
   // Changer d'actif change de cours : la proposition de prix suit la sélection. Elle
   // n'est pas posée par un effet, qui la réappliquerait à chaque rafraîchissement de la
@@ -296,6 +501,15 @@ export default function FeuilleMouvement({
     setPrixUnitaire(
       catalogue.find((position) => String(position.id) === String(identifiantActif))?.cours_eur ?? ''
     );
+  }
+
+  // Des frais prélevés dans l'actif qui sort font déjà partie de la quantité retirée :
+  // le serveur les refuse, et l'option disparaît plutôt que de mener à un refus.
+  function choisirSens(code) {
+    setSens(code);
+    if (code === 'sortie_non_marchande' && origineFrais === FRAIS_EN_ACTIF) {
+      setOrigineFrais(FRAIS_EN_EUROS);
+    }
   }
 
   function marquerQuitte(champ) {
@@ -361,6 +575,8 @@ export default function FeuilleMouvement({
         quantite: true,
         prix_unitaire: true,
         frais: true,
+        frais_unite: true,
+        frais_contre_valeur_eur: true,
         date_transaction: true,
       });
       return;
@@ -371,7 +587,9 @@ export default function FeuilleMouvement({
     setMessageServeur(null);
 
     try {
-      const enregistre = await api.creerTransaction(jeton, actifId, corps);
+      const enregistre = edition
+        ? await api.modifierTransaction(jeton, actifId, mouvement.id, corps)
+        : await api.creerTransaction(jeton, actifId, corps);
 
       // La confirmation est rédigée ici, où le sens, la classe et le symbole sont
       // connus, et remise à l'écran d'origine qui l'affichera après le rafraîchissement.
@@ -384,10 +602,10 @@ export default function FeuilleMouvement({
         transaction: enregistre,
         actif,
         sens,
-        resume:
-          sens === 'achat'
-            ? `Achat de ${quantiteEnregistree} enregistré.`
-            : `Vente de ${quantiteEnregistree} enregistrée.`,
+        resume: edition
+          ? `Mouvement corrigé : ${quantiteEnregistree}.`
+          : RESUMES[sens](quantiteEnregistree),
+        edition,
       });
     } catch (echec) {
       const duServeur = erreursDuServeur(echec);
@@ -406,7 +624,11 @@ export default function FeuilleMouvement({
   const verrouille = envoi || creationEnCours;
 
   return (
-    <Feuille titre="Nouveau mouvement" surFermeture={surFermeture} verrouillee={verrouille}>
+    <Feuille
+      titre={edition ? 'Corriger le mouvement' : 'Nouveau mouvement'}
+      surFermeture={surFermeture}
+      verrouillee={verrouille}
+    >
       <form className="mouvement" onSubmit={soumettre} noValidate>
         {/* Le sens est un groupe de boutons radio et non une paire de boutons : les deux
             options sont exclusives, et les flèches du clavier doivent passer de l'une à
@@ -426,7 +648,7 @@ export default function FeuilleMouvement({
                   name={`${identifiant}-sens`}
                   value={option.code}
                   checked={sens === option.code}
-                  onChange={() => setSens(option.code)}
+                  onChange={() => choisirSens(option.code)}
                   className="lecteur-ecran-seulement"
                 />
                 <span>{option.libelle}</span>
@@ -448,7 +670,10 @@ export default function FeuilleMouvement({
                 className="champ__saisie"
                 value={nouvelActif.type}
                 onChange={(evenement) =>
-                  setNouvelActif({ ...nouvelActif, type: evenement.target.value })
+                  // Le symbole est vidé avec le changement de classe : AAPL n'a rien à
+                  // faire dans une liste de métaux, et une valeur restée en place
+                  // partirait au serveur.
+                  setNouvelActif({ ...nouvelActif, type: evenement.target.value, symbole: '' })
                 }
               >
                 {CLASSES_QUANTITE.map((classe) => (
@@ -459,18 +684,53 @@ export default function FeuilleMouvement({
               </select>
             </div>
 
-            <Champ
-              label="Symbole"
-              valeur={nouvelActif.symbole}
-              onChange={(evenement) =>
-                setNouvelActif({ ...nouvelActif, symbole: evenement.target.value })
-              }
-              erreur={erreurs.symbole}
-              aide="Le code du marché, par exemple BTC, XAU ou USD."
-              obligatoire
-              maxLength={20}
-              autoComplete="off"
-            />
+            {/* Le champ suit la couverture de la classe (D27, S-16). Une classe dont
+                l'application connaît la liste propose un choix : l'utilisateur ne
+                découvre plus le refus après avoir tapé. Une classe dont seul le
+                fournisseur sait garde une saisie libre, et annonce d'où viendra la
+                réponse. */}
+            {couvertureChoisie?.symboles ? (
+              <div className="champ">
+                <label className="champ__label" htmlFor={`${identifiant}-symbole`}>
+                  Symbole
+                  <span className="champ__obligatoire" aria-hidden="true"> *</span>
+                  <span className="lecteur-ecran-seulement"> (obligatoire)</span>
+                </label>
+                <select
+                  id={`${identifiant}-symbole`}
+                  className={`champ__saisie${erreurs.symbole ? ' champ__saisie--erreur' : ''}`}
+                  value={nouvelActif.symbole}
+                  onChange={(evenement) =>
+                    setNouvelActif({ ...nouvelActif, symbole: evenement.target.value })
+                  }
+                  aria-describedby={`${identifiant}-symbole-aide`}
+                >
+                  <option value="">Choisir un symbole</option>
+                  {couvertureChoisie.symboles.map((entree) => (
+                    <option key={entree.symbole} value={entree.symbole}>
+                      {entree.nom ? `${entree.symbole} — ${entree.nom}` : entree.symbole}
+                    </option>
+                  ))}
+                </select>
+                <p className="champ__aide" id={`${identifiant}-symbole-aide`}>
+                  {aideCouverture}
+                </p>
+                {erreurs.symbole && <p className="champ__erreur">{erreurs.symbole}</p>}
+              </div>
+            ) : (
+              <Champ
+                label="Symbole"
+                valeur={nouvelActif.symbole}
+                onChange={(evenement) =>
+                  setNouvelActif({ ...nouvelActif, symbole: evenement.target.value })
+                }
+                erreur={erreurs.symbole}
+                aide={aideCouverture}
+                obligatoire
+                maxLength={20}
+                autoComplete="off"
+              />
+            )}
 
             <Champ
               label="Nom"
@@ -510,7 +770,7 @@ export default function FeuilleMouvement({
               className={`champ__saisie${erreurs.actif ? ' champ__saisie--erreur' : ''}`}
               value={actifId}
               onChange={(evenement) => choisirActif(evenement.target.value)}
-              disabled={verrouille}
+              disabled={verrouille || edition}
               aria-invalid={erreurs.actif ? 'true' : undefined}
             >
               <option value="">Choisir un actif</option>
@@ -522,15 +782,20 @@ export default function FeuilleMouvement({
             </select>
 
             <div className="mouvement__appoint">
-              {actif && <JetonClasse classe={actif.type} avecLibelle />}
-              <button
-                type="button"
-                className="mouvement__lien"
-                onClick={() => setCreation(true)}
-                disabled={verrouille}
-              >
-                Suivre un nouvel actif
-              </button>
+              {actif && <JetonClasse classe={actif.type} symbole={actif.symbole} avecLibelle />}
+              {/* Un mouvement ne se déplace pas d'une position à une autre : en
+                  correction, ni le choix de l'actif ni l'ouverture d'une nouvelle
+                  position n'ont de sens. */}
+              {!edition && (
+                <button
+                  type="button"
+                  className="mouvement__lien"
+                  onClick={() => setCreation(true)}
+                  disabled={verrouille}
+                >
+                  Suivre un nouvel actif
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -551,35 +816,46 @@ export default function FeuilleMouvement({
             {/* Raccourci de vente totale : il évite de recopier à la main une quantité à
                 huit décimales, et garantit que la valeur envoyée est exactement celle que
                 le serveur a rendue. */}
-            {sens === 'vente' && quantiteDetenue !== null && !estNul(quantiteDetenue) && (
+            {sens !== 'achat' && quantiteDetenue !== null && !estNul(quantiteDetenue) && (
               <button
                 type="button"
                 className="mouvement__lien"
                 onClick={() => setQuantite(quantiteDetenue)}
                 disabled={verrouille}
               >
-                Tout vendre
+                {sens === 'vente' ? 'Tout vendre' : 'Tout sortir'}
               </button>
             )}
           </div>
 
-          <Champ
-            label="Prix unitaire (€)"
-            valeur={prixUnitaire}
-            onChange={(evenement) => setPrixUnitaire(evenement.target.value)}
-            onBlur={() => marquerQuitte('prix_unitaire')}
-            erreur={erreurDe('prix_unitaire')}
-            obligatoire
-            inputMode="decimal"
-            autoComplete="off"
-            disabled={verrouille}
-          />
+          {!sortie && (
+            <Champ
+              label="Prix unitaire (€)"
+              valeur={prixUnitaire}
+              onChange={(evenement) => setPrixUnitaire(evenement.target.value)}
+              onBlur={() => marquerQuitte('prix_unitaire')}
+              erreur={erreurDe('prix_unitaire')}
+              obligatoire
+              inputMode="decimal"
+              autoComplete="off"
+              disabled={verrouille}
+            />
+          )}
         </div>
+
+        {sortie && (
+          <p className="mouvement__aide">
+            <span aria-hidden="true">ⓘ </span>
+            Une sortie retire la quantité de votre position sans contrepartie en euros :
+            transfert vers un autre portefeuille, retrait, ou frais réglés en nature. Elle ne
+            dégage aucune plus-value, et la valeur qui quitte le portefeuille est comptée à part.
+          </p>
+        )}
 
         {/* Le cours du jour est une proposition et non une contrainte : le dire évite de
             laisser croire que la valeur affichée est celle de l'opération passée que l'on
             est en train de saisir. */}
-        {actif && (
+        {actif && !sortie && (
           <p className="mouvement__aide">
             {actif.cours_eur ? (
               <>
@@ -611,7 +887,7 @@ export default function FeuilleMouvement({
           />
 
           <Champ
-            label="Frais (€)"
+            label={origineFrais === FRAIS_EN_EUROS ? 'Frais (€)' : 'Frais prélevés'}
             valeur={frais}
             onChange={(evenement) => setFrais(evenement.target.value)}
             onBlur={() => marquerQuitte('frais')}
@@ -622,6 +898,65 @@ export default function FeuilleMouvement({
             disabled={verrouille}
           />
         </div>
+
+        {/* Unité réellement prélevée. Elle n'apparaît qu'une fois un montant saisi :
+            un champ de plus sur un formulaire où neuf mouvements sur dix n'ont pas de
+            frais en nature pèserait plus qu'il ne servirait. */}
+        {normaliser(frais) !== '' && (
+          <div className="champ">
+            <label className="champ__label" htmlFor={`${identifiant}-origine-frais`}>
+              Ces frais ont été prélevés en
+            </label>
+            <select
+              id={`${identifiant}-origine-frais`}
+              className="champ__saisie"
+              value={origineFrais}
+              onChange={(evenement) => setOrigineFrais(evenement.target.value)}
+              disabled={verrouille}
+            >
+              <option value={FRAIS_EN_EUROS}>euros</option>
+              {/* Retirés de la position elle-même, ils font partie de la quantité qui
+                  sort : l'option n'a pas de sens sur une sortie. */}
+              {!sortie && actif && (
+                <option value={FRAIS_EN_ACTIF}>{actif.symbole}, l’actif de l’opération</option>
+              )}
+              <option value={FRAIS_EN_TIERS}>un autre actif</option>
+            </select>
+            {origineFrais === FRAIS_EN_ACTIF && actif && (
+              <p className="champ__aide">
+                Saisissez la quantité <strong>reçue</strong> et les frais retenus par la
+                plateforme : ils sont convertis au prix de l’opération.
+              </p>
+            )}
+          </div>
+        )}
+
+        {normaliser(frais) !== '' && origineFrais === FRAIS_EN_TIERS && (
+          <div className="mouvement__paire">
+            <Champ
+              label="Actif des frais"
+              valeur={symboleFrais}
+              onChange={(evenement) => setSymboleFrais(evenement.target.value)}
+              onBlur={() => marquerQuitte('frais_unite')}
+              erreur={erreurDe('frais_unite')}
+              aide="Le code du marché, par exemple BNB."
+              maxLength={20}
+              autoComplete="off"
+              disabled={verrouille}
+            />
+            <Champ
+              label="Contre-valeur en euros"
+              valeur={contreValeurFrais}
+              onChange={(evenement) => setContreValeurFrais(evenement.target.value)}
+              onBlur={() => marquerQuitte('frais_contre_valeur_eur')}
+              erreur={erreurDe('frais_contre_valeur_eur')}
+              aide="Ce que valaient ces frais en euros au moment de l’opération."
+              inputMode="decimal"
+              autoComplete="off"
+              disabled={verrouille}
+            />
+          </div>
+        )}
 
         {/* Le récapitulatif est une région vivante : ses recalculs sont annoncés sans
             interrompre la saisie en cours. */}
@@ -641,18 +976,40 @@ export default function FeuilleMouvement({
             </p>
           ) : recapitulatif ? (
             <dl className="mouvement__effet">
-              <div>
-                <dt>Montant de l'opération</dt>
-                <dd>
-                  <Montant valeur={recapitulatif.montant} />
-                </dd>
-              </div>
+              {!sortie && (
+                <div>
+                  <dt>Montant de l'opération</dt>
+                  <dd>
+                    <Montant valeur={recapitulatif.montant} />
+                  </dd>
+                </div>
+              )}
 
               {!estNul(recapitulatif.frais) && (
                 <div>
                   <dt>Frais</dt>
                   <dd>
                     <Montant valeur={recapitulatif.frais} />
+                    {/* La conversion est annoncée avant validation, jamais découverte
+                        après : c'est le seul moment où l'utilisateur peut corriger un
+                        prix d'opération dont dépend la contre-valeur. */}
+                    {recapitulatif.frais_unite && recapitulatif.frais_unite !== FRAIS_EN_EUROS && (
+                      <span className="mouvement__inchange">
+                        {formaterQuantiteEnNature(
+                          recapitulatif.frais_montant,
+                          recapitulatif.frais_unite
+                        )}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              )}
+
+              {recapitulatif.cout_sortie != null && (
+                <div>
+                  <dt>Valeur sortie du portefeuille</dt>
+                  <dd>
+                    <Montant valeur={recapitulatif.cout_sortie} />
                   </dd>
                 </div>
               )}
@@ -712,7 +1069,7 @@ export default function FeuilleMouvement({
               calculé : enregistrer sans l'avoir vu retirerait à cet écran sa raison
               d'être, et signifierait que le serveur n'a pas accepté la saisie. */}
           <Bouton type="submit" enCours={envoi} desactive={!recapitulatif || verrouille}>
-            Enregistrer
+            {edition ? 'Enregistrer la correction' : 'Enregistrer'}
           </Bouton>
         </div>
       </form>

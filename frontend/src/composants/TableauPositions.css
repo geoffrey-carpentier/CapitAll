@@ -118,10 +118,21 @@
     cursor: pointer;
   }
 
+  /*
+    La cellule reste une cellule de tableau.
+
+    Elle portait display:flex, ce qui la sortait de l'algorithme de mise en page du
+    tableau : n'étant plus une case, elle ne s'étirait plus à la hauteur de sa ligne et
+    s'arrêtait 7,5 px au-dessus des autres, filet compris. La colonne « Actif » semblait
+    donc décalée verticalement de toutes les colonnes de chiffres. La disposition en
+    ligne est de toute façon déjà tenue par le lien qu'elle contient.
+  */
   .positions-liste__cellule-actif {
-    display: flex;
-    align-items: center;
-    gap: var(--espace-2);
+    white-space: nowrap;
+  }
+
+  .positions-liste__cellule-actif .pastille-fraicheur {
+    margin-left: var(--espace-2);
   }
 
   .positions-liste__lien {

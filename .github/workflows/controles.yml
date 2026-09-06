@@ -1,0 +1,82 @@
+# Contrôles automatiques sur chaque proposition de fusion.
+#
+# Un seul travail, aux étapes ordonnées : les deux suites doivent s'exécuter l'une après
+# l'autre et non en parallèle. Elles partagent des ports et des variables
+# d'environnement, et les faire tourner ensemble a déjà produit des résultats que
+# personne ne savait interpréter.
+#
+# Ce fichier ne publie rien et ne déploie rien. La construction d'images et la mise en
+# service relèvent d'un autre déclencheur, avec d'autres autorisations.
+#
+# Aucun secret réel n'est employé : les valeurs ci-dessous sont des chaînes de test, et
+# les suites n'atteignent ni base de données ni fournisseur externe.
+#
+# NOTE, tant que le lot L1 n'est pas livré : la suite backend échoue volontairement.
+# Neuf tests de régression y décrivent des défauts constatés et non encore corrigés.
+# Leur passage au vert est le critère d'acceptation de L1. Le détail est dans
+# .claude/revues/execution-2026-09-05/TESTS-OUVERTS.md.
+
+name: Contrôles
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+# Lecture seule : le travail n'a besoin que du contenu du dépôt.
+permissions:
+  contents: read
+
+jobs:
+  controles:
+    name: Lint, tests et construction
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      # Valeurs de test explicites. La chaîne de connexion ne pointe sur aucune base
+      # joignable : les suites injectent leurs modèles, elles n'ouvrent pas de session.
+      DATABASE_URL: postgresql://test:test@127.0.0.1:1/base_inaccessible
+      JWT_SECRET: valeur_de_test_sans_equivalent_reel_0123456789
+
+    steps:
+      - name: Récupération des sources
+        uses: actions/checkout@v4
+
+      - name: Installation de Node
+        uses: actions/setup-node@v4
+        with:
+          # Même version majeure que les images de livraison.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # npm ci et non npm install : l'installation suit le fichier de verrouillage à la
+      # lettre, sans le mettre à jour. Deux exécutions installent exactement les mêmes
+      # versions, ce qui est la condition pour qu'un échec soit reproductible.
+      - name: Dépendances du back-end
+        run: npm ci
+        working-directory: backend
+
+      - name: Dépendances du front-end
+        run: npm ci
+        working-directory: frontend
+
+      - name: Tests du back-end
+        run: npm test -- --maxWorkers=1
+        working-directory: backend
+
+      - name: Tests du front-end
+        run: npm test -- --maxWorkers=1
+        working-directory: frontend
+
+      - name: Analyse statique du front-end
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Construction du front-end
+        run: npm run build
+        working-directory: frontend

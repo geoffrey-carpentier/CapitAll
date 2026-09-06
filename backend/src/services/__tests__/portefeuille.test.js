@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { quantiteDetenue, verifierVenteAutorisee } from '../portefeuille.js';
+import {
+  quantiteDetenue,
+  verifierVenteAutorisee,
+  verifierHistoriqueSortiesAutorisees,
+} from '../portefeuille.js';
 
 function achat(quantite) {
   return { sens: 'achat', quantite };
@@ -7,6 +11,10 @@ function achat(quantite) {
 
 function vente(quantite) {
   return { sens: 'vente', quantite };
+}
+
+function date(transaction, dateTransaction, id) {
+  return { ...transaction, id, date_transaction: dateTransaction };
 }
 
 describe('quantité détenue', () => {
@@ -72,5 +80,36 @@ describe('règle de vente', () => {
     } catch (erreur) {
       expect(erreur.statut).toBe(400);
     }
+  });
+});
+
+describe('règle de vente chronologique', () => {
+  it('refuse une vente placée avant le premier achat', () => {
+    const historique = [
+      date(vente('1'), '2026-01-01T10:00:00.000Z', 2),
+      date(achat('1'), '2026-01-02T10:00:00.000Z', 1),
+    ];
+
+    expect(() => verifierHistoriqueSortiesAutorisees(historique)).toThrow(/détenez 0/);
+  });
+
+  it('refuse une vente rétroactive qui rend une vente ultérieure impossible', () => {
+    const historique = [
+      date(achat('1'), '2026-01-01T10:00:00.000Z', 1),
+      date(vente('0.6'), '2026-01-02T10:00:00.000Z', 3),
+      date(vente('0.5'), '2026-01-03T10:00:00.000Z', 2),
+    ];
+
+    expect(() => verifierHistoriqueSortiesAutorisees(historique)).toThrow(/détenez 0\.4/);
+  });
+
+  it('accepte un historique dont chaque solde intermédiaire reste positif ou nul', () => {
+    const historique = [
+      date(achat('1'), '2026-01-01T10:00:00.000Z', 1),
+      date(vente('0.4'), '2026-01-02T10:00:00.000Z', 2),
+      date(vente('0.6'), '2026-01-03T10:00:00.000Z', 3),
+    ];
+
+    expect(() => verifierHistoriqueSortiesAutorisees(historique)).not.toThrow();
   });
 });
