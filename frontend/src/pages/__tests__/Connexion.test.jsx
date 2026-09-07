@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import Connexion from '../Connexion';
 import * as contexte from '../../contexte/contexteAuthentification';
@@ -50,6 +51,33 @@ describe('écran de connexion', () => {
     // getByLabelText échoue si le label n'est pas relié au champ : le test vaut
     // vérification d'accessibilité.
     expect(screen.getByLabelText(/adresse électronique/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/mot de passe/i)).toBeInTheDocument();
+    // Le sélecteur restreint la recherche au champ : la commande de révélation porte
+    // elle aussi « mot de passe » dans son nom accessible, et c'est voulu.
+    expect(screen.getByLabelText(/mot de passe/i, { selector: 'input' })).toBeInTheDocument();
+  });
+
+  // La saisie masquée est le premier suspect d'un refus de connexion. La commande dit son
+  // état plutôt que de le laisser deviner au dessin de l'icône.
+  it('permet de révéler puis de masquer le mot de passe saisi', async () => {
+    const utilisateur = userEvent.setup();
+    vi.spyOn(contexte, 'useAuthentification').mockReturnValue({
+      estConnecte: false,
+      connecter: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Connexion />
+      </MemoryRouter>
+    );
+
+    const champ = screen.getByLabelText(/mot de passe/i, { selector: 'input' });
+    expect(champ.getAttribute('type')).toBe('password');
+
+    await utilisateur.click(screen.getByLabelText('Afficher le mot de passe'));
+    expect(champ.getAttribute('type')).toBe('text');
+
+    await utilisateur.click(screen.getByLabelText('Masquer le mot de passe'));
+    expect(champ.getAttribute('type')).toBe('password');
   });
 });

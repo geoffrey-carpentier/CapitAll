@@ -424,6 +424,13 @@ export default function DetailPosition() {
         </Message>
       )}
 
+      {/*
+        Valorisation et repères de la position se partagent une bande, comme le patrimoine
+        et sa répartition sur l'écran d'accueil. La valorisation occupait auparavant toute
+        la largeur pour trois chiffres, laissant ses deux tiers droits vides, et les repères
+        s'alignaient en dessous sur une rangée qui n'avait plus rien à quoi se comparer.
+      */}
+      <div className="detail__principal">
       <section className="detail__valorisation" aria-labelledby="titre-valorisation">
         <h2 id="titre-valorisation" className="detail__intitule">
           Valorisation de la position
@@ -440,20 +447,33 @@ export default function DetailPosition() {
             className="detail__valeur"
           />
         )}
-        <p className="detail__variations">
-          {!masque && (
-            <Variation
-              valeur={afficher(position.plus_value_latente)}
-              mode="absolue"
-              devise={devise}
-              amplitude={position.pourcentage_variation}
-            />
-          )}
-          {position.pourcentage_variation !== null && (
-            <Variation valeur={position.pourcentage_variation} />
-          )}
-          <span className="detail__depuis">de plus-value latente</span>
-        </p>
+        <dl className="detail__reperes">
+          <div className="detail__marqueur">
+            <dt>Gains latents</dt>
+            <dd>
+              {masque ? (
+                <span aria-label="Montant masqué">••••</span>
+              ) : (
+                <Variation
+                  valeur={afficher(position.plus_value_latente)}
+                  mode="absolue"
+                  devise={devise}
+                  amplitude={position.pourcentage_variation}
+                />
+              )}
+            </dd>
+          </div>
+          <div className="detail__marqueur">
+            <dt>Progression</dt>
+            <dd>
+              {position.pourcentage_variation === null ? (
+                <span className="detail__depuis">—</span>
+              ) : (
+                <Variation valeur={position.pourcentage_variation} />
+              )}
+            </dd>
+          </div>
+        </dl>
       </section>
 
       <dl className="detail__trio">
@@ -493,6 +513,7 @@ export default function DetailPosition() {
           </dd>
         </div>
       </dl>
+      </div>
 
       {/*
         Le graphe de cours et sa ligne de prix de revient (D79). L'aire se teinte de part

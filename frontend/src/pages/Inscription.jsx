@@ -5,6 +5,7 @@ import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
 import Message from '../composants/Message';
 import './Authentification.css';
+import Marque from '../composants/Marque';
 
 // Contrôles repris de ceux du serveur, qui reste l'autorité : cette validation n'est
 // qu'un confort, elle évite un aller-retour réseau pour une erreur évidente.
@@ -113,6 +114,10 @@ export default function Inscription() {
   return (
     <main className="authentification">
       <div className="authentification__carte">
+        <p className="authentification__marque">
+          <Marque taille={28} />
+          WalletWatch
+        </p>
         <h1 className="authentification__titre">Créer un compte</h1>
         <p className="authentification__intro">
           Réunissez vos cryptomonnaies, devises, métaux et actions sur un seul tableau de bord.

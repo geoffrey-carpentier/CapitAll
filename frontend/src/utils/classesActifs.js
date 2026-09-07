@@ -8,8 +8,8 @@
 //
 // Le vocabulaire est celui du lexique du projet, il ne s'invente pas ici.
 export const LIBELLES_CLASSE = {
-  crypto: 'Cryptomonnaie',
-  metal: 'Métal précieux',
-  devise: 'Devise',
-  action: 'Action',
+  crypto: 'Cryptos',
+  metal: 'Métaux',
+  devise: 'Devises',
+  action: 'Actions',
 };

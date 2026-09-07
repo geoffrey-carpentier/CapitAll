@@ -145,7 +145,7 @@ describe('JetonClasse', () => {
   // La forme ne se prononce pas : le nom de la classe est toujours restitué.
   it('nomme la classe même lorsque le libellé n\'est pas visible', () => {
     render(<JetonClasse classe="metal" />);
-    expect(screen.getByText('Métal précieux')).toBeTruthy();
+    expect(screen.getByText('Métaux')).toBeTruthy();
   });
 
   it('ignore une classe inconnue plutôt que d\'afficher une forme muette', () => {

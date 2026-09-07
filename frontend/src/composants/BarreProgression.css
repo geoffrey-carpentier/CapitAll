@@ -4,24 +4,75 @@
   gap: var(--espace-2);
 }
 
+/*
+  22 px et non 6. La barre portait un filet de six pixels sur toute la largeur de la carte :
+  un trait long et fin se lit mal, et il ne laissait aucune place au chiffre qu'il
+  représente. À cette épaisseur, le pourcentage tient dedans.
+*/
 .barre-progression__piste {
-  height: 6px;
+  position: relative;
+  height: 22px;
   border-radius: var(--rayon-pilule);
   background: var(--couleur-carte-haute);
   overflow: hidden;
 }
 
 .barre-progression__remplissage {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   height: 100%;
+  padding: 0 var(--espace-2);
   background: var(--couleur-accent);
   border-radius: var(--rayon-pilule);
+  box-sizing: border-box;
+}
+
+/* La couleur de la classe surveillée, celle de l'anneau de répartition (D98). Le seuil
+   dit ainsi ce qu'il surveille sans le répéter en toutes lettres. */
+.barre-progression__piste--crypto .barre-progression__remplissage {
+  background: var(--couleur-classe-crypto);
+}
+
+.barre-progression__piste--metal .barre-progression__remplissage {
+  background: var(--couleur-classe-metal);
+}
+
+.barre-progression__piste--devise .barre-progression__remplissage {
+  background: var(--couleur-classe-devise);
+}
+
+.barre-progression__piste--action .barre-progression__remplissage {
+  background: var(--couleur-classe-action);
 }
 
 /* Un seuil franchi n'est plus une progression mais un fait : la barre prend la couleur
-   d'avertissement, celle que D70 réserve aux états qui demandent un regard. */
+   d'avertissement, celle que D70 réserve aux états qui demandent un regard. Elle l'emporte
+   sur la couleur de classe, l'état primant l'appartenance. */
 .barre-progression__piste--atteint .barre-progression__remplissage {
   background: var(--couleur-avertissement);
+}
+
+/*
+  Le chiffre est posé sur le remplissage, à son extrémité. L'encre sombre s'y détache de
+  toutes les teintes de classe comme de l'ambre : ce sont les quatre couleurs mesurées en
+  D98, dont le contraste avec le fond de l'application dépasse 4,5:1, donc a fortiori avec
+  une encre presque noire. Hors du remplissage, sur la piste, il reprend l'encre atténuée.
+*/
+.barre-progression__pourcentage {
+  font-size: var(--taille-legende);
+  font-weight: var(--graisse-forte);
+  font-variant-numeric: tabular-nums;
+  color: var(--couleur-fond);
+  white-space: nowrap;
+}
+
+.barre-progression__pourcentage--dehors {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: var(--espace-2);
+  color: var(--couleur-texte-attenue);
 }
 
 .barre-progression__reperes {

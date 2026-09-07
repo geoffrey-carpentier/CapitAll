@@ -5,6 +5,7 @@ import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
 import Message from '../composants/Message';
 import './Authentification.css';
+import Marque from '../composants/Marque';
 
 export default function Connexion() {
   const { connecter, estConnecte, sessionExpiree } = useAuthentification();
@@ -49,6 +50,10 @@ export default function Connexion() {
   return (
     <main className="authentification">
       <div className="authentification__carte">
+        <p className="authentification__marque">
+          <Marque taille={28} />
+          WalletWatch
+        </p>
         <h1 className="authentification__titre">Connexion</h1>
         <p className="authentification__intro">Accédez au suivi de votre patrimoine.</p>
 

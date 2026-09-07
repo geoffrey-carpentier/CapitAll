@@ -48,3 +48,60 @@
 .champ__erreur {
   color: var(--couleur-negatif);
 }
+
+/*
+  Zone de saisie d'un mot de passe : le champ et sa commande de révélation partagent le
+  même cadre. Le bouton est posé par-dessus plutôt qu'à côté, pour que la bordure du champ
+  reste d'un seul tenant et que la largeur du champ ne dépende pas de la présence du
+  bouton.
+*/
+.champ__zone {
+  position: relative;
+  /* Conteneur souple, et non un simple bloc : dans un bloc, un input reprend sa largeur
+     intrinsèque d'une vingtaine de caractères au lieu de suivre celle du champ. Le
+     bouton, lui, reste positionné par-dessus. */
+  display: flex;
+}
+
+.champ__zone .champ__saisie {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.champ__zone--revelable .champ__saisie {
+  /* De la place pour le bouton, sans que le texte saisi passe dessous. */
+  padding-right: 44px;
+}
+
+.champ__revelation {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  /* 44 px : la zone interactive minimale en mobile (D77). Le bouton occupe toute la
+     hauteur du champ, il n'y a donc rien à viser précisément. */
+  width: 44px;
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0 var(--rayon-carte) var(--rayon-carte) 0;
+  color: var(--couleur-texte-attenue);
+  cursor: pointer;
+}
+
+.champ__revelation:hover,
+.champ__revelation[aria-pressed='true'] {
+  color: var(--couleur-texte);
+}
+
+.champ__revelation svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

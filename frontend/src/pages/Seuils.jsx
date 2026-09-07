@@ -73,6 +73,30 @@ function nomCible(seuil) {
   return seuil.type_cible === 'capital_total' ? 'Patrimoine total' : (seuil.nom_actif ?? seuil.symbole);
 }
 
+// Retrait d'un seuil.
+//
+// Le bouton était une commande pleine largeur au bas de chaque carte : il pesait autant
+// que le seuil qu'il supprime, et sur une liste de six seuils, six commandes de
+// suppression occupaient plus de place que l'information. Il devient une croix au coin
+// supérieur droit, à l'emplacement où l'on ferme une chose depuis toujours.
+//
+// La croix seule ne se prononce pas : le nom accessible dit ce qu'elle retire, et la
+// confirmation qui suit rappelle le seuil concerné. Sa zone reste à 44 px.
+function BoutonRetrait({ seuil, surRetrait }) {
+  return (
+    <button
+      type="button"
+      className="seuils__retrait"
+      onClick={() => surRetrait(seuil)}
+      aria-label={`Retirer ce seuil, ${nomCible(seuil)}`}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  );
+}
+
 export default function Seuils() {
   const { jeton } = useAuthentification();
   const naviguer = useNavigate();
@@ -311,15 +335,8 @@ export default function Seuils() {
                         </p>
                       </div>
                       <span className="seuils__puce-franchi">Franchi</span>
+                      <BoutonRetrait seuil={seuil} surRetrait={setARetirer} />
                     </div>
-                    <button
-                      type="button"
-                      className="seuils__retrait"
-                      onClick={() => setARetirer(seuil)}
-                    >
-                      Retirer
-                      <span className="lecteur-ecran-seulement"> ce seuil, {nomCible(seuil)}</span>
-                    </button>
                   </Carte>
                 </li>
               );
@@ -352,15 +369,8 @@ export default function Seuils() {
                             <Montant valeur={afficher(seuil.valeur_seuil)} devise={deviseAffichee} />
                           )}
                         </p>
-                        {/* Un pourcentage, jamais converti ni masqué, au même titre que
-                            la performance ou la répartition ailleurs dans l'application :
-                            il ne représente pas un montant, seule une devise en porte. */}
-                        {seuil.ecart_pourcentage !== null && (
-                          <p className="seuils__sous-texte">
-                            reste <Montant valeur={seuil.ecart_pourcentage} type="pourcentage" />
-                          </p>
-                        )}
                       </div>
+                      <BoutonRetrait seuil={seuil} surRetrait={setARetirer} />
                     </div>
 
                     <BarreProgression
@@ -369,17 +379,10 @@ export default function Seuils() {
                       devise={deviseAffichee}
                       masque={masque}
                       sens={seuil.sens_seuil}
+                      classe={type}
+                      ecart={seuil.ecart_pourcentage}
                       libelle={`Progression vers le seuil, ${nomCible(seuil)}`}
                     />
-
-                    <button
-                      type="button"
-                      className="seuils__retrait"
-                      onClick={() => setARetirer(seuil)}
-                    >
-                      Retirer
-                      <span className="lecteur-ecran-seulement"> ce seuil, {nomCible(seuil)}</span>
-                    </button>
                   </Carte>
                 </li>
               );

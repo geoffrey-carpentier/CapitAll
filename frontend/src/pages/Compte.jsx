@@ -328,7 +328,7 @@ export default function Compte() {
       </Carte>
 
       <Carte titre="À propos" className="compte__carte">
-        <dl className="compte__informations">
+        <dl className="compte__informations compte__informations--propos">
           <div className="compte__ligne">
             <dt>Version</dt>
             <dd>0.1.0</dd>
@@ -336,23 +336,37 @@ export default function Compte() {
           {/* Sources et fréquences réelles : elles reprennent les adaptateurs branchés
               et les durées de vie du cache définies côté serveur (D21). */}
           <div className="compte__ligne">
-            <dt>Cryptomonnaies</dt>
-            <dd>Coinbase, rafraîchi toutes les 2 minutes</dd>
+            <dt>Cryptos</dt>
+            <dd>Coinbase, toutes les 2 minutes</dd>
           </div>
           <div className="compte__ligne">
             <dt>Devises</dt>
-            <dd>Frankfurter (BCE), rafraîchi une fois par heure</dd>
+            <dd>Frankfurter (taux de référence BCE), une fois par heure</dd>
           </div>
           <div className="compte__ligne">
-            <dt>Métaux précieux</dt>
-            <dd>gold-api, rafraîchi toutes les 10 minutes</dd>
+            <dt>Métaux</dt>
+            <dd>gold-api, toutes les 10 minutes. Cotation à l&apos;once troy</dd>
           </div>
           <div className="compte__ligne">
             <dt>Actions</dt>
             <dd>
-              Financial Modeling Prep, puis Finnhub et Alpha Vantage en secours, rafraîchi
-              toutes les 5 minutes. Ces positions ne sont valorisées que si une clé de
-              fournisseur est configurée sur le serveur.
+              Financial Modeling Prep, puis Finnhub et Alpha Vantage en secours, toutes les
+              5 minutes
+            </dd>
+          </div>
+          <div className="compte__ligne">
+            <dt>Devise de référence</dt>
+            <dd>
+              Euro. L&apos;affichage en dollar convertit au taux du jour, sans modifier
+              les montants enregistrés
+            </dd>
+          </div>
+          <div className="compte__ligne">
+            <dt>Cours indisponible</dt>
+            <dd>
+              Le dernier cours connu prend le relais, avec sa date. À défaut, la position
+              n&apos;est pas valorisée et sort du total, plutôt que d&apos;être comptée
+              pour zéro
             </dd>
           </div>
         </dl>

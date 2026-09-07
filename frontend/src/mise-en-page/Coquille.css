@@ -43,7 +43,13 @@
   align-items: center;
   gap: var(--espace-1);
   padding: var(--espace-2) var(--espace-1);
-  font-size: var(--taille-legende);
+  /* Ces cinq libellés sont la structure de l'application, pas une annotation : ils
+     doivent dominer le contenu qu'ils encadrent, et non lui céder le pas. 16 px les
+     place entre le corps de texte et le titre d'écran, et l'espacement vertical suit —
+     une liste plus haute se balaie mieux qu'une liste plus dense. */
+  font-size: 16px;
+  font-weight: var(--graisse-forte);
+  letter-spacing: 0.01em;
   color: var(--couleur-texte-attenue);
   text-decoration: none;
 }
@@ -146,25 +152,13 @@
     font-weight: var(--graisse-forte);
   }
 
-  .coquille__marque > span {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--rayon-carte);
-    background: var(--couleur-accent);
-    /* La même encre sombre que le bouton flottant, sur le même fond accentué. La
-       couleur de texte ordinaire n'y atteignait que 2,40:1, mesuré au navigateur : la
-       lettre était illisible, même si son aria-hidden la met hors du champ formel de
-       la règle. */
-    color: #0b1015;
-    font-size: var(--taille-corps);
-  }
+  /* La marque porte son propre dessin et ses propres couleurs : voir Marque.jsx. Il n'y
+     a plus de pastille à styler ici. */
 
   .coquille__liste {
     flex: none;
     flex-direction: column;
-    gap: var(--espace-1);
+    gap: var(--espace-2);
   }
 
   .coquille__liste > li {
@@ -175,12 +169,15 @@
     display: none;
   }
 
+  /* Le rail latéral reprend la taille posée plus haut : 14 px y ramenaient les libellés
+     sous le poids des chiffres qu'ils encadrent. La marge intérieure verticale suit, pour
+     que quatre entrées plus grosses restent une liste aérée et non un bloc compact. */
   .coquille__lien {
     flex-direction: row;
     justify-content: flex-start;
     gap: var(--espace-3);
-    padding: var(--espace-3);
-    font-size: var(--taille-corps);
+    padding: var(--espace-3) var(--espace-4);
+    font-size: 16px;
     border-radius: var(--rayon-carte);
   }
 
@@ -201,7 +198,13 @@
   }
 
   .coquille__pseudo {
-    font-size: var(--taille-legende);
+    /* Ces cinq libellés sont la structure de l'application, pas une annotation : ils
+     doivent dominer le contenu qu'ils encadrent, et non lui céder le pas. 16 px les
+     place entre le corps de texte et le titre d'écran, et l'espacement vertical suit —
+     une liste plus haute se balaie mieux qu'une liste plus dense. */
+  font-size: 16px;
+  font-weight: var(--graisse-forte);
+  letter-spacing: 0.01em;
     color: var(--couleur-texte-attenue);
   }
 
