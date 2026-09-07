@@ -1,0 +1,27 @@
+/*
+  Encre de la marque. Le tracé et la fente reprennent l'encre sombre du fond général, la
+  même que celle du bouton flottant sur son aplat d'accent : sur un dégradé bleu-rose,
+  c'est elle qui tient le contraste, là où l'encre de texte ordinaire s'y noierait.
+
+  Le point de relevé est en revanche clair : il doit se détacher du trait sombre qui le
+  porte, et non s'y fondre.
+*/
+.marque {
+  flex: none;
+  display: block;
+}
+
+.marque__trace {
+  stroke: #0b1015;
+}
+
+.marque__fente {
+  fill: #0b1015;
+  opacity: 0.55;
+}
+
+.marque__releve {
+  fill: var(--couleur-texte);
+  stroke: #0b1015;
+  stroke-width: 2;
+}

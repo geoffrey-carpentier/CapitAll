@@ -147,3 +147,27 @@
 .seuils__carte--franchi .seuils__sous-texte {
   margin: 0;
 }
+
+/*
+  Deux seuils par ligne au-dessus du point de rupture. Une carte de seuil tient sur trois
+  lignes de texte au plus : empilées sur toute la largeur d'un écran de bureau, six d'entre
+  elles remplissaient deux hauteurs d'écran pour un contenu qui n'occupait qu'un tiers de
+  la largeur. Les cartes gardent la même hauteur sur une ligne, ce que « stretch » assure
+  sans avoir à figer une valeur.
+*/
+@media (min-width: 900px) {
+  .seuils__liste {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--espace-3);
+    align-items: stretch;
+  }
+
+  .seuils__liste > li {
+    display: flex;
+  }
+
+  .seuils__liste > li > .carte {
+    flex: 1;
+  }
+}

@@ -289,12 +289,17 @@
   }
 
   /* Dans la bande, le trio reprend la colonne : trois lignes empilées y tiennent mieux
-     qu'une rangée, la largeur disponible étant celle d'une colonne et non d'un écran. */
+     qu'une rangée, la largeur disponible étant celle d'une colonne et non d'un écran.
+
+     La marge intérieure est portée par les lignes et non par le cadre : posée sur le
+     cadre, elle arrêtait les filets de séparation à seize pixels du bord, et le cadre
+     paraissait plus large que son contenu. Les filets vont maintenant d'un bord à
+     l'autre, et le texte respire à l'intérieur. */
   .detail__principal .detail__trio {
     flex-direction: column;
     justify-content: center;
     gap: 0;
-    padding: 0 var(--espace-4);
+    padding: 0;
     border: 1px solid var(--couleur-bordure);
     border-radius: var(--rayon-carte);
   }
@@ -304,8 +309,8 @@
     flex-direction: row;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--espace-4);
-    padding: var(--espace-4) 0;
+    gap: var(--espace-6);
+    padding: var(--espace-4) var(--espace-6);
     border-bottom: 1px solid var(--couleur-bordure);
     border-left: 0;
   }

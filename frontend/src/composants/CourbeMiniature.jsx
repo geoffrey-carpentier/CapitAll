@@ -22,7 +22,10 @@ import { sensVariation } from '../utils/formatage';
 // lisait sur une bande étroite alors que la colonne avait la place. Trente points sur
 // 80 px les espacent de moins de trois pixels, ce qui écrase toute inflexion.
 const LARGEUR = 120;
-const HAUTEUR = 24;
+// 32 px : à 24, trente points écrasaient les inflexions contre les bords du cadre. La
+// hauteur reste inférieure à celle d'une ligne de tableau, la colonne ne s'en trouve pas
+// élargie.
+const HAUTEUR = 32;
 const MARGE = 2;
 
 function trace(points) {

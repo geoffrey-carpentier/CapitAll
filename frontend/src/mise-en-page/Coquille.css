@@ -152,20 +152,8 @@
     font-weight: var(--graisse-forte);
   }
 
-  .coquille__marque > span {
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--rayon-carte);
-    background: var(--couleur-accent);
-    /* La même encre sombre que le bouton flottant, sur le même fond accentué. La
-       couleur de texte ordinaire n'y atteignait que 2,40:1, mesuré au navigateur : la
-       lettre était illisible, même si son aria-hidden la met hors du champ formel de
-       la règle. */
-    color: #0b1015;
-    font-size: var(--taille-corps);
-  }
+  /* La marque porte son propre dessin et ses propres couleurs : voir Marque.jsx. Il n'y
+     a plus de pastille à styler ici. */
 
   .coquille__liste {
     flex: none;
