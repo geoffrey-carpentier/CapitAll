@@ -26,6 +26,11 @@ const ATTEIGNABLES =
 
 export default function Feuille({
   titre,
+  // Complément du titre, sur sa propre ligne. Concaténé au titre, un nom d'actif long
+  // — « Nouveau seuil — NVIDIA Corporation (NVDA) » — passait sur deux lignes en gras et
+  // en corps de titre, poussait le bouton de fermeture et déséquilibrait l'en-tête.
+  // Séparé, le titre reste court et stable, et le nom de l'actif se lit en dessous.
+  sousTitre,
   children,
   surFermeture,
   // Pendant un enregistrement, la feuille ne se referme plus : ni par le bouton, ni
@@ -37,6 +42,7 @@ export default function Feuille({
   const declencheur = useRef(null);
   const identifiant = useId();
   const idTitre = `${identifiant}-titre`;
+  const idSousTitre = `${identifiant}-sous-titre`;
 
   useEffect(() => {
     declencheur.current = document.activeElement;
@@ -92,7 +98,10 @@ export default function Feuille({
         className="feuille"
         role="dialog"
         aria-modal="true"
-        aria-labelledby={idTitre}
+        // Le nom du dialogue reprend les deux lignes de l'en-tête. Séparer le titre du
+        // nom de la cible règle un problème de mise en page ; il ne doit pas priver un
+        // lecteur d'écran de savoir sur quoi porte la feuille qui vient de s'ouvrir.
+        aria-labelledby={sousTitre ? `${idTitre} ${idSousTitre}` : idTitre}
         tabIndex={-1}
         ref={dialogue}
         onKeyDown={auClavier}
@@ -100,9 +109,16 @@ export default function Feuille({
         <span className="feuille__poignee" aria-hidden="true" />
 
         <header className="feuille__entete">
-          <h2 id={idTitre} className="feuille__titre">
-            {titre}
-          </h2>
+          <div className="feuille__intitule">
+            <h2 id={idTitre} className="feuille__titre">
+              {titre}
+            </h2>
+            {sousTitre && (
+              <p id={idSousTitre} className="feuille__sous-titre">
+                {sousTitre}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             className="feuille__fermer"

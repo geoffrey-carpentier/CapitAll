@@ -562,7 +562,10 @@ describe('saisie d’un seuil depuis l’onglet Seuils', () => {
 
     await utilisateur.click(screen.getByRole('button', { name: '+ Seuil' }));
 
-    expect(screen.getByRole('dialog', { name: 'Nouveau seuil — Bitcoin (BTC)' })).toBeTruthy();
+    // Le nom du dialogue reprend les deux lignes de son en-tête : le titre, court et
+    // stable, puis la cible. Un nom d'actif long tenait auparavant sur la même ligne que
+    // le titre, en gras et en corps de titre, et poussait le bouton de fermeture.
+    expect(screen.getByRole('dialog', { name: 'Nouveau seuil Bitcoin (BTC)' })).toBeTruthy();
     expect(screen.getByLabelText('Cible').value).toBe('actif:1');
     const options = within(screen.getByLabelText('Cible')).getAllByRole('option');
     expect(options.map((option) => option.value)).not.toContain('capital_total');

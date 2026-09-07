@@ -45,16 +45,34 @@
 
 .feuille__entete {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--espace-3);
   margin-bottom: var(--espace-3);
+  /* L'en-tête n'est pas du contenu à copier : sans cela, un clic à côté du titre y
+     laissait un curseur de texte, ce qui donnait à une zone inerte l'apparence d'un
+     champ de saisie. */
+  user-select: none;
+  cursor: default;
+}
+
+.feuille__intitule {
+  flex: 1;
+  min-width: 0;
 }
 
 .feuille__titre {
-  flex: 1;
   margin: 0;
   font-size: var(--taille-titre);
   font-weight: var(--graisse-forte);
+}
+
+/* Le nom de la cible, sous le titre : il peut être long, il se coupe plutôt que de
+   pousser le bouton de fermeture hors de l'écran. */
+.feuille__sous-titre {
+  margin: 2px 0 0;
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  overflow-wrap: anywhere;
 }
 
 /* Zone tactile de 44 px en mobile (D77), le glyphe restant plus petit. */
