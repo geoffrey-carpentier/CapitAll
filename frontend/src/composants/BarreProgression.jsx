@@ -1,5 +1,6 @@
 import './BarreProgression.css';
 import Montant from './Montant';
+import { formaterPourcentage } from '../utils/formatage';
 
 // Avancement d'une valeur vers un seuil.
 //
@@ -17,6 +18,15 @@ import Montant from './Montant';
 // montant par un nombre pour une valeur restituée à la voix, ce que la politique de
 // formatage interdit. aria-valuetext porte les deux montants en toutes lettres, et
 // c'est lui que les lecteurs d'écran annoncent.
+//
+// L'écart restant avant franchissement est écrit dans la barre, à l'extrémité de son
+// remplissage. Il figurait auparavant dans le texte au-dessus, ce qui séparait le chiffre
+// de la forme qui le représente et obligeait à faire l'aller-retour. C'est bien l'écart
+// que la spécification demande, et non l'avancement : dire « il reste 6 % » répond à la
+// question posée devant un seuil, là où « vous en êtes à 94 % » la contourne. L'avancement
+// reste porté par la longueur de la barre et par aria-valuenow. La barre porte la couleur de la
+// classe d'actif surveillée, celle-là même que porte l'anneau de répartition (D98) : c'est
+// le seul repère qui relie un seuil à ce qu'il surveille sans le répéter en toutes lettres.
 //
 // Un cours indisponible ne donne pas une barre à zéro, qui se lirait comme « très
 // loin du seuil » : la barre disparaît au profit d'une mention explicite.
@@ -50,6 +60,8 @@ export default function BarreProgression({
   sens = 'au_dessus',
   atteint = false,
   masque = false,
+  classe = null,
+  ecart = null,
 }) {
   const avancement =
     valeur === null || valeur === undefined ? null : fraction(valeur, cible, sens);
@@ -65,10 +77,22 @@ export default function BarreProgression({
   const pourcentage = Math.round(avancement * 100);
   const description = sens === 'au_dessus' ? 'seuil haut' : 'seuil bas';
 
+  // Le pourcentage se lit dans la barre plutôt qu'au-dessus d'elle. Il y perd sa place
+  // quand la barre est trop courte pour l'accueillir : en deçà d'un cinquième, il se pose
+  // juste après le remplissage, sur la piste vide.
+  const dansLeRemplissage = pourcentage >= 22;
+  const etiquette = ecart === null || ecart === undefined ? null : `reste ${formaterPourcentage(ecart)}`;
+
   return (
     <div className="barre-progression">
       <div
-        className={`barre-progression__piste${atteint ? ' barre-progression__piste--atteint' : ''}`}
+        className={[
+          'barre-progression__piste',
+          atteint ? 'barre-progression__piste--atteint' : '',
+          classe ? `barre-progression__piste--${classe}` : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -76,7 +100,19 @@ export default function BarreProgression({
         aria-valuetext={`${pourcentage} % du ${description}`}
         aria-label={libelle}
       >
-        <span className="barre-progression__remplissage" style={{ width: `${pourcentage}%` }} />
+        <span className="barre-progression__remplissage" style={{ width: `${pourcentage}%` }}>
+          {etiquette && dansLeRemplissage && (
+            <span className="barre-progression__pourcentage">{etiquette}</span>
+          )}
+        </span>
+        {etiquette && !dansLeRemplissage && (
+          <span
+            className="barre-progression__pourcentage barre-progression__pourcentage--dehors"
+            style={{ left: `${pourcentage}%` }}
+          >
+            {etiquette}
+          </span>
+        )}
       </div>
       <p className="barre-progression__reperes">
         {masque ? (

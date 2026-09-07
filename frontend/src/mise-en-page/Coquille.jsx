@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
 import Bouton from '../composants/Bouton';
+import Marque from '../composants/Marque';
 import './Coquille.css';
 
 // Navigation principale. Les écrans non encore développés figurent déjà dans la
@@ -62,7 +63,7 @@ export default function Coquille() {
   return (
     <div className="coquille">
       <nav className="coquille__navigation" aria-label="Navigation principale">
-        <p className="coquille__marque"><span aria-hidden="true">W</span>WalletWatch</p>
+        <p className="coquille__marque"><Marque />WalletWatch</p>
 
         <ul className="coquille__liste">
           {ENTREES.map((entree) =>

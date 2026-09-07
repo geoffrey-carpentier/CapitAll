@@ -93,3 +93,40 @@
   font-size: var(--taille-legende);
   color: var(--couleur-texte-attenue);
 }
+
+/*
+  La marque en tête de carte. Les écrans d'authentification sont les seuls où le rail de
+  navigation n'existe pas encore : sans elle, rien n'y nomme l'application, et l'écran de
+  connexion d'un outil patrimonial gagne à dire tout de suite chez qui l'on est.
+*/
+.authentification__marque {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  margin: 0 0 var(--espace-6);
+  font-size: var(--taille-titre);
+  font-weight: var(--graisse-forte);
+  letter-spacing: 0.01em;
+}
+
+/*
+  Une lueur très basse derrière la carte, dans les deux teintes de la marque. Elle donne
+  un fond à un écran qui n'était qu'un aplat, sans rien ajouter à charger : c'est un
+  dégradé calculé par le navigateur, pas une image. Les valeurs sont volontairement
+  faibles — au-delà, le contraste du texte de la carte s'en trouverait affecté.
+*/
+.authentification {
+  position: relative;
+  isolation: isolate;
+}
+
+.authentification::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 45% at 50% 0%, color-mix(in srgb, var(--couleur-classe-crypto) 12%, transparent), transparent 70%),
+    radial-gradient(45% 40% at 85% 100%, color-mix(in srgb, var(--couleur-classe-action) 9%, transparent), transparent 70%);
+  pointer-events: none;
+}

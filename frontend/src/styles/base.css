@@ -38,8 +38,24 @@ h2 {
   font-weight: var(--graisse-forte);
 }
 
+/*
+  Les liens ne sont pas soulignés au repos. Sur des écrans qui alignent des chiffres, un
+  soulignement par ligne fabrique une trame parasite : la répartition, les positions et la
+  navigation sont des blocs à activer, pas des renvois dans un texte suivi.
+
+  Le soulignement n'est pas supprimé pour autant, il est déplacé au survol et à la prise
+  de focus. La couleur ne porte donc jamais seule l'information « ceci est un lien » : le
+  pointeur et le clavier la doublent tous deux, et l'indicateur de focus défini ci-dessous
+  reste visible dans tous les cas.
+*/
 a {
   color: var(--couleur-accent);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
 }
 
 /*

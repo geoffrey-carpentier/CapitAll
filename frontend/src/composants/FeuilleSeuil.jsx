@@ -196,7 +196,8 @@ export default function FeuilleSeuil({
 
   return (
     <Feuille
-      titre={cibleActif && actifChoisi ? `Nouveau seuil — ${nomCible}` : 'Nouveau seuil'}
+      titre="Nouveau seuil"
+      sousTitre={cibleActif && actifChoisi ? nomCible : undefined}
       surFermeture={surFermeture}
       verrouillee={envoi}
     >

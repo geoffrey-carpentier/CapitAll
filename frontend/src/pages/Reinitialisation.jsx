@@ -5,6 +5,7 @@ import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
 import Message from '../composants/Message';
 import './Authentification.css';
+import Marque from '../composants/Marque';
 
 // Choix d'un nouveau mot de passe à partir d'une clé de réinitialisation.
 //
@@ -74,6 +75,10 @@ export default function Reinitialisation() {
   return (
     <main className="authentification">
       <div className="authentification__carte">
+        <p className="authentification__marque">
+          <Marque taille={28} />
+          WalletWatch
+        </p>
         <h1 className="authentification__titre">Nouveau mot de passe</h1>
         <p className="authentification__intro">
           Saisissez la clé reçue, puis le mot de passe que vous souhaitez utiliser.

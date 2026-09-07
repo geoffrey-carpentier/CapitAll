@@ -196,11 +196,11 @@ describe('filtres par classe', () => {
     rendre();
     await screen.findByRole('table');
 
-    const filtreCrypto = screen.getByRole('button', { name: /Cryptomonnaie, 1 position/ });
+    const filtreCrypto = screen.getByRole('button', { name: /Cryptos, 1 position/ });
     await utilisateur.click(filtreCrypto);
 
     // Le compteur des autres classes ne bouge pas : ce sont des repères, pas un reste.
-    expect(screen.getByRole('button', { name: /Métal précieux, 1 position/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Métaux, 1 position/ })).toBeTruthy();
     expect(lignesDuTableau()).toHaveLength(1);
   });
 
@@ -209,8 +209,8 @@ describe('filtres par classe', () => {
     rendre();
     await screen.findByRole('table');
 
-    await utilisateur.click(screen.getByRole('button', { name: /Cryptomonnaie/ }));
-    await utilisateur.click(screen.getByRole('button', { name: /Métal précieux/ }));
+    await utilisateur.click(screen.getByRole('button', { name: /Cryptos/ }));
+    await utilisateur.click(screen.getByRole('button', { name: /Métaux/ }));
 
     expect(lignesDuTableau()).toHaveLength(2);
     expect(adresse.search).toContain('classes=crypto%2Cmetal');
@@ -249,9 +249,9 @@ describe('états', () => {
     rendre('/positions?classes=crypto');
     await screen.findByRole('table');
 
-    await utilisateur.click(screen.getByRole('button', { name: /Cryptomonnaie/ }));
+    await utilisateur.click(screen.getByRole('button', { name: /Cryptos/ }));
     await utilisateur.click(screen.getByRole('button', { name: /Devise/ }));
-    await utilisateur.click(screen.getByRole('button', { name: /Métal précieux/ }));
+    await utilisateur.click(screen.getByRole('button', { name: /Métaux/ }));
 
     // Rien ne correspond : l'en-tête et les filtres restent affichés.
     api.portefeuille.mockResolvedValue({ ...PORTEFEUILLE, actifs: [POSITIONS[0]] });
@@ -315,7 +315,7 @@ describe('accessibilité et affichage', () => {
     await screen.findByRole('table');
 
     // Le lien de la liste mobile, celui qui est parcouru à la voix.
-    const lien = screen.getByRole('link', { name: /Bitcoin, Cryptomonnaie, valorisée/ });
+    const lien = screen.getByRole('link', { name: /Bitcoin, Cryptos, valorisée/ });
     expect(lien.getAttribute('href')).toBe('/positions/1');
   });
 

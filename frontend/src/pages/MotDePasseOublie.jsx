@@ -5,6 +5,7 @@ import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
 import Message from '../composants/Message';
 import './Authentification.css';
+import Marque from '../composants/Marque';
 
 // Demande de réinitialisation d'un mot de passe oublié (D23).
 //
@@ -40,6 +41,10 @@ export default function MotDePasseOublie() {
   return (
     <main className="authentification">
       <div className="authentification__carte">
+        <p className="authentification__marque">
+          <Marque taille={28} />
+          WalletWatch
+        </p>
         <h1 className="authentification__titre">Mot de passe oublié</h1>
         <p className="authentification__intro">
           Indiquez l’adresse de votre compte. Vous recevrez une clé permettant d’en choisir un

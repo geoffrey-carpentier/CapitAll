@@ -63,10 +63,57 @@
   font-size: var(--taille-caption, 0.875rem);
 }
 
+/* Même raison que pour le formulaire : l'action d'export garde sa largeur propre. */
+.compte__carte > .bouton {
+  align-self: flex-start;
+}
+
+/*
+  Fiche « À propos ». Les lignes y étaient réparties comme celles du bloc d'informations,
+  libellé à gauche et valeur poussée à droite. Cela tient tant que la valeur est courte ;
+  la ligne des actions, qui court sur trois lignes, se retrouvait ferrée à droite en
+  drapeau, décalée de tout le reste. Deux colonnes fixes et un texte aligné à gauche
+  règlent le cas sans traiter cette ligne à part.
+*/
+.compte__informations--propos {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  column-gap: var(--espace-6);
+  row-gap: var(--espace-3);
+  align-items: baseline;
+}
+
+.compte__informations--propos .compte__ligne {
+  display: contents;
+}
+
+.compte__informations--propos dd {
+  text-align: left;
+  font-weight: var(--graisse-normale);
+}
+
+@media (max-width: 479px) {
+  .compte__informations--propos {
+    grid-template-columns: 1fr;
+    row-gap: var(--espace-1);
+  }
+
+  .compte__informations--propos dd {
+    margin-bottom: var(--espace-2);
+  }
+}
+
 .compte__formulaire {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--espace-3);
+}
+
+/* Les champs occupent la largeur de la carte, le bouton la sienne : un bouton étiré sur
+   toute la carte se lit comme une action principale de page, ce qu'il n'est pas. */
+.compte__formulaire .champ {
+  align-self: stretch;
 }
 
 .compte__actions {

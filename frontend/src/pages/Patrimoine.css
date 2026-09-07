@@ -93,13 +93,35 @@
   font-variant-numeric: tabular-nums;
 }
 
-.patrimoine__variations {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  /* 12 px entre éléments liés. */
-  gap: var(--espace-3);
-  margin: var(--espace-3) 0 0;
+/*
+  Les deux repères qui suivent le patrimoine. Chacun porte son intitulé : deux valeurs
+  posées à la suite du grand chiffre laissaient deviner laquelle répondait à quelle
+  question. Ils sont séparés par un filet vertical, comme les chiffres de contexte du bas
+  d'écran, plutôt que par des cartes qui leur donneraient le poids d'indicateurs de tête.
+*/
+.patrimoine__reperes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espace-4);
+  margin: var(--espace-6) 0 var(--espace-3);
+}
+
+.patrimoine__repere + .patrimoine__repere {
+  padding-left: var(--espace-4);
+  border-left: 1px solid var(--couleur-bordure);
+}
+
+.patrimoine__repere dt {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.patrimoine__repere dd {
+  margin: var(--espace-1) 0 0;
+  font-size: var(--taille-titre);
+  font-variant-numeric: tabular-nums;
 }
 
 .patrimoine__depuis {
@@ -174,10 +196,10 @@
 @media (min-width: 768px) {
   .patrimoine__principal {
     display: grid;
-    /* Les deux blocs sont de même rang : ni l'un ni l'autre n'est un aparté. La
-       répartition demande un peu moins de place que le patrimoine, qui porte le plus
-       gros chiffre de l'application. */
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    /* La répartition prend la plus grande part. Le bloc de patrimoine porte trois
+       chiffres et n'a pas besoin de plus, tandis que la répartition doit loger un anneau
+       et quatre lignes chiffrées : c'est elle que l'espace supplémentaire sert. */
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     align-items: stretch;
   }
 
@@ -191,7 +213,7 @@
 
   .patrimoine__contexte {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     gap: var(--espace-6);
   }
 

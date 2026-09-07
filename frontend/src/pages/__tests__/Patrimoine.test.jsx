@@ -76,10 +76,9 @@ describe('règles de comportement', () => {
     rendre();
 
     expect(await screen.findByText(/12.480,65/)).toBeTruthy();
-    // La variation absolue paraît deux fois, et c'est voulu : en tête, comme variation
-    // du patrimoine depuis l'origine, et plus bas, nommée « plus-value latente » parmi
-    // les chiffres de contexte. Ce sont deux lectures du même montant.
-    expect(screen.getAllByLabelText(/en hausse de 2.480,65/)).toHaveLength(2);
+    // Le montant des gains latents ne paraît plus qu'une fois : il est nommé en tête de
+    // carte, et les chiffres de contexte du bas ne le répètent plus.
+    expect(screen.getAllByLabelText(/en hausse de 2.480,65/)).toHaveLength(1);
     // Une variation relative s'écrit à une décimale : 24,81 s'affiche « +24,8 % ».
     expect(screen.getByLabelText(/en hausse de 24,8 /)).toBeTruthy();
   });
@@ -146,11 +145,11 @@ describe('règles de comportement', () => {
     await screen.findByText('Répartition');
 
     expect(
-      screen.getByRole('link', { name: 'Voir les positions de la classe Cryptomonnaie' })
+      screen.getByRole('link', { name: 'Voir les positions de la classe Cryptos' })
         .getAttribute('href')
     ).toBe('/positions?classes=crypto');
     expect(
-      screen.getByRole('link', { name: 'Voir les positions de la classe Action' })
+      screen.getByRole('link', { name: 'Voir les positions de la classe Actions' })
         .getAttribute('href')
     ).toBe('/positions?classes=action');
   });
@@ -472,7 +471,7 @@ describe('accessibilité', () => {
     // de description à fournir, elle se lit directement, entrée par entrée.
     await screen.findByText(/12.480,65/);
     const entrees = screen.getAllByRole('listitem');
-    const crypto = entrees.find((entree) => entree.textContent.includes('Cryptomonnaie'));
+    const crypto = entrees.find((entree) => entree.textContent.includes('Cryptos'));
 
     expect(crypto).toBeTruthy();
     expect(crypto.textContent).toMatch(/59,9/);
