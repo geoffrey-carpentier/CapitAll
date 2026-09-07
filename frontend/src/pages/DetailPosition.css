@@ -241,3 +241,76 @@
   text-align: center;
   color: var(--couleur-texte-attenue);
 }
+
+/*
+  Bande principale de la fiche : la valorisation et les trois repères de la position.
+  Empilées en mobile, côte à côte au-dessus du point de rupture, dans la même proportion
+  que le patrimoine et sa répartition sur l'écran d'accueil.
+*/
+.detail__principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-6);
+}
+
+/* Deux repères nommés sous le grand chiffre, plutôt qu'une file de variations dont on
+   devait deviner à quelle question chacune répondait. Même traitement que l'écran
+   Patrimoine, filet vertical compris. */
+.detail__reperes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espace-4);
+  margin: var(--espace-6) 0 0;
+}
+
+.detail__marqueur + .detail__marqueur {
+  padding-left: var(--espace-4);
+  border-left: 1px solid var(--couleur-bordure);
+}
+
+.detail__marqueur dt {
+  font-size: var(--taille-legende);
+  color: var(--couleur-texte-attenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail__marqueur dd {
+  margin: var(--espace-1) 0 0;
+  font-size: var(--taille-titre);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 768px) {
+  .detail__principal {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: stretch;
+  }
+
+  /* Dans la bande, le trio reprend la colonne : trois lignes empilées y tiennent mieux
+     qu'une rangée, la largeur disponible étant celle d'une colonne et non d'un écran. */
+  .detail__principal .detail__trio {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    padding: 0 var(--espace-4);
+    border: 1px solid var(--couleur-bordure);
+    border-radius: var(--rayon-carte);
+  }
+
+  .detail__principal .detail__repere {
+    flex: none;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--espace-4);
+    padding: var(--espace-4) 0;
+    border-bottom: 1px solid var(--couleur-bordure);
+    border-left: 0;
+  }
+
+  .detail__principal .detail__repere:last-child {
+    border-bottom: 0;
+  }
+}

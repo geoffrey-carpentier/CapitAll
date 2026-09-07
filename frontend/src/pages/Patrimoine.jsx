@@ -341,23 +341,41 @@ export default function Patrimoine() {
               className="patrimoine__valeur"
             />
           )}
-          <p className="patrimoine__variations">
-            {!masque && (
-              <Variation
-                valeur={afficher(portefeuille.plus_value_latente)}
-                mode="absolue"
-                devise={devise}
-                amplitude={portefeuille.pourcentage_variation}
-              />
-            )}
-            {portefeuille.pourcentage_variation !== null && (
-              <Variation valeur={portefeuille.pourcentage_variation} />
-            )}
-            {/* Ce chiffre est la plus-value latente rapportée au coût des positions
-                encore détenues. Il portait la mention « depuis l'origine », que le
-                sélecteur de période emploie aussi pour l'évolution de la valeur suivie :
-                deux calculs différents sous un même mot, sur le même écran. */}
-            <span className="patrimoine__depuis">sur le coût des positions détenues</span>
+          {/* Trois repères et non un seul chiffre suivi d'une file de variations. La
+              carte portait le patrimoine puis deux valeurs collées à sa suite, sans dire
+              laquelle répondait à quelle question ; elle en pose maintenant trois, chacune
+              nommée. Le pourcentage est rapporté au coût des positions encore détenues, et
+              non « depuis l'origine » : le sélecteur de période emploie déjà ce mot pour
+              l'évolution de la valeur suivie, qui est un autre calcul. */}
+          <dl className="patrimoine__reperes">
+            <div className="patrimoine__repere">
+              <dt>Gains latents</dt>
+              <dd>
+                {masque ? (
+                  <span aria-label="Montant masqué">••••</span>
+                ) : (
+                  <Variation
+                    valeur={afficher(portefeuille.plus_value_latente)}
+                    mode="absolue"
+                    devise={devise}
+                    amplitude={portefeuille.pourcentage_variation}
+                  />
+                )}
+              </dd>
+            </div>
+            <div className="patrimoine__repere">
+              <dt>Progression</dt>
+              <dd>
+                {portefeuille.pourcentage_variation === null ? (
+                  <span className="patrimoine__depuis">—</span>
+                ) : (
+                  <Variation valeur={portefeuille.pourcentage_variation} />
+                )}
+              </dd>
+            </div>
+          </dl>
+          <p className="patrimoine__depuis">
+            Gains et progression rapportés au coût des positions détenues.
           </p>
         </section>
 
@@ -416,19 +434,8 @@ export default function Patrimoine() {
           </dd>
         </div>
         <div className="patrimoine__ligne">
-          <dt>Plus-value latente</dt>
-          <dd>
-            {masque ? (
-              <span aria-label="Montant masqué">••••</span>
-            ) : (
-              <Variation
-                valeur={afficher(portefeuille.plus_value_latente)}
-                mode="absolue"
-                devise={devise}
-                amplitude={portefeuille.pourcentage_variation}
-              />
-            )}
-          </dd>
+          <dt>Positions suivies</dt>
+          <dd>{actifs.length}</dd>
         </div>
         <div className="patrimoine__ligne">
           <dt>Plus-value réalisée</dt>

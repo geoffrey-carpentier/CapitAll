@@ -10,6 +10,6 @@
 export const LIBELLES_CLASSE = {
   crypto: 'Cryptos',
   metal: 'Métaux',
-  devise: 'Devise',
-  action: 'Action',
+  devise: 'Devises',
+  action: 'Actions',
 };

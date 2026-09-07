@@ -145,9 +145,9 @@ describe('composition', () => {
     expect(screen.queryByText(/Or/)).toBeNull();
   });
 
-  // Le pourcentage restant est toujours écrit en toutes lettres à côté de la barre :
-  // ce n'est pas elle qui porte seule l'information.
-  it("écrit l'écart restant en toutes lettres à côté de la barre", async () => {
+  // L'écart restant est écrit en toutes lettres dans la barre, à l'extrémité de son
+  // remplissage : ce n'est pas la longueur seule qui porte l'information.
+  it("écrit l'écart restant en toutes lettres dans la barre", async () => {
     rendre();
     await screen.findByRole('heading', { name: 'Seuils', level: 1 });
 

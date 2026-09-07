@@ -43,11 +43,13 @@
   align-items: center;
   gap: var(--espace-1);
   padding: var(--espace-2) var(--espace-1);
-  /* Corps de texte plutôt que légende : ces cinq libellés sont la structure de
-     l'application, pas une annotation. Ils étaient plus petits que la moindre valeur
-     affichée à côté d'eux. */
-  font-size: var(--taille-corps);
+  /* Ces cinq libellés sont la structure de l'application, pas une annotation : ils
+     doivent dominer le contenu qu'ils encadrent, et non lui céder le pas. 16 px les
+     place entre le corps de texte et le titre d'écran, et l'espacement vertical suit —
+     une liste plus haute se balaie mieux qu'une liste plus dense. */
+  font-size: 16px;
   font-weight: var(--graisse-forte);
+  letter-spacing: 0.01em;
   color: var(--couleur-texte-attenue);
   text-decoration: none;
 }
@@ -168,7 +170,7 @@
   .coquille__liste {
     flex: none;
     flex-direction: column;
-    gap: var(--espace-1);
+    gap: var(--espace-2);
   }
 
   .coquille__liste > li {
@@ -179,12 +181,15 @@
     display: none;
   }
 
+  /* Le rail latéral reprend la taille posée plus haut : 14 px y ramenaient les libellés
+     sous le poids des chiffres qu'ils encadrent. La marge intérieure verticale suit, pour
+     que quatre entrées plus grosses restent une liste aérée et non un bloc compact. */
   .coquille__lien {
     flex-direction: row;
     justify-content: flex-start;
     gap: var(--espace-3);
-    padding: var(--espace-3);
-    font-size: var(--taille-corps);
+    padding: var(--espace-3) var(--espace-4);
+    font-size: 16px;
     border-radius: var(--rayon-carte);
   }
 
@@ -205,11 +210,13 @@
   }
 
   .coquille__pseudo {
-    /* Corps de texte plutôt que légende : ces cinq libellés sont la structure de
-     l'application, pas une annotation. Ils étaient plus petits que la moindre valeur
-     affichée à côté d'eux. */
-  font-size: var(--taille-corps);
+    /* Ces cinq libellés sont la structure de l'application, pas une annotation : ils
+     doivent dominer le contenu qu'ils encadrent, et non lui céder le pas. 16 px les
+     place entre le corps de texte et le titre d'écran, et l'espacement vertical suit —
+     une liste plus haute se balaie mieux qu'une liste plus dense. */
+  font-size: 16px;
   font-weight: var(--graisse-forte);
+  letter-spacing: 0.01em;
     color: var(--couleur-texte-attenue);
   }
 

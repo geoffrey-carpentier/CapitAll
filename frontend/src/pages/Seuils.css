@@ -99,18 +99,51 @@
   border-radius: var(--rayon-pilule);
 }
 
+/* Croix de retrait, au coin supérieur droit de la carte. Elle remplace une commande
+   pleine largeur qui pesait autant que le seuil qu'elle supprime. La zone reste à 44 px,
+   même si le dessin n'en occupe que la moitié. */
 .seuils__retrait {
-  align-self: flex-start;
-  min-height: 44px;
-  padding: 0 var(--espace-2);
-  font-family: var(--police);
-  font-size: var(--taille-legende);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--espace-2)) calc(-1 * var(--espace-2)) 0 0;
+  padding: 0;
   color: var(--couleur-texte-attenue);
   background: none;
   border: none;
+  border-radius: var(--rayon-carte);
   cursor: pointer;
+}
+
+.seuils__retrait svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 
 .seuils__retrait:hover {
   color: var(--couleur-negatif);
+  background: var(--couleur-carte-haute);
+}
+
+/*
+  Un seuil franchi n'appelle plus de décision : il rend compte. Sa carte se resserre donc
+  à un peu plus de la moitié de la hauteur d'une carte en cours — une ligne au lieu de
+  trois — et le groupe passe en tête d'écran, ce que fait déjà l'ordre du document.
+*/
+.seuils__carte--franchi {
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.seuils__carte--franchi .seuils__ligne {
+  align-items: center;
+}
+
+.seuils__carte--franchi .seuils__sous-texte {
+  margin: 0;
 }
