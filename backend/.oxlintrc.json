@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["oxc", "node"],
+  "env": { "node": true, "es2023": true },
+  "ignorePatterns": ["coverage", "node_modules"],
+  "rules": {
+    "no-unused-vars": "error",
+    "no-await-in-loop": "off"
+  }
+}

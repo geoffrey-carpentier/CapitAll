@@ -132,7 +132,10 @@ describe('choix du nouveau mot de passe', () => {
     const utilisateur = userEvent.setup();
     rendreReinitialisation();
 
-    await utilisateur.type(screen.getByLabelText(/Clé de réinitialisation/), JETON);
+    // La clé fait soixante-quatre caractères : la saisir touche par touche allonge le
+    // test sans rien prouver de plus, et c'est un collage que fait l'utilisateur réel.
+    await utilisateur.click(screen.getByLabelText(/Clé de réinitialisation/));
+    await utilisateur.paste(JETON);
     await utilisateur.type(screen.getByLabelText(/^Nouveau mot de passe/), 'mot-de-passe-neuf');
     await utilisateur.type(screen.getByLabelText(/Confirmer le mot de passe/), 'mot-de-passe-neuf');
     await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer le mot de passe' }));
