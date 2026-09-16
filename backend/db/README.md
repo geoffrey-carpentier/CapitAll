@@ -1,13 +1,15 @@
 # Base de données
 
-Trois éléments, aux rôles distincts.
+Les éléments de ce dossier, aux rôles distincts.
 
 | Fichier | Rôle |
 |---|---|
 | `schema.sql` | état courant du schéma, à exécuter sur une base vide |
 | `seed.sql` | jeu de développement court. **Vide toutes les tables** avant de réinsérer |
 | `seed-demo.sql` | jeu de démonstration complet. Ne vide rien hors de ses propres comptes |
+| `seed-test.sql` | jeu des tests d'intégration, joué par `docker-compose.test.yml` |
 | `migrations/` | évolutions du schéma survenues après sa première mise en service |
+| `migrer.js` | application des migrations manquantes, avec registre en base |
 
 `seed.sql` et `seed-demo.sql` ne servent pas le même besoin et ne se remplacent pas. Le
 premier repart d'une base propre, ce qui suppose de pouvoir tout perdre ; le second
@@ -56,6 +58,20 @@ Les migrations s'appliquent dans l'ordre chronologique de leur nom :
 ```bash
 psql -d capitall -f backend/db/migrations/2026-08-06_activation-compte.sql
 psql -d capitall -f backend/db/migrations/2026-08-23_historique-cours-par-position.sql
+psql -d capitall -f backend/db/migrations/2026-09-05_precision-numerique.sql
+psql -d capitall -f backend/db/migrations/2026-09-05_revocation-et-recuperation.sql
+psql -d capitall -f backend/db/migrations/2026-09-05_transferts-et-frais.sql
+psql -d capitall -f backend/db/migrations/2026-09-06_heure-de-releve.sql
+```
+
+`migrer.js` fait la même chose en tenant un registre en base : il n'applique que les
+migrations absentes du registre, chacune dans sa transaction, et refuse de continuer si un
+fichier déjà appliqué a été modifié depuis. Il se lance depuis `backend/`, avec la
+configuration de l'API :
+
+```bash
+node db/migrer.js --etat    # état de chaque migration
+node db/migrer.js           # application de celles qui manquent
 ```
 
 Un rôle propriétaire est nécessaire : le rôle applicatif `capitall_app` est volontairement

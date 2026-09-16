@@ -64,19 +64,22 @@ versionné. `.env.example` en donne le modèle commenté.
 |---|---|---|
 | `POSTGRES_USER` | propriétaire de la base, qui crée le schéma | aucun |
 | `POSTGRES_PASSWORD` | son mot de passe | aucun |
-| `POSTGRES_DB` | nom de la base, à laisser à `capitall` | aucun |
+| `POSTGRES_DB` | nom de la base | aucun |
 | `CAPITALL_APP_PASSWORD` | mot de passe du rôle applicatif `capitall_app` | aucun |
 | `JWT_SECRET` | secret de signature des jetons, 32 caractères minimum | aucun |
 | `JWT_EXPIRATION` | durée de validité des jetons | `2h` |
 | `PORT_APPLICATION` | port publié sur la machine hôte | `8080` |
 | `ORIGINE_AUTORISEE` | origine admise par l'API | `http://localhost:8080` |
+| `FMP_API_KEY`, `FINNHUB_API_KEY`, `ALPHA_VANTAGE_API_KEY` | clés de cours d'actions ; sans elles, les actions restent sans cours | vides |
+| `AFFICHER_JETON_REINITIALISATION` | affiche la clé de réinitialisation à l'écran ; démonstration seulement, jamais sur un déploiement réel | `false` |
 
 Les quatre premières et `JWT_SECRET` n'ont pas de valeur par défaut : elles doivent être
 renseignées. L'API refuse de démarrer si `JWT_SECRET` est absent ou fait moins de trente-deux
 caractères.
 
-`POSTGRES_DB` doit rester `capitall` : `backend/db/schema.sql` accorde explicitement les
-droits sur une base portant ce nom. Changer la valeur suppose d'adapter le script.
+`POSTGRES_DB` peut porter un autre nom que `capitall` : `backend/db/schema.sql` accorde les
+droits sur la base où il s'exécute, lue par `current_database()`. Les commandes de ce guide
+supposent `capitall` et sont alors à adapter.
 
 Aucun secret ne figure dans les Dockerfile, dans les fichiers de composition, ni dans les
 images produites : l'inspection des deux images ne montre que `NODE_ENV=production` et les
@@ -187,6 +190,22 @@ docker compose -f docker-compose.production.yml exec -T db \
 
 Les migrations sont écrites de façon rejouable : appliquer deux fois la même ne produit
 ni erreur ni double effet. Convention et liste : `backend/db/README.md`.
+
+Sur une base joignable depuis le poste, `backend/db/migrer.js` applique dans l'ordre celles
+qui manquent et tient le registre de celles déjà passées, avec l'empreinte de chaque
+fichier. Il se lance depuis `backend/` et lit la même configuration que l'API
+(`backend/.env`, `JWT_SECRET` compris), avec une `DATABASE_URL` qui désigne un rôle
+propriétaire : le rôle applicatif n'a pas le droit de modifier le schéma.
+
+```bash
+cd backend
+node db/migrer.js --etat    # liste les migrations appliquées et celles qui manquent
+node db/migrer.js           # applique celles qui manquent
+```
+
+`--etat` n'applique aucune migration, mais crée la table de registre si elle n'existe pas
+encore. La base de cette pile n'étant pas publiée sur la machine, c'est la commande `psql`
+ci-dessus qui s'y applique. Dans tous les cas, faire d'abord une sauvegarde.
 
 ## Sauvegarde et restauration
 
