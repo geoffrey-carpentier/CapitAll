@@ -305,6 +305,18 @@ export default function DetailPosition() {
   const enRepli = position.source_cours === 'repli';
   const sansCours = position.cours_eur === null;
   const mouvements = position.transactions ?? [];
+  // Copie de la frise pour l'affichage : ses montants suivent la devise choisie, comme le
+  // reste de la fiche. Les mouvements d'origine, en euros, restent ceux que la feuille de
+  // correction reçoit, la saisie se faisant dans la devise de référence.
+  const mouvementsAffiches = mouvements.map((mouvement) => ({
+    ...mouvement,
+    prix_unitaire: afficher(mouvement.prix_unitaire),
+    montant: afficher(mouvement.montant),
+    frais: afficher(mouvement.frais),
+    cout_sortie: afficher(mouvement.cout_sortie),
+    plus_value_realisee: afficher(mouvement.plus_value_realisee),
+    effet_pru: afficher(mouvement.effet_pru),
+  }));
   const performances = position.historique?.performances ?? {};
 
   // Le sens du tracé vient de la performance calculée par le serveur, jamais d'une
@@ -566,7 +578,7 @@ export default function DetailPosition() {
         <div id="panneau-detail" role="tabpanel" aria-labelledby={`onglet-${onglet}`}>
           {onglet === 'mouvements' ? (
             <FriseMouvements
-              mouvements={mouvements}
+              mouvements={mouvementsAffiches}
               classe={position.type}
               symbole={position.symbole}
               devise={devise}

@@ -251,6 +251,25 @@ describe('frise des mouvements', () => {
     expect(evenements[evenements.length - 1].textContent).toContain('Achat initial'.slice(0, 5));
   });
 
+  // Les mouvements arrivent en euros. En dollars, chaque montant de la frise passe par la
+  // même conversion que le reste de la fiche, et non par le seul changement de symbole.
+  it('convertit les montants de la frise en dollars', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
+
+    await utilisateur.click(screen.getByLabelText('Afficher les montants en dollars'));
+
+    const [vente] = evenementsDeLaFrise();
+    // Taux 1,1699 : prix 63 500 → 74 288,65 ; montant 12 700 → 14 857,73 ;
+    // plus-value 1 360,75 → 1 591,94 ; frais 8 → 9,36.
+    expect(vente.textContent).toMatch(/74.288,65/);
+    expect(vente.textContent).toMatch(/14.857,73/);
+    expect(vente.textContent).toMatch(/1.591,94/);
+    expect(vente.textContent).toMatch(/9,36/);
+    expect(vente.textContent).not.toMatch(/63.500/);
+  });
+
   it('est une liste ordonnée sémantique', async () => {
     rendre();
     await screen.findByRole('heading', { name: 'Bitcoin', level: 1 });
