@@ -77,6 +77,16 @@ const RESUMES = {
   sortie_non_marchande: (quantite) => `Sortie de ${quantite} enregistrée.`,
 };
 
+// Ce que deviennent les frais, selon le sens : ils ne jouent pas le même rôle dans le
+// calcul, et l'aide d'un achat affichée sur une sortie décrivait une règle qui ne s'y
+// applique pas.
+const AIDES_FRAIS = {
+  achat: "Facultatif. Les frais d'achat entrent dans le prix de revient.",
+  vente: 'Facultatif. Les frais de vente sont déduits de la plus-value réalisée.',
+  sortie_non_marchande:
+    "Facultatif. Les frais d'une sortie s'ajoutent à la valeur qui quitte le portefeuille.",
+};
+
 // Délai d'inactivité avant de demander le récapitulatif. Assez court pour que le chiffre
 // suive la frappe, assez long pour ne pas envoyer une requête par caractère.
 const DELAI_RECAPITULATIF = 350;
@@ -107,6 +117,20 @@ function normaliser(valeur) {
     .trim()
     .replace(/[\s ]/g, '')
     .replace(',', '.');
+}
+
+// PostgreSQL rend un NUMERIC à l'échelle de sa colonne : quinze euros de frais arrivent
+// écrits « 15.000000000000000000 ». Repris tel quel en correction, ce texte remplissait
+// le champ de zéros et dépassait les deux décimales d'un montant, si bien que la
+// correction ne pouvait plus être enregistrée. Seuls les zéros de fin de la partie
+// décimale sont retirés, sur la chaîne elle-même : la valeur ne passe jamais par un
+// nombre à virgule flottante.
+function sansZerosInutiles(valeur) {
+  const texte = String(valeur ?? '');
+  if (!texte.includes('.')) {
+    return texte;
+  }
+  return texte.replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function estNul(montant) {
@@ -194,10 +218,10 @@ export default function FeuilleMouvement({
 
   const [sens, setSens] = useState(() => mouvement?.sens ?? 'achat');
   const [actifId, setActifId] = useState(idInitial);
-  const [quantite, setQuantite] = useState(() => mouvement?.quantite ?? '');
+  const [quantite, setQuantite] = useState(() => sansZerosInutiles(mouvement?.quantite));
   const [prixUnitaire, setPrixUnitaire] = useState(() => {
     if (mouvement) {
-      return mouvement.prix_unitaire ?? '';
+      return sansZerosInutiles(mouvement.prix_unitaire);
     }
     return actifs.find((position) => String(position.id) === idInitial)?.cours_eur ?? '';
   });
@@ -211,14 +235,14 @@ export default function FeuilleMouvement({
       return '';
     }
     const montant = mouvement.frais_montant ?? mouvement.frais ?? '0';
-    return comparerDecimales(montant, '0') === 0 ? '' : montant;
+    return comparerDecimales(montant, '0') === 0 ? '' : sansZerosInutiles(montant);
   });
   const [origineFrais, setOrigineFrais] = useState(origineInitiale);
   const [symboleFrais, setSymboleFrais] = useState(() =>
     origineInitiale === FRAIS_EN_TIERS ? (mouvement?.frais_unite ?? '') : ''
   );
   const [contreValeurFrais, setContreValeurFrais] = useState(() =>
-    origineInitiale === FRAIS_EN_TIERS ? (mouvement?.frais ?? '') : ''
+    origineInitiale === FRAIS_EN_TIERS ? sansZerosInutiles(mouvement?.frais) : ''
   );
 
   // Un portefeuille vide n'a rien à sélectionner : la feuille s'ouvre alors directement
@@ -892,7 +916,7 @@ export default function FeuilleMouvement({
             onChange={(evenement) => setFrais(evenement.target.value)}
             onBlur={() => marquerQuitte('frais')}
             erreur={erreurDe('frais')}
-            aide="Facultatif. Les frais d'achat entrent dans le prix de revient."
+            aide={AIDES_FRAIS[sens]}
             inputMode="decimal"
             autoComplete="off"
             disabled={verrouille}

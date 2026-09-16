@@ -115,7 +115,8 @@ describe('feuille en correction', () => {
 
     expect(screen.getByLabelText(/^Quantité/).value).toBe('0.5');
     expect(screen.getByLabelText(/^Prix unitaire/).value).toBe('54000');
-    expect(screen.getByLabelText(/^Frais/).value).toBe('15.00');
+    // « 15.00 » est relu « 15 » : mêmes quinze euros, sans zéro inutile.
+    expect(screen.getByLabelText(/^Frais/).value).toBe('15');
     expect(screen.getByLabelText(/^Date de l/).value).toBe('2026-05-27');
     expect(screen.getByRole('radio', { name: 'Achat' }).checked).toBe(true);
   });
@@ -190,6 +191,78 @@ describe('feuille en correction', () => {
     // l'utilisateur avait saisi, donc ce qu'il doit relire.
     expect(screen.getByLabelText(/^Frais/).value).toBe('0.0002');
     expect(screen.getByLabelText(/Ces frais ont été prélevés en/).value).toBe('actif');
+  });
+
+  // PostgreSQL rend chaque NUMERIC à l'échelle de sa colonne : c'est sous cette forme que
+  // le détail d'une position transmet ses mouvements. Les fixtures ci-dessus, écrites à la
+  // main, ne le montraient pas, et c'est ce qui a laissé passer le défaut : relus tels
+  // quels, des frais de quinze euros dépassaient les deux décimales d'un montant et la
+  // correction restait impossible à enregistrer.
+  describe('valeurs telles que le serveur les rend', () => {
+    const ACHAT_SERVEUR = {
+      ...ACHAT,
+      quantite: '0.500000000000000000',
+      prix_unitaire: '54000.000000000000000000',
+      frais: '15.00',
+      frais_montant: '15.000000000000000000',
+    };
+
+    it('retire les zéros de la précision SQL sans changer la valeur', async () => {
+      await ouvrir(ACHAT_SERVEUR);
+
+      expect(screen.getByLabelText(/^Quantité/).value).toBe('0.5');
+      expect(screen.getByLabelText(/^Prix unitaire/).value).toBe('54000');
+      expect(screen.getByLabelText(/^Frais/).value).toBe('15');
+    });
+
+    it('laisse enregistrer la correction d’un mouvement à frais en euros', async () => {
+      const utilisateur = await ouvrir(ACHAT_SERVEUR);
+
+      await utilisateur.clear(screen.getByLabelText(/^Prix unitaire/));
+      await utilisateur.type(screen.getByLabelText(/^Prix unitaire/), '52000');
+
+      await waitFor(() => {
+        expect(screen.getByText('Nouveau prix de revient')).toBeTruthy();
+      });
+      const [, , , corps] = api.simulerModificationTransaction.mock.calls.at(-1);
+      expect(corps.frais).toBe('15');
+
+      await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la correction' }));
+      await waitFor(() => {
+        expect(api.modifierTransaction).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('relit de même des frais prélevés dans un tiers actif', async () => {
+      await ouvrir({
+        ...ACHAT_SERVEUR,
+        frais: '10.80',
+        frais_montant: '0.000200000000000000',
+        frais_unite: 'USDC',
+      });
+
+      expect(screen.getByLabelText(/^Frais/).value).toBe('0.0002');
+      expect(screen.getByLabelText(/Contre-valeur/).value).toBe('10.8');
+    });
+  });
+
+  // L'aide du champ des frais disait « frais d'achat » quel que soit le sens, y compris sur
+  // une sortie où elle ne s'appliquait pas (défaut relevé sur les captures du dossier).
+  it('adapte l’aide des frais au sens du mouvement', async () => {
+    const utilisateur = await ouvrir(ACHAT);
+    const aide = () => {
+      const ids = screen.getByLabelText(/^Frais/).getAttribute('aria-describedby').split(' ');
+      return document.getElementById(ids.find((id) => id.endsWith('-aide'))).textContent;
+    };
+
+    expect(aide()).toMatch(/frais d'achat entrent dans le prix de revient/);
+
+    await utilisateur.click(screen.getByRole('radio', { name: 'Vente' }));
+    expect(aide()).toMatch(/déduits de la plus-value réalisée/);
+
+    await utilisateur.click(screen.getByRole('radio', { name: 'Sortie' }));
+    expect(aide()).toMatch(/valeur qui quitte le portefeuille/);
+    expect(aide()).not.toMatch(/achat/);
   });
 
   it('reste une création quand aucun mouvement n’est passé', async () => {
