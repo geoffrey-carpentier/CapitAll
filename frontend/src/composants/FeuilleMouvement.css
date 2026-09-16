@@ -82,13 +82,16 @@
   outline-offset: 2px;
 }
 
+/* minmax(0, 1fr) et non 1fr : une colonne 1fr ne descend pas sous la largeur minimale de
+   son contenu, et un champ de saisie en garde une d'environ vingt caractères. Entre 381 et
+   490 px, les deux champs dépassaient alors la feuille, qui défilait de côté. */
 .mouvement__paire {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--espace-3);
 }
 
-/* Sous 360 px, deux champs côte à côte deviennent illisibles : ils s'empilent. */
+/* Sous 380 px, deux champs côte à côte deviennent illisibles : ils s'empilent. */
 @media (max-width: 380px) {
   .mouvement__paire {
     grid-template-columns: 1fr;
@@ -141,11 +144,10 @@
   gap: var(--espace-3);
 }
 
+/* Bloc de texte ordinaire et non conteneur flex : en flex, chaque morceau de la phrase
+   devenait un élément distinct, et le point qui suit le montant du cours du jour passait
+   seul à la ligne. L'espace après le pictogramme est porté par le texte lui-même. */
 .mouvement__aide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--espace-1);
   margin: 0 0 var(--espace-4);
   padding: var(--espace-3);
   font-size: var(--taille-legende);

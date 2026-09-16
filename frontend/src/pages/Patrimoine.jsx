@@ -382,7 +382,17 @@ export default function Patrimoine() {
         {/* Une répartition n'a de sens qu'à partir de deux positions. */}
         {actifs.length > 1 && portefeuille.repartition.length > 0 && (
           <Carte titre="Répartition" className="patrimoine__repartition">
-            <Repartition repartition={portefeuille.repartition} devise={devise} masque={masque} />
+            {/* Les montants de la répartition sont en euros, comme le total : ils passent
+                par la même conversion, faute de quoi la bascule les suffixerait de « $ »
+                sans les convertir. */}
+            <Repartition
+              repartition={portefeuille.repartition.map((part) => ({
+                ...part,
+                valeur: afficher(part.valeur),
+              }))}
+              devise={devise}
+              masque={masque}
+            />
           </Carte>
         )}
       </div>

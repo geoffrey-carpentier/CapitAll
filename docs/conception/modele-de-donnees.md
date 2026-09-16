@@ -109,11 +109,11 @@ alerte (#id, ->utilisateur_id NOT NULL, ->actif_id NULL, type_cible NOT NULL,
         date_creation NOT NULL, date_declenchement)
 
 snapshot_valorisation (#id, ->utilisateur_id NOT NULL, date_snapshot NOT NULL,
-                        valeur_totale_eur NOT NULL,
+                        valeur_totale_eur NOT NULL, heure_releve,
                         UNIQUE(utilisateur_id, date_snapshot))
 
 snapshot_cours (#id, ->actif_id NOT NULL, date_snapshot NOT NULL,
-                cours_eur NOT NULL, quantite NOT NULL,
+                cours_eur NOT NULL, quantite NOT NULL, heure_releve,
                 UNIQUE(actif_id, date_snapshot))
 
 annonce (#id, ->auteur_id NOT NULL, titre NOT NULL, contenu NOT NULL,
@@ -156,6 +156,7 @@ erDiagram
     UTILISATEUR ||--o{ SNAPSHOT_VALORISATION : enregistre
     ACTIF ||--o{ SNAPSHOT_COURS : releve
     UTILISATEUR ||--o{ ANNONCE : publie
+    UTILISATEUR ||--o{ REINITIALISATION_MOT_DE_PASSE : demande
 
     UTILISATEUR {
         int id PK
@@ -164,7 +165,16 @@ erDiagram
         string pseudo
         string role
         boolean actif
+        timestamp jetons_invalides_avant
         timestamp date_inscription
+    }
+    REINITIALISATION_MOT_DE_PASSE {
+        int id PK
+        int utilisateur_id FK
+        string jeton_hache UK
+        timestamp date_creation
+        timestamp expire_le
+        timestamp utilise_le
     }
     ACTIF {
         int id PK
@@ -202,6 +212,7 @@ erDiagram
         int utilisateur_id FK,UK
         date date_snapshot UK
         numeric valeur_totale_eur
+        timestamp heure_releve
     }
     SNAPSHOT_COURS {
         int id PK
@@ -209,6 +220,7 @@ erDiagram
         date date_snapshot UK
         numeric cours_eur
         numeric quantite
+        timestamp heure_releve
     }
     ANNONCE {
         int id PK
@@ -228,7 +240,7 @@ valeur de cette section est relevée dans ce fichier et dans les migrations de
 `backend/db/migrations/` ; aucune contrainte n'y est ajoutée par anticipation.
 
 Convention de lecture : `SERIAL` est le raccourci PostgreSQL de `integer NOT NULL DEFAULT
-nextval(...)` avec sa séquence dédiée, et fournit la clé primaire de chacune des sept
+nextval(...)` avec sa séquence dédiée, et fournit la clé primaire de chacune des huit
 tables. Une colonne marquée « non » en nullabilité porte `NOT NULL` dans le script.
 
 ### 3.1 `utilisateur`
@@ -334,9 +346,14 @@ CHECK (
 | `utilisateur_id` | `INTEGER` | non | — | `REFERENCES utilisateur(id) ON DELETE CASCADE` |
 | `date_snapshot` | `DATE` | non | — | — |
 | `valeur_totale_eur` | `NUMERIC(30, 2)` | non | — | `CHECK (valeur_totale_eur >= 0)` |
+| `heure_releve` | `TIMESTAMPTZ` | **oui** | — | — |
 
 Contrainte de table : `UNIQUE (utilisateur_id, date_snapshot)`. C'est elle qui rend
 l'écriture quotidienne idempotente.
+
+`heure_releve` (migration `2026-09-06_heure-de-releve.sql`) porte l'instant réel du relevé,
+écrit à la première actualisation de la journée et non à une heure de clôture. Elle est nulle pour
+les points antérieurs à son ajout, dont l'heure n'a pas été conservée.
 
 ### 3.6 `snapshot_cours`
 
@@ -347,8 +364,10 @@ l'écriture quotidienne idempotente.
 | `date_snapshot` | `DATE` | non | — | — |
 | `cours_eur` | `NUMERIC(38, 18)` | non | — | `CHECK (cours_eur >= 0)` |
 | `quantite` | `NUMERIC(38,18)` | non | — | `CHECK (quantite >= 0)` |
+| `heure_releve` | `TIMESTAMPTZ` | **oui** | — | — |
 
-Contrainte de table : `UNIQUE (actif_id, date_snapshot)`. Table ajoutée par la migration
+Contrainte de table : `UNIQUE (actif_id, date_snapshot)`. `heure_releve` suit la même règle
+que sur `snapshot_valorisation`, les deux séries étant écrites par le même déclencheur. Table ajoutée par la migration
 `2026-08-23_historique-cours-par-position.sql`, qui accorde aussi ses droits au rôle
 applicatif : ce rôle est créé par `schema.sql` avant l'existence de la table, une base
 déjà en service ne les hérite donc pas.
@@ -380,6 +399,7 @@ d'unicité, sept index explicites figurent au script :
 | `idx_alerte_utilisateur` | `alerte(utilisateur_id)` |
 | `idx_alerte_actif` | `alerte(actif_id)`, **partiel** : `WHERE actif_id IS NOT NULL` |
 | `idx_annonce_date` | `annonce(date_publication DESC)` |
+| `idx_reinitialisation_utilisateur` | `reinitialisation_mot_de_passe(utilisateur_id)` |
 
 Les deux tables d'instantanés n'en portent aucun de plus : leur contrainte d'unicité
 produit déjà un index sur (propriétaire, date) dans cet ordre, qui est exactement la
@@ -387,9 +407,9 @@ lecture faite par l'application — une cible filtrée, puis triée par date.
 
 ### 3.9 Chaînes de suppression
 
-`ON DELETE CASCADE` est posé sur les sept clés étrangères du schéma. La suppression d'un compte
-atteint donc, en un saut, ses actifs, ses alertes, ses instantanés de valorisation et ses
-annonces ; et en deux sauts, par ses actifs, ses transactions, ses relevés de cours et les
+`ON DELETE CASCADE` est posé sur les huit clés étrangères du schéma. La suppression d'un compte
+atteint donc, en un saut, ses actifs, ses alertes, ses instantanés de valorisation, ses
+annonces et ses demandes de réinitialisation ; et en deux sauts, par ses actifs, ses transactions, ses relevés de cours et les
 alertes qui ciblent l'un de ces actifs.
 
 ### 3.10 Rôle applicatif

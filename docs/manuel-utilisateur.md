@@ -75,7 +75,7 @@ Les variations portent toujours un signe et une flèche, jamais la couleur seule
 
 **Se connecter.** Adresse et mot de passe. En cas d'erreur, le message ne précise jamais si c'est l'adresse ou le mot de passe qui est en cause : c'est volontaire, cela empêche de découvrir quels comptes existent.
 
-**Un point à connaître.** Votre session ne survit pas à un rechargement de page. C'est le contrepoids d'un choix de sécurité : votre jeton d'accès n'est jamais écrit dans votre navigateur, il vit uniquement le temps de la visite. Rien de ce que vous avez saisi n'est perdu, seule la session est à rouvrir.
+**Un point à connaître.** Votre session survit à un rechargement de page, mais pas à la fermeture de l'onglet : votre jeton d'accès est conservé dans le stockage de session du navigateur, jamais dans son stockage durable. Sur un poste partagé, rien ne reste derrière vous une fois l'onglet fermé.
 
 **Le premier écran.** Un compte neuf n'affiche ni graphique ni répartition, ce qui n'aurait aucun sens sans données, mais un texte court et une seule action : ajouter votre première position.
 
@@ -270,8 +270,9 @@ comme votre plateforme, et votre coût sera bien de 1 000 €.
 indisponible. L'application indique alors la date du dernier cours connu au lieu de
 présenter une valeur faussement fraîche.
 
-**Pourquoi suis-je déconnecté quand je rafraîchis la page ?** Le jeton reste en mémoire
-et n'est pas conservé dans le stockage du navigateur.
+**Pourquoi suis-je déconnecté quand je ferme l'onglet ?** Le jeton vit dans le stockage de
+session du navigateur, qui disparaît avec l'onglet. Un simple rafraîchissement, lui, ne
+vous déconnecte pas.
 
 **La bascule en dollars change-t-elle mes calculs ?** Non. Elle ne transforme que
 l'affichage ; l'euro reste la devise de calcul.

@@ -20,6 +20,8 @@ dans Git. Les erreurs JSON ont la forme `{ "erreur": "message" }` et peuvent ajo
 | GET | `/api/sante` | `200` — `{ "statut": "ok" }` |
 | POST | `/api/auth/inscription` | `{ email, motDePasse, pseudo? }` → `201` profil sans mot de passe |
 | POST | `/api/auth/connexion` | `{ email, motDePasse }` → `200` avec `token` et utilisateur |
+| POST | `/api/auth/mot-de-passe-oublie` | `{ email }` → `202`, réponse identique que l'adresse existe ou non |
+| POST | `/api/auth/reinitialisation` | `{ jeton, nouveauMotDePasse }` → `204` |
 
 ## Routes protégées
 
@@ -36,7 +38,8 @@ dans Git. Les erreurs JSON ont la forme `{ "erreur": "message" }` et peuvent ajo
 | PATCH | `/api/actifs/:id/transactions/:idTransaction` | correction d'un mouvement → `200`; refuse celle qui rendrait l'historique invalide |
 | POST | `/api/actifs/:id/transactions/:idTransaction/simulation` | effet de la correction, sans écriture → `200` |
 | DELETE | `/api/actifs/:id/transactions/:idTransaction` | `204`; refuse une suppression qui rendrait l'historique invalide |
-| GET | `/api/portefeuille` | portefeuille consolidé, cours, performances, alertes déclenchées |
+| GET | `/api/portefeuille` | portefeuille consolidé, cours, performances ; lecture sans écriture en base |
+| POST | `/api/portefeuille/actualisation` | même réponse, après enregistrement des relevés du jour et évaluation des seuils, dont `alertes_declenchees` |
 | GET | `/api/portefeuille/historique?jours=30` | historique; `jours` facultatif, entier de 1 à 3650 |
 | GET | `/api/alertes` | alertes du porteur du jeton |
 | POST | `/api/alertes` | `{ type_cible, sens_seuil, valeur_seuil, actif_id? }` → `201` |
@@ -44,8 +47,6 @@ dans Git. Les erreurs JSON ont la forme `{ "erreur": "message" }` et peuvent ajo
 | PATCH | `/api/compte/mot-de-passe` | `{ ancienMotDePasse, nouveauMotDePasse }` → `200 { token }` |
 | GET | `/api/compte/export-mouvements` | CSV UTF-8 avec `Content-Disposition` |
 | GET | `/api/symboles` | couverture des symboles par classe, avec provenance et date |
-| POST | `/api/auth/mot-de-passe-oublie` | `{ email }` → `202`, réponse identique que l'adresse existe ou non |
-| POST | `/api/auth/reinitialisation` | `{ jeton, nouveauMotDePasse }` → `204` |
 | DELETE | `/api/compte` | `{ motDePasse }` → `204`; suppression définitive du compte |
 
 Le corps d'un mouvement est :
@@ -64,6 +65,9 @@ Le corps d'un mouvement est :
 `sens` vaut `achat`, `vente` ou `sortie_non_marchande`. Une sortie non marchande — un
 transfert ou un retrait — n'accepte pas de `prix_unitaire` : elle ne dégage aucun
 produit.
+
+Une correction (`PATCH`) prend le même corps et remplace le mouvement entier : une `note`
+absente du corps est effacée. Pour la conserver, il faut la renvoyer.
 
 Les frais se donnent sous **une seule** des trois formes, jamais deux à la fois :
 

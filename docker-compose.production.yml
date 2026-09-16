@@ -88,8 +88,12 @@ services:
     build:
       context: ./frontend
     restart: unless-stopped
+    # Lié à la boucle locale : cette pile publie des comptes de démonstration dont les
+    # mots de passe sont dans le dépôt. Ouverte au réseau, n'importe quel poste voisin
+    # pourrait s'y connecter. Une présentation depuis un autre appareil suppose de retirer
+    # ce préfixe, en connaissance de cause.
     ports:
-      - '${PORT_APPLICATION:-8080}:80'
+      - '127.0.0.1:${PORT_APPLICATION:-8080}:80'
     depends_on:
       api:
         condition: service_healthy

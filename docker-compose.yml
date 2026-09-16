@@ -20,8 +20,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Lié à la boucle locale, comme dans docker-compose.test.yml : l'API et les outils du
+    # poste s'y connectent par localhost, et rien ne justifie d'ouvrir la base au réseau
+    # sur lequel se trouve la machine.
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - donnees-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -34,8 +37,10 @@ services:
     image: redis:7-alpine
     container_name: capitall-redis
     restart: unless-stopped
+    # Même raison, et une de plus : Redis n'a pas de mot de passe. Joignable depuis le
+    # réseau, n'importe qui pourrait y écrire un cours et fausser les valorisations.
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s

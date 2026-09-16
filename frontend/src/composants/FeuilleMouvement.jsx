@@ -77,16 +77,30 @@ const RESUMES = {
   sortie_non_marchande: (quantite) => `Sortie de ${quantite} enregistrée.`,
 };
 
+// Ce que deviennent les frais, selon le sens : ils ne jouent pas le même rôle dans le
+// calcul, et l'aide d'un achat affichée sur une sortie décrivait une règle qui ne s'y
+// applique pas.
+const AIDES_FRAIS = {
+  achat: "Facultatif. Les frais d'achat entrent dans le prix de revient.",
+  vente: 'Facultatif. Les frais de vente sont déduits de la plus-value réalisée.',
+  sortie_non_marchande:
+    "Facultatif. Les frais d'une sortie s'ajoutent à la valeur qui quitte le portefeuille.",
+};
+
 // Délai d'inactivité avant de demander le récapitulatif. Assez court pour que le chiffre
 // suive la frappe, assez long pour ne pas envoyer une requête par caractère.
 const DELAI_RECAPITULATIF = 350;
 
-// Date du jour dans le fuseau de l'utilisateur, au format attendu par un champ de date.
-// L'heure UTC ne conviendrait pas : passé minuit, elle désignerait encore la veille.
+// Jour d'un instant dans le fuseau de l'utilisateur, au format attendu par un champ de
+// date. L'heure UTC ne conviendrait pas : passé minuit, elle désignerait encore la veille.
+function jourLocal(instant) {
+  const decalage = instant.getTimezoneOffset() * 60000;
+  return new Date(instant.getTime() - decalage).toISOString().slice(0, 10);
+}
+
+// Date du jour, selon la même règle.
 function aujourdhui() {
-  const maintenant = new Date();
-  const decalage = maintenant.getTimezoneOffset() * 60000;
-  return new Date(maintenant.getTime() - decalage).toISOString().slice(0, 10);
+  return jourLocal(new Date());
 }
 
 // Un champ de date rend un jour, la colonne attend un instant.
@@ -107,6 +121,20 @@ function normaliser(valeur) {
     .trim()
     .replace(/[\s ]/g, '')
     .replace(',', '.');
+}
+
+// PostgreSQL rend un NUMERIC à l'échelle de sa colonne : quinze euros de frais arrivent
+// écrits « 15.000000000000000000 ». Repris tel quel en correction, ce texte remplissait
+// le champ de zéros et dépassait les deux décimales d'un montant, si bien que la
+// correction ne pouvait plus être enregistrée. Seuls les zéros de fin de la partie
+// décimale sont retirés, sur la chaîne elle-même : la valeur ne passe jamais par un
+// nombre à virgule flottante.
+function sansZerosInutiles(valeur) {
+  const texte = String(valeur ?? '');
+  if (!texte.includes('.')) {
+    return texte;
+  }
+  return texte.replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function estNul(montant) {
@@ -194,16 +222,17 @@ export default function FeuilleMouvement({
 
   const [sens, setSens] = useState(() => mouvement?.sens ?? 'achat');
   const [actifId, setActifId] = useState(idInitial);
-  const [quantite, setQuantite] = useState(() => mouvement?.quantite ?? '');
+  const [quantite, setQuantite] = useState(() => sansZerosInutiles(mouvement?.quantite));
   const [prixUnitaire, setPrixUnitaire] = useState(() => {
     if (mouvement) {
-      return mouvement.prix_unitaire ?? '';
+      return sansZerosInutiles(mouvement.prix_unitaire);
     }
     return actifs.find((position) => String(position.id) === idInitial)?.cours_eur ?? '';
   });
-  const [date, setDate] = useState(() =>
-    mouvement ? new Date(mouvement.date_transaction).toISOString().slice(0, 10) : aujourdhui()
-  );
+  // Le jour d'un mouvement corrigé se lit dans le fuseau de l'utilisateur, comme la frise
+  // l'affiche : relu en UTC, un mouvement saisi peu après minuit apparaissait la veille.
+  const jourInitial = mouvement ? jourLocal(new Date(mouvement.date_transaction)) : null;
+  const [date, setDate] = useState(() => jourInitial ?? aujourdhui());
   // En édition, le champ porte le montant réellement prélevé, pas sa contre-valeur :
   // c'est ce que l'utilisateur avait saisi, et c'est donc ce qu'il doit relire.
   const [frais, setFrais] = useState(() => {
@@ -211,14 +240,14 @@ export default function FeuilleMouvement({
       return '';
     }
     const montant = mouvement.frais_montant ?? mouvement.frais ?? '0';
-    return comparerDecimales(montant, '0') === 0 ? '' : montant;
+    return comparerDecimales(montant, '0') === 0 ? '' : sansZerosInutiles(montant);
   });
   const [origineFrais, setOrigineFrais] = useState(origineInitiale);
   const [symboleFrais, setSymboleFrais] = useState(() =>
     origineInitiale === FRAIS_EN_TIERS ? (mouvement?.frais_unite ?? '') : ''
   );
   const [contreValeurFrais, setContreValeurFrais] = useState(() =>
-    origineInitiale === FRAIS_EN_TIERS ? (mouvement?.frais ?? '') : ''
+    origineInitiale === FRAIS_EN_TIERS ? sansZerosInutiles(mouvement?.frais) : ''
   );
 
   // Un portefeuille vide n'a rien à sélectionner : la feuille s'ouvre alors directement
@@ -409,13 +438,24 @@ export default function FeuilleMouvement({
   // porte une seule, celle que l'utilisateur a choisie. Envoyer la forme courte et la
   // forme longue ensemble obligerait le serveur à décider laquelle prime, et il refuse
   // — à raison — de le faire.
+  //
+  // En correction, deux informations que la feuille ne présente pas repartent telles
+  // qu'elles étaient. L'heure d'abord : tant que le jour n'est pas changé, l'horodatage
+  // d'origine est renvoyé, sans quoi midi UTC pouvait placer une vente avant l'achat du
+  // même jour dont elle dépend, et la correction était refusée. La note ensuite : la
+  // correction remplace le mouvement entier, et une note absente du corps était effacée.
   const corps = useMemo(() => {
     const montantFrais = normaliser(frais);
     const commun = {
       sens,
       quantite: normaliser(quantite),
-      date_transaction: versHorodatage(date),
+      date_transaction:
+        edition && date === jourInitial ? mouvement.date_transaction : versHorodatage(date),
     };
+
+    if (edition && typeof mouvement.note === 'string' && mouvement.note.trim() !== '') {
+      commun.note = mouvement.note;
+    }
 
     if (sens !== 'sortie_non_marchande') {
       commun.prix_unitaire = normaliser(prixUnitaire);
@@ -449,6 +489,9 @@ export default function FeuilleMouvement({
     contreValeurFrais,
     actif,
     date,
+    edition,
+    jourInitial,
+    mouvement,
   ]);
 
   // Récapitulatif recalculé à chaque modification, après un court délai d'inactivité.
@@ -892,7 +935,7 @@ export default function FeuilleMouvement({
             onChange={(evenement) => setFrais(evenement.target.value)}
             onBlur={() => marquerQuitte('frais')}
             erreur={erreurDe('frais')}
-            aide="Facultatif. Les frais d'achat entrent dans le prix de revient."
+            aide={AIDES_FRAIS[sens]}
             inputMode="decimal"
             autoComplete="off"
             disabled={verrouille}

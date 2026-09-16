@@ -20,16 +20,30 @@ const SESSION = {
 };
 
 function Temoin() {
-  const { jeton, utilisateur, estConnecte, connecter, deconnecter, remplacerJeton } =
-    useAuthentification();
+  const {
+    jeton,
+    utilisateur,
+    estConnecte,
+    sessionExpiree,
+    connecter,
+    deconnecter,
+    remplacerJeton,
+  } = useAuthentification();
 
   return (
     <div>
       <p>jeton : {jeton ?? 'aucun'}</p>
       <p>pseudo : {utilisateur?.pseudo ?? 'aucun'}</p>
       <p>connecté : {String(estConnecte)}</p>
-      <button type="button" onClick={() => connecter({ email: 'x', motDePasse: 'y' })}>
+      <p>expirée : {String(sessionExpiree)}</p>
+      <button
+        type="button"
+        onClick={() => connecter({ email: 'x', motDePasse: 'y' }).catch(() => {})}
+      >
         Se connecter
+      </button>
+      <button type="button" onClick={() => api.profil(jeton).catch(() => {})}>
+        Consulter le profil
       </button>
       <button type="button" onClick={() => remplacerJeton('jeton-renouvele')}>
         Renouveler
@@ -145,5 +159,60 @@ describe('session durable', () => {
     monter();
 
     expect(screen.getByText('connecté : false')).toBeTruthy();
+  });
+});
+
+// Le serveur répond 401 dans deux cas qui ne se racontent pas de la même façon : un jeton
+// qui n'est plus valable, et des identifiants refusés à la connexion. Seul le premier
+// ferme une session ; annoncer « session expirée » à quelqu'un qui vient de se tromper de
+// mot de passe serait faux.
+describe('session perdue', () => {
+  function repondre401() {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ erreur: 'Email ou mot de passe incorrect.' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("ne parle pas d'expiration après un échec de connexion", async () => {
+    const utilisateur = userEvent.setup();
+    // Le vrai client d'API, pour que le 401 suive le même chemin qu'en usage : l'espion
+    // laisse passer l'appel et permet d'attendre que le refus soit entièrement traité.
+    api.connexion.mockRestore();
+    vi.spyOn(api, 'connexion');
+    repondre401();
+    monter();
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    await waitFor(() => expect(api.connexion).toHaveBeenCalled());
+    await expect(api.connexion.mock.results[0].value).rejects.toThrow();
+    expect(screen.getByText('connecté : false')).toBeTruthy();
+    expect(screen.getByText('expirée : false')).toBeTruthy();
+  });
+
+  it("signale l'expiration quand une session ouverte reçoit un 401", async () => {
+    const utilisateur = userEvent.setup();
+    window.sessionStorage.setItem(
+      CLE_SESSION,
+      JSON.stringify({ jeton: 'jeton-perime', utilisateur: SESSION.utilisateur })
+    );
+    repondre401();
+    monter();
+
+    await utilisateur.click(screen.getByRole('button', { name: 'Consulter le profil' }));
+
+    await screen.findByText('expirée : true');
+    expect(screen.getByText('connecté : false')).toBeTruthy();
+    expect(window.sessionStorage.getItem(CLE_SESSION)).toBeNull();
   });
 });
