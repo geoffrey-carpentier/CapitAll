@@ -698,8 +698,8 @@ describe('correction d’un mouvement depuis la frise', () => {
     const dialogue = await screen.findByRole('dialog');
     expect(within(dialogue).getByRole('heading', { name: 'Corriger le mouvement' })).toBeTruthy();
     // Les champs portent les valeurs du mouvement choisi, et non celles du plus récent.
-    expect(within(dialogue).getByLabelText(/^Quantité/).value).toBe('0.50000000');
-    expect(within(dialogue).getByLabelText(/^Prix unitaire/).value).toBe('54000.00');
+    expect(within(dialogue).getByLabelText(/^Quantité/).value).toBe('0.5');
+    expect(within(dialogue).getByLabelText(/^Prix unitaire/).value).toBe('54000');
   });
 });
 

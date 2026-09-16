@@ -141,11 +141,10 @@
   gap: var(--espace-3);
 }
 
+/* Bloc de texte ordinaire et non conteneur flex : en flex, chaque morceau de la phrase
+   devenait un élément distinct, et le point qui suit le montant du cours du jour passait
+   seul à la ligne. L'espace après le pictogramme est porté par le texte lui-même. */
 .mouvement__aide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--espace-1);
   margin: 0 0 var(--espace-4);
   padding: var(--espace-3);
   font-size: var(--taille-legende);
