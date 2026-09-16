@@ -26,8 +26,8 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # schema.sql accorde les droits sur la base nommée capitall : ce nom ne doit pas
-      # être changé sans adapter le script.
+      # Nom libre : schema.sql accorde les droits sur la base où il s'exécute, lue par
+      # current_database(). Les commandes de docs/deploiement.md supposent capitall.
       POSTGRES_DB: ${POSTGRES_DB}
       CAPITALL_APP_PASSWORD: ${CAPITALL_APP_PASSWORD}
     volumes:
