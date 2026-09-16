@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-// Filet de régression du lot L0, famille « fermée par L1 ».
+// Filet de régression des défauts corrigés par le lot L1.
 //
-// Chaque test reproduit un défaut constaté sur ce dépôt et vérifié dans les sources.
-// Ils échouent volontairement tant que L1 n'a pas livré : leur passage au vert est le
-// critère d'acceptation du lot. Les cas dont la correction relève du contrat numérique
-// vivent dans regression-precision.test.js, sous it.fails, parce qu'ils resteront
-// ouverts plus longtemps.
+// Chaque test reproduit un défaut constaté sur ce dépôt et vérifié dans les sources. Ils
+// ont d'abord échoué, décrivant le comportement attendu ; les corrections livrées, ils
+// passent, et retomberaient au rouge si l'un de ces défauts revenait. Les cas qui
+// relèvent du contrat numérique vivent dans regression-precision.test.js.
 
 let creerServicePortefeuille;
 let creerServiceCours;

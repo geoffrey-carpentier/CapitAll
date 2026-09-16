@@ -11,10 +11,8 @@
 # Aucun secret réel n'est employé : les valeurs ci-dessous sont des chaînes de test, et
 # les suites n'atteignent ni base de données ni fournisseur externe.
 #
-# NOTE, tant que le lot L1 n'est pas livré : la suite backend échoue volontairement.
-# Neuf tests de régression y décrivent des défauts constatés et non encore corrigés.
-# Leur passage au vert est le critère d'acceptation de L1. Le détail est dans
-# .claude/revues/execution-2026-09-05/TESTS-OUVERTS.md.
+# Les tests d'intégration, qui exigent un vrai PostgreSQL, ne s'exécutent pas ici : ils
+# ont leur propre commande (npm run test:integration) et leur environnement dédié.
 
 name: Contrôles
 
@@ -64,6 +62,10 @@ jobs:
       - name: Dépendances du front-end
         run: npm ci
         working-directory: frontend
+
+      - name: Analyse statique du back-end
+        run: npm run lint
+        working-directory: backend
 
       - name: Tests du back-end
         run: npm test -- --maxWorkers=1
