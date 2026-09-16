@@ -96,11 +96,11 @@ La plus-value latente est **potentielle** : elle varie à chaque mouvement de co
 
 ## Exactitude des calculs
 
-Aucun montant n'est calculé en virgule flottante. Les quantités et les montants sont convertis en entiers exprimés dans une unité fixe (huit décimales pour les quantités et le PRU, deux pour les montants), puis manipulés en arithmétique entière exacte.
+Aucun montant n'est calculé en virgule flottante. Les quantités et les montants sont convertis en entiers exprimés dans une unité fixe (dix-huit décimales pour les quantités et les prix, vingt-quatre pour le PRU, deux pour les montants), puis manipulés en arithmétique entière exacte.
 
 Ce choix n'est pas théorique : en virgule flottante, `0,1 + 0,2` vaut `0,30000000000000004`. Sur un portefeuille de cryptomonnaies, où les quantités comportent couramment huit décimales, l'écart se propage à chaque opération. Un test dédié vérifie que l'addition de 0,1 et 0,2 rend exactement 0,3.
 
-Le PRU est conservé à huit décimales et non à deux : arrondi au centime, le prix de revient d'un actif coté très haut ou très bas serait faussé, et l'erreur se reporterait sur la plus-value.
+Le PRU est calculé à vingt-quatre décimales et non à deux : arrondi au centime, le prix de revient d'un actif coté très haut ou très bas serait faussé, et l'erreur se reporterait sur la plus-value.
 
 ## Ce qui est stocké et ce qui ne l'est pas
 

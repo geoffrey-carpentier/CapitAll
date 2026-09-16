@@ -91,7 +91,7 @@ Les sept états demandés sont définis **une fois ici** et ne sont rappelés da
 | État | Déclencheur | Traitement |
 |---|---|---|
 | **Cours en repli** | `cours_indisponibles` non vide dans la réponse | Bandeau d'avertissement nommant les actifs concernés et la date du dernier cours connu. `PastilleFraicheur` en état tiède sur les positions concernées. Les valorisations restent affichées, jamais masquées. |
-| **Session expirée** | 401 sur une requête d'un écran déjà affiché | Le jeton vivant en mémoire, un rechargement ramène à la connexion. Message explicite plutôt que redirection silencieuse. |
+| **Session expirée** | 401 sur une requête d'un écran déjà affiché, alors qu'une session était ouverte | Retour à la connexion avec un message explicite plutôt qu'une redirection silencieuse. Un 401 à la connexion n'est pas une expiration : l'écran affiche le message du serveur. |
 
 ## 6. Premier lancement, le parcours qui décide de tout
 
@@ -318,7 +318,7 @@ Une **sortie non marchande** est étiquetée « Sortie » et n'affiche ni prix n
 
 **Composants.** `Champ`, `Bouton`, `Carte`, `BasculeDevise`, `MasquageMontants`, `Confirmation`, `Message`, `MessageErreur`.
 
-**Interactions.** Le changement de mot de passe exige l'ancien et n'invalide pas la session en cours, le jeton étant signé sur l'identifiant et le rôle et jamais sur le mot de passe. La suppression du compte demande une confirmation par saisie du mot de passe et énonce sans ambiguïté ce qui sera supprimé, positions, mouvements et seuils compris, et que l'opération est irréversible. **Ce mot de passe est vérifié par le serveur** : contrôlé par la seule interface, il ne protégerait pas d'un appel direct porteur d'un jeton dérobé. L'export est obtenu par un appel authentifié puis remis à l'utilisateur depuis la page ; il ne peut pas être un simple lien, le jeton ne vivant qu'en mémoire (D57) et n'accompagnant pas une navigation du navigateur.
+**Interactions.** Le changement de mot de passe exige l'ancien et n'invalide pas la session en cours, le jeton étant signé sur l'identifiant et le rôle et jamais sur le mot de passe. La suppression du compte demande une confirmation par saisie du mot de passe et énonce sans ambiguïté ce qui sera supprimé, positions, mouvements et seuils compris, et que l'opération est irréversible. **Ce mot de passe est vérifié par le serveur** : contrôlé par la seule interface, il ne protégerait pas d'un appel direct porteur d'un jeton dérobé. L'export est obtenu par un appel authentifié puis remis à l'utilisateur depuis la page ; il ne peut pas être un simple lien, le jeton étant porté par l'en-tête d'autorisation et n'accompagnant pas une navigation du navigateur.
 
 **Impacts API livrés.** `PATCH /api/compte/mot-de-passe`, `DELETE /api/compte`
 (le mot de passe de confirmation est transmis dans le corps) et

@@ -157,8 +157,8 @@ Ces règles s'appliquent en toute circonstance et sont vérifiées côté serveu
 | RG6 | Le prix de revient intègre les frais d'achat, quelle que soit l'unité dans laquelle ils ont été prélevés ; une vente ne le modifie pas | valorisation |
 | RG6 bis | Une sortie non marchande — transfert, retrait — retire de la quantité sans dégager de produit : elle ne modifie pas le prix de revient unitaire et ne produit aucune plus-value réalisée | valorisation |
 | RG6 ter | Un mouvement peut être corrigé, jamais déplacé vers une autre position ; une correction qui rendrait un mouvement postérieur impossible est refusée sans rien écrire | transactions |
-| RG12 | Un jeton reste soumis à l'état du compte : un compte désactivé ou supprimé, et un jeton émis avant la borne de révocation du compte, ferment la session immédiatement | accès |
-| RG13 | Les tentatives de connexion sont plafonnées par adresse électronique et non par adresse réseau ; une connexion réussie remet le compteur à zéro | accès |
+| RG15 | Un jeton reste soumis à l'état du compte : un compte désactivé ou supprimé, et un jeton émis avant la borne de révocation du compte, ferment la session immédiatement | accès |
+| RG16 | Les tentatives de connexion sont plafonnées par adresse électronique et non par adresse réseau ; une connexion réussie remet le compteur à zéro | accès |
 | RG14 | Une clé de réinitialisation vaut une heure, ne sert qu'une fois, et n'est jamais conservée en clair | accès |
 | RG7 | Les transactions sont prises en compte dans l'ordre chronologique, indépendamment de leur ordre de saisie | valorisation |
 | RG8 | Un instantané de valorisation est unique par utilisateur et par jour | historique |
@@ -177,7 +177,7 @@ La règle RG3 ne peut pas être exprimée par une contrainte de base de données
 | Exigence | Mise en œuvre attendue |
 |---|---|
 | Authentification | jeton signé en HS256, durée de validité de deux heures, sans jeton de rafraîchissement : au-delà, l'utilisateur se reconnecte |
-| Stockage du jeton côté client | en mémoire, sans persistance dans le navigateur, afin de limiter l'exposition en cas d'injection de contenu. Un rafraîchissement de page déconnecte, comportement assumé (D57) |
+| Stockage du jeton côté client | stockage de session du navigateur : le jeton survit au rechargement et disparaît à la fermeture de l'onglet, le stockage durable restant écarté (révision de D57). Le jeton reste lisible par un script de la page : la politique de sécurité du contenu et la borne de révocation en limitent l'exposition |
 | Mots de passe | hachage bcrypt avec un coût de travail d'au moins 10, jamais de stockage ni de journalisation en clair |
 | Réponse à un échec de connexion | message générique, et comparaison effectuée même sur un compte inexistant afin de ne pas créer d'écart de temps de réponse exploitable |
 | Contrôle d'accès | trois niveaux : authentification, propriété de la ressource, rôle. Le filtre du propriétaire est porté par la requête de base de données elle-même, jamais par une comparaison effectuée après lecture |
@@ -194,7 +194,7 @@ Exigence structurante du produit, au même rang que la sécurité. Une applicati
 
 - Aucun calcul monétaire ni aucune agrégation de quantité ne repose sur l'arithmétique en virgule flottante.
 - Les montants et les quantités sont conservés en base dans un type numérique à précision arbitraire, et manipulés côté serveur en entiers à échelle fixe.
-- Les quantités admettent huit décimales, les montants deux.
+- Les quantités et les prix admettent dix-huit décimales, les montants deux ; le prix de revient est calculé à vingt-quatre décimales.
 - Le seul point où une valeur en virgule flottante est acceptée est la lecture d'une réponse de fournisseur externe, immédiatement convertie et arrondie.
 
 ### 5.3 Accessibilité
@@ -256,12 +256,12 @@ Description complète : `conception/architecture.md`. Résumé des choix engagea
 | Brique | Choix | Motif principal |
 |---|---|---|
 | Interface | React 18 avec Vite | tableau de bord interactif consommant des données au format JSON ; un rendu serveur imposerait un rechargement à chaque changement de période ou de devise d'affichage |
-| Serveur | Node.js 20 et Express | architecture en couches explicite, et partage des schémas de validation avec l'interface |
+| Serveur | Node.js et Express | architecture en couches explicite |
 | Base de données | PostgreSQL 16 | type numérique à précision arbitraire indispensable aux montants, et contraintes de vérification riches |
 | Cache | Redis 7 | cache court des cours, nécessaire de toute façon, et couvrant un besoin réel de stockage clé-valeur (D14) |
 | Authentification | jeton signé et bcrypt | interface sans état, adaptée à un client découplé |
-| Validation | schémas déclaratifs | source unique de la forme attendue, réutilisable des deux côtés (D41) |
-| Représentation graphique | Recharts (D58) | composants natifs de l'écosystème de l'interface, sans adaptateur à écrire ; la courbe d'aire couvre le besoin depuis que la répartition se lit en liste chiffrée (D74) |
+| Validation | schémas déclaratifs (Zod), côté serveur | source unique de la forme attendue ; l'interface n'effectue que des contrôles de forme, le serveur restant seul décisionnaire (D41) |
+| Représentation graphique | Recharts (D58) | composants natifs de l'écosystème de l'interface, sans adaptateur à écrire : courbes d'aire, courbes miniatures et anneau de répartition, accompagné de sa liste chiffrée (D98) |
 | Conteneurisation | Docker et Docker Compose | reproductibilité de l'environnement et démonstration de la procédure de déploiement |
 
 Les cours sont appelés exclusivement côté serveur (D6). Chaque fournisseur est encapsulé dans un adaptateur exposant une interface commune, ce qui permet d'en changer sans toucher à la logique métier (D5).
@@ -284,8 +284,10 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 |---|---|---|---|---|
 | GET | `/api/sante` | public | état de santé HTTP de l'API | 200 |
 | POST | `/api/auth/inscription` | public | création de compte | 201, 400, 409 |
-| POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401, 403 |
-| PATCH | `/api/compte/mot-de-passe` | authentifié | changement de mot de passe, ancien exigé | 204, 400, 401 |
+| POST | `/api/auth/connexion` | public | authentification, émission du jeton | 200, 400, 401, 403, 429 |
+| POST | `/api/auth/mot-de-passe-oublie` | public | demande d'une clé de réinitialisation, réponse identique que l'adresse existe ou non | 202, 400, 429 |
+| POST | `/api/auth/reinitialisation` | public | choix d'un nouveau mot de passe contre une clé valide | 204, 400, 429 |
+| PATCH | `/api/compte/mot-de-passe` | authentifié | changement de mot de passe, ancien exigé ; un jeton neuf est rendu | 200, 400, 401 |
 | DELETE | `/api/compte` | authentifié | suppression du compte et de ses données, mot de passe de confirmation exigé | 204, 400, 401 |
 | GET | `/api/compte/export-mouvements` | authentifié | export CSV de tous les mouvements du compte (D84) | 200, 401 |
 | GET | `/api/auth/moi` | authentifié | informations du compte courant | 200, 401 |
@@ -296,14 +298,19 @@ Toutes les routes privées attendent le jeton dans l'en-tête d'autorisation. Un
 | DELETE | `/api/actifs/:id` | propriétaire | suppression, en cascade sur les transactions et alertes liées | 204, 401, 404 |
 | POST | `/api/actifs/:id/transactions` | propriétaire | enregistrement d'une transaction | 201, 400, 401, 404 |
 | POST | `/api/actifs/:id/transactions/simulation` | propriétaire | effet d'une transaction sur la position, avant enregistrement et sans écriture | 200, 400, 401, 404 |
+| PATCH | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | correction d'une transaction, refusée si elle rend un mouvement postérieur impossible | 200, 400, 401, 404 |
+| POST | `/api/actifs/:id/transactions/:idTransaction/simulation` | propriétaire | effet d'une correction sur la position, sans écriture | 200, 400, 401, 404 |
 | DELETE | `/api/actifs/:id/transactions/:idTransaction` | propriétaire | suppression d'une transaction, refusée si elle rend l'historique invalide | 204, 400, 401, 404 |
-| GET | `/api/portefeuille` | authentifié | consolidation : valeur totale, coût de revient, plus-values, répartition, taux de change, alertes franchies | 200, 401 |
+| GET | `/api/portefeuille` | authentifié | consolidation : valeur totale, coût de revient, plus-values, répartition, taux de change ; lecture sans écriture | 200, 401 |
+| POST | `/api/portefeuille/actualisation` | authentifié | même consolidation, après enregistrement des relevés du jour et évaluation des seuils, dont les seuils franchis | 200, 401 |
 | GET | `/api/portefeuille/historique` | authentifié | instantanés de valorisation | 200, 401 |
 | GET | `/api/alertes` | authentifié | liste des alertes, chacune enrichie de la valeur actuellement observée sur sa cible et de l'écart restant avant franchissement en pourcentage | 200, 401 |
 | POST | `/api/alertes` | authentifié | création d'une alerte | 201, 400, 401, 404 |
 | PATCH | `/api/alertes/:id` | propriétaire | désactivation | 200, 400, 401, 404 |
-**Statut à la date de cette version.** Le tableau ci-dessus décrit les vingt points
-d'entrée effectivement montés par le serveur. Les routes d'annonces et
+| GET | `/api/symboles` | authentifié | couverture des symboles acceptés, par classe, sans appel fournisseur | 200, 401 |
+
+**Statut à la date de cette version.** Le tableau ci-dessus décrit les vingt-cinq points
+d'entrée applicatifs effectivement montés par le serveur, plus la route de santé. Les routes d'annonces et
 d'administration ne font pas partie du contrat du MVP ; elles sont reportées en
 version 2 (D85). Les corps et réponses sont documentés dans `api/README.md`, avec
 une collection rejouable dans `api/capitall.http`.
@@ -318,6 +325,8 @@ Les structures de données échangées par chaque point d'entrée sont document�
 |---|---|---|
 | `/connexion` | public | formulaire de connexion |
 | `/inscription` | public | formulaire d'inscription |
+| `/mot-de-passe-oublie` | public | demande d'une clé de réinitialisation |
+| `/reinitialisation` | public | choix d'un nouveau mot de passe |
 | `/patrimoine` | authentifié | consolidation, répartition, courbe d'évolution, seuils franchis |
 | `/positions` | authentifié | liste des positions, filtres par classe et tri |
 | `/positions/:id` | propriétaire | détail d'une position, ses mouvements et ses seuils |
@@ -326,7 +335,7 @@ Les structures de données échangées par chaque point d'entrée sont document�
 
 Les libellés et les chemins suivent le lexique du projet : patrimoine, position, seuil.
 
-La saisie d'un mouvement n'a pas de route à elle : c'est une feuille glissante en mobile et un dialogue centré en desktop, ouverts par-dessus l'écran courant, dont ils préservent le contexte. Leur ouverture est portée par le paramètre `?mouvement` de l'écran d'origine, de sorte qu'elle survive à un rechargement et se referme par le bouton de retour du navigateur.
+La saisie d'un mouvement n'a pas de route à elle : c'est une feuille glissante en mobile et un dialogue centré en desktop, ouverts par-dessus l'écran courant, dont ils préservent le contexte. Leur ouverture est portée par le paramètre `?mouvement` de l'écran d'origine, de sorte qu'elle survive à un rechargement et se referme par le bouton de retour du navigateur. L'adresse `/mouvement` reste atteignable : elle ouvre la feuille par-dessus le patrimoine.
 
 Toute route privée atteinte sans jeton valide redirige vers la connexion.
 
@@ -356,7 +365,7 @@ Le produit est considéré comme conforme si l'ensemble des critères suivants e
 | C3 | Aucun utilisateur n'accède à une donnée d'un autre, y compris en interrogeant directement l'interface de programmation | appels forgés avec le jeton d'un second compte |
 | C4 | L'application reste utilisable lorsqu'un fournisseur de cours est indisponible | fournisseur simulé en échec, puis panne réelle constatée |
 | C5 | L'application reste utilisable lorsque le cache est arrêté | service de cache stoppé puis redémarré |
-| C6 | Les règles de gestion RG1 à RG13 sont toutes vérifiées côté serveur | tests unitaires et appels de contrôle |
+| C6 | Les règles de gestion RG1 à RG16 sont toutes vérifiées côté serveur | tests unitaires et appels de contrôle |
 | C7 | Les contrastes atteignent le seuil requis et aucune information n'est portée par la seule couleur | mesure par outil dédié, capture à l'appui |
 | C8 | L'ensemble se déploie sur une machine vierge à partir du dépôt et de la documentation | installation complète suivie pas à pas |
 
