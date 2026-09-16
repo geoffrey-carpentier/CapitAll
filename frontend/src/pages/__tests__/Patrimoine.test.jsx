@@ -97,6 +97,22 @@ describe('règles de comportement', () => {
     expect(api.actualiserPortefeuille.mock.calls.length + api.historique.mock.calls.length).toBe(appelsAvant);
   });
 
+  // La répartition arrive en euros comme le total. Suffixer ses montants de « $ » sans
+  // les convertir afficherait des euros sous une étiquette de dollars.
+  it('convertit aussi les montants de la répartition', async () => {
+    const utilisateur = userEvent.setup();
+    rendre();
+    await screen.findByText(/12.480,65/);
+
+    await utilisateur.click(screen.getByLabelText('Afficher les montants en dollars'));
+    await screen.findByText(/14.183,01/);
+
+    const cryptos = screen.getByRole('link', { name: /classe Cryptos/ });
+    // 7480,65 x 1,1364 = 8501,01.
+    expect(cryptos.textContent).toMatch(/8.501,01/);
+    expect(cryptos.textContent).not.toMatch(/7.480,65/);
+  });
+
   it('conserve le choix de devise dans la session', async () => {
     const utilisateur = userEvent.setup();
     const { unmount } = rendre();
