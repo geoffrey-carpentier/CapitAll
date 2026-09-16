@@ -91,12 +91,16 @@ const AIDES_FRAIS = {
 // suive la frappe, assez long pour ne pas envoyer une requête par caractère.
 const DELAI_RECAPITULATIF = 350;
 
-// Date du jour dans le fuseau de l'utilisateur, au format attendu par un champ de date.
-// L'heure UTC ne conviendrait pas : passé minuit, elle désignerait encore la veille.
+// Jour d'un instant dans le fuseau de l'utilisateur, au format attendu par un champ de
+// date. L'heure UTC ne conviendrait pas : passé minuit, elle désignerait encore la veille.
+function jourLocal(instant) {
+  const decalage = instant.getTimezoneOffset() * 60000;
+  return new Date(instant.getTime() - decalage).toISOString().slice(0, 10);
+}
+
+// Date du jour, selon la même règle.
 function aujourdhui() {
-  const maintenant = new Date();
-  const decalage = maintenant.getTimezoneOffset() * 60000;
-  return new Date(maintenant.getTime() - decalage).toISOString().slice(0, 10);
+  return jourLocal(new Date());
 }
 
 // Un champ de date rend un jour, la colonne attend un instant.
@@ -225,9 +229,10 @@ export default function FeuilleMouvement({
     }
     return actifs.find((position) => String(position.id) === idInitial)?.cours_eur ?? '';
   });
-  const [date, setDate] = useState(() =>
-    mouvement ? new Date(mouvement.date_transaction).toISOString().slice(0, 10) : aujourdhui()
-  );
+  // Le jour d'un mouvement corrigé se lit dans le fuseau de l'utilisateur, comme la frise
+  // l'affiche : relu en UTC, un mouvement saisi peu après minuit apparaissait la veille.
+  const jourInitial = mouvement ? jourLocal(new Date(mouvement.date_transaction)) : null;
+  const [date, setDate] = useState(() => jourInitial ?? aujourdhui());
   // En édition, le champ porte le montant réellement prélevé, pas sa contre-valeur :
   // c'est ce que l'utilisateur avait saisi, et c'est donc ce qu'il doit relire.
   const [frais, setFrais] = useState(() => {
@@ -433,13 +438,24 @@ export default function FeuilleMouvement({
   // porte une seule, celle que l'utilisateur a choisie. Envoyer la forme courte et la
   // forme longue ensemble obligerait le serveur à décider laquelle prime, et il refuse
   // — à raison — de le faire.
+  //
+  // En correction, deux informations que la feuille ne présente pas repartent telles
+  // qu'elles étaient. L'heure d'abord : tant que le jour n'est pas changé, l'horodatage
+  // d'origine est renvoyé, sans quoi midi UTC pouvait placer une vente avant l'achat du
+  // même jour dont elle dépend, et la correction était refusée. La note ensuite : la
+  // correction remplace le mouvement entier, et une note absente du corps était effacée.
   const corps = useMemo(() => {
     const montantFrais = normaliser(frais);
     const commun = {
       sens,
       quantite: normaliser(quantite),
-      date_transaction: versHorodatage(date),
+      date_transaction:
+        edition && date === jourInitial ? mouvement.date_transaction : versHorodatage(date),
     };
+
+    if (edition && typeof mouvement.note === 'string' && mouvement.note.trim() !== '') {
+      commun.note = mouvement.note;
+    }
 
     if (sens !== 'sortie_non_marchande') {
       commun.prix_unitaire = normaliser(prixUnitaire);
@@ -473,6 +489,9 @@ export default function FeuilleMouvement({
     contreValeurFrais,
     actif,
     date,
+    edition,
+    jourInitial,
+    mouvement,
   ]);
 
   // Récapitulatif recalculé à chaque modification, après un court délai d'inactivité.

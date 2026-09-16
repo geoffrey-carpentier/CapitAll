@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FeuilleMouvement from '../FeuilleMouvement';
 import FriseMouvements from '../FriseMouvements';
@@ -243,6 +243,74 @@ describe('feuille en correction', () => {
 
       expect(screen.getByLabelText(/^Frais/).value).toBe('0.0002');
       expect(screen.getByLabelText(/Contre-valeur/).value).toBe('10.8');
+    });
+  });
+
+  // Ce qu'une correction ne doit pas toucher. La feuille ne présente ni la note ni l'heure
+  // du mouvement : elle les renvoyait donc perdues, la note remplacée par rien et l'heure
+  // par midi UTC, ce qui pouvait placer une vente avant l'achat du même jour dont elle
+  // dépend.
+  describe('ce que la correction conserve', () => {
+    async function corrigerLePrix(mouvement) {
+      const utilisateur = await ouvrir(mouvement);
+      await utilisateur.clear(screen.getByLabelText(/^Prix unitaire/));
+      await utilisateur.type(screen.getByLabelText(/^Prix unitaire/), '52000');
+      await waitFor(() => {
+        expect(api.simulerModificationTransaction).toHaveBeenCalled();
+      });
+      return utilisateur;
+    }
+
+    const corpsSimule = () => api.simulerModificationTransaction.mock.calls.at(-1)[3];
+
+    it('renvoie la note du mouvement', async () => {
+      const utilisateur = await corrigerLePrix(ACHAT);
+      expect(corpsSimule().note).toBe('Achat initial');
+
+      await waitFor(() => {
+        expect(screen.getByText('Nouveau prix de revient')).toBeTruthy();
+      });
+      await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer la correction' }));
+      await waitFor(() => {
+        expect(api.modifierTransaction).toHaveBeenCalledTimes(1);
+      });
+      expect(api.modifierTransaction.mock.calls[0][3].note).toBe('Achat initial');
+    });
+
+    it('n’invente pas de note quand le mouvement n’en a pas', async () => {
+      await corrigerLePrix({ ...ACHAT, note: null });
+      expect('note' in corpsSimule()).toBe(false);
+    });
+
+    it('garde l’horodatage d’origine quand le jour ne change pas', async () => {
+      await corrigerLePrix({ ...ACHAT, date_transaction: '2026-05-27T13:45:00.000Z' });
+      expect(corpsSimule().date_transaction).toBe('2026-05-27T13:45:00.000Z');
+    });
+
+    it('place à midi UTC un mouvement dont le jour est changé', async () => {
+      await corrigerLePrix({ ...ACHAT, date_transaction: '2026-05-27T13:45:00.000Z' });
+      fireEvent.change(screen.getByLabelText(/^Date de l/), { target: { value: '2026-05-20' } });
+
+      await waitFor(() => {
+        expect(corpsSimule().date_transaction).toBe('2026-05-20T12:00:00.000Z');
+      });
+    });
+
+    it('relit le jour dans le fuseau de l’utilisateur, comme la frise', async () => {
+      // 23 h 30 UTC est déjà le lendemain à Paris : relu en UTC, le champ affichait la
+      // veille, et une correction sans autre changement déplaçait le mouvement d'un jour.
+      const horodatage = '2026-05-26T23:30:00.000Z';
+      const instant = new Date(horodatage);
+      const jourLocal = [
+        instant.getFullYear(),
+        String(instant.getMonth() + 1).padStart(2, '0'),
+        String(instant.getDate()).padStart(2, '0'),
+      ].join('-');
+
+      await corrigerLePrix({ ...ACHAT, date_transaction: horodatage });
+
+      expect(screen.getByLabelText(/^Date de l/).value).toBe(jourLocal);
+      expect(corpsSimule().date_transaction).toBe(horodatage);
     });
   });
 
