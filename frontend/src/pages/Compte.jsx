@@ -318,8 +318,9 @@ export default function Compte() {
       <Carte titre="Données" className="compte__carte">
         <p className="compte__note">
           Exporte la totalité de vos mouvements, tous actifs confondus, au format CSV :
-          date, sens, actif, classe, quantité, prix unitaire, frais et montant. Les
-          montants y sont écrits en euros, sans mise en forme.
+          date, sens, actif, classe, quantité, prix unitaire, frais en euros, frais
+          prélevés et leur unité, puis montant. Les montants y sont écrits en euros, sans
+          mise en forme.
         </p>
         {erreurExport && <Message variante="erreur">{erreurExport}</Message>}
         <Bouton variante="secondaire" onClick={exporter} enCours={exportEnCours}>

@@ -4,7 +4,7 @@
 
 <p align="center">
   <img alt="React 18" src="https://img.shields.io/badge/React-18-3987e5">
-  <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-199e70">
+  <img alt="Node 20.19+ ou 22.12+" src="https://img.shields.io/badge/Node-20.19%2B%20%7C%2022.12%2B-199e70">
   <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-336791">
   <img alt="Redis 7" src="https://img.shields.io/badge/Redis-7-d95926">
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed">
@@ -68,7 +68,8 @@ consolidé sur un tableau de bord conçu d'abord pour le téléphone.
 
 **Suivi**
 
-- seuils sur le cours d'un actif ou sur le capital total, évalués à chaque consultation ;
+- seuils sur le cours d'un actif ou sur le capital total, évalués à l'actualisation du
+  tableau de bord ;
 - historique de valorisation journalier, alimenté à la première consultation de chaque jour ;
 - historique journalier du cours et de la quantité de chaque position.
 
@@ -111,7 +112,7 @@ Détail des couches et des flux : [architecture](docs/conception/architecture.md
 | Brique | Choix | Version |
 |---|---|---|
 | Interface | React, Vite, React Router | 18.3, Vite 8, Router 7.18 |
-| Serveur | Node.js, Express | Node 20+ en local, Node 22 dans l'image ; Express 4.22 |
+| Serveur | Node.js, Express | Node 20.19+ ou 22.12+ en local, Node 22 dans l'image ; Express 4.22 |
 | Base de données | PostgreSQL | 16 |
 | Cache | Redis | 7 |
 | Authentification | jsonwebtoken, bcrypt | jeton HS256, validité 2 h |
@@ -160,7 +161,8 @@ docker-compose.production.yml  pile complète : interface, API, PostgreSQL, Redi
 La base et le cache tournent en conteneur, l'API et l'interface sur le poste, avec
 rechargement à chaud. Pour tout faire tourner en conteneurs, voir la section suivante.
 
-**Prérequis** : Node.js 20 ou supérieur, Docker et Docker Compose. Aucune installation de
+**Prérequis** : Node.js 20.19 et plus sur la branche 20, ou 22.12 et plus (versions
+exigées par Vite 8), Docker et Docker Compose. Aucune installation de
 PostgreSQL ni de Redis n'est nécessaire.
 
 ```bash
@@ -181,7 +183,8 @@ psql -h localhost -p 5432 -U capitall -d capitall -f backend/db/schema.sql
 psql -h localhost -p 5432 -U capitall -d capitall -f backend/db/seed.sql
 
 # 4. Dépendances et lancement
-npm run install:all
+npm install                           # outil de lancement simultané, à la racine
+npm run install:all                   # dépendances de l'API et de l'interface
 npm run dev                           # API et interface simultanément
 ```
 
@@ -239,7 +242,7 @@ les deux piles, les suivantes ne concernent que la pile complète.
 |---|---|---|
 | `POSTGRES_USER` | propriétaire de la base | aucun |
 | `POSTGRES_PASSWORD` | son mot de passe | aucun |
-| `POSTGRES_DB` | nom de la base, à laisser à `capitall` | aucun |
+| `POSTGRES_DB` | nom de la base | aucun |
 | `POSTGRES_PORT` | port publié sur le poste | 5432 |
 | `REDIS_PORT` | port publié sur le poste | 6379 |
 | `CAPITALL_APP_PASSWORD` | mot de passe du rôle applicatif | aucun |
@@ -247,6 +250,8 @@ les deux piles, les suivantes ne concernent que la pile complète.
 | `JWT_EXPIRATION` | durée de validité des jetons | 2h |
 | `PORT_APPLICATION` | port publié par la pile complète | 8080 |
 | `ORIGINE_AUTORISEE` | origine admise par l'API | http://localhost:8080 |
+| `FMP_API_KEY`, `FINNHUB_API_KEY`, `ALPHA_VANTAGE_API_KEY` | clés de cours d'actions | vides |
+| `AFFICHER_JETON_REINITIALISATION` | affiche la clé de réinitialisation à l'écran, démonstration seulement | false |
 
 **`backend/.env`**, consommé par l'API.
 
@@ -258,6 +263,8 @@ les deux piles, les suivantes ne concernent que la pile complète.
 | `REDIS_URL` | adresse du cache | non |
 | `PORT` | port d'écoute de l'API | non, 5000 |
 | `NODE_ENV` | environnement d'exécution | non, development |
+| `ORIGINE_AUTORISEE` | origine admise par l'API | non, http://localhost:5173 |
+| `AFFICHER_JETON_REINITIALISATION` | affiche la clé de réinitialisation à l'écran, démonstration seulement | non, false |
 | `FMP_API_KEY` | cours d'actions, fournisseur principal | non |
 | `FINNHUB_API_KEY` | cours d'actions, premier repli | non |
 | `ALPHA_VANTAGE_API_KEY` | cours d'actions, second repli | non |
@@ -279,7 +286,7 @@ repli.
 
 Deux scripts, aux usages opposés.
 
-**`backend/db/seed.sql`** crée trois comptes, six actifs, douze mouvements, deux seuils,
+**`backend/db/seed.sql`** crée trois comptes, six actifs, treize mouvements, deux seuils,
 trois annonces, quatre-vingt-dix jours d'historique de valorisation et cinq cent quarante
 relevés de cours, répartis dans huit tables. Il **réinitialise entièrement** la base par
 `TRUNCATE ... CASCADE` avant d'insérer : déterministe et rejouable pour repartir propre, mais
