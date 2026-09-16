@@ -70,10 +70,16 @@ export function FournisseurAuthentification({ children }) {
   // se racontent pas de la même façon. La garde de routes renvoie vers la connexion dans
   // les deux cas ; sans ce drapeau, l'expiration serait une redirection silencieuse, et
   // l'utilisateur se retrouverait devant un formulaire sans savoir pourquoi.
+  //
+  // Sans session ouverte, un 401 ne peut venir que d'identifiants refusés à la connexion :
+  // il n'y a alors rien d'expiré à annoncer, et l'écran affiche le message du serveur.
   const signalerSessionPerdue = useCallback(() => {
+    if (!jeton) {
+      return;
+    }
     setSessionExpiree(true);
     deconnecter();
-  }, [deconnecter]);
+  }, [jeton, deconnecter]);
 
   // Le client d'API prévient d'un 401 : la session est perdue, l'état est vidé et la
   // garde de routes renvoie vers la connexion au rendu suivant.
