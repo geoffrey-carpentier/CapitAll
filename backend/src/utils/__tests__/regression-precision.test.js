@@ -9,8 +9,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 //
 // Ils restent ici comme régression. Chacun décrit une perte de précision réelle, et
 // chacun retomberait au rouge si une échelle était rabaissée par mégarde.
-//
-// Registre : .claude/revues/execution-2026-09-05/TESTS-OUVERTS.md
 
 let versUnites;
 let versNotationPositionnelle;
