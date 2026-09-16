@@ -31,7 +31,7 @@ Quatre services sur un même réseau interne, créé par Docker Compose.
 
 | Service | Image | Rôle | Publié sur l'hôte |
 |---|---|---|---|
-| `web` | construite depuis `frontend/Dockerfile` | fichiers de l'interface, servis par Nginx, et relais des appels d'API | oui, port 8080 par défaut |
+| `web` | construite depuis `frontend/Dockerfile` | fichiers de l'interface, servis par Nginx, et relais des appels d'API | oui, port 8080 par défaut, sur `127.0.0.1` |
 | `api` | construite depuis `backend/Dockerfile` | serveur Express | non |
 | `db` | `postgres:16-alpine` | données persistantes | non |
 | `redis` | `redis:7-alpine` | cache des cours | non |
@@ -39,6 +39,12 @@ Quatre services sur un même réseau interne, créé par Docker Compose.
 Un seul port est ouvert sur la machine hôte, celui de l'interface. La base, le cache et
 l'API ne sont joignables que depuis le réseau de la pile, sous les noms `db`, `redis` et
 `api` : rien d'autre que l'interface n'est exposé au réseau de la machine.
+
+Ce port est lui-même lié à la boucle locale (`127.0.0.1`) : la pile embarque des comptes de
+démonstration dont les mots de passe figurent dans le dépôt, et l'ouvrir au réseau rendrait
+l'application accessible à n'importe quel poste voisin. Une présentation depuis un autre
+appareil, un téléphone par exemple, suppose de retirer ce préfixe dans
+`docker-compose.production.yml`, en connaissance de cause, puis de le rétablir.
 
 L'interface et l'API sont servies sous la même origine. Les appels du navigateur partent
 en chemin relatif vers `/api/...` ; Nginx les relaie vers le conteneur `api`. Aucune
@@ -122,7 +128,7 @@ NAME                          SERVICE   STATUS                    PORTS
 capitall-production-api-1     api       Up (healthy)              5000/tcp
 capitall-production-db-1      db        Up (healthy)              5432/tcp
 capitall-production-redis-1   redis     Up (healthy)              6379/tcp
-capitall-production-web-1     web       Up (healthy)              0.0.0.0:8080->80/tcp
+capitall-production-web-1     web       Up (healthy)              127.0.0.1:8080->80/tcp
 ```
 
 Puis, depuis la machine hôte :
@@ -158,6 +164,14 @@ repartir d'une base neuve et à nouveau peuplée par le jeu de démonstration, n
 avant une présentation.
 
 ## Redéploiement après une modification du code
+
+**Avant de reconstruire, vérifier que la base est au niveau du code.** Les scripts
+d'initialisation ne sont joués qu'à la création du volume : une base créée avant une
+migration ne la reçoit pas en même temps que l'image. Une API reconstruite sur une base
+restée en arrière échoue dès sa première requête, par exemple à la connexion, sur une
+colonne absente. Si le code récupéré apporte des migrations absentes de la base, faire une
+sauvegarde, puis les appliquer (section « Évolution du schéma sur une base déjà peuplée »)
+avant la commande ci-dessous.
 
 ```bash
 git pull
