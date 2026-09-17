@@ -75,7 +75,7 @@ function classes() {
         // Les deux fournisseurs n'ont pas le même quota : un cours peut manquer sur l'un.
         provenance: ACTIONS_FMP.includes(symbole) ? 'fmp' : 'finnhub',
       })),
-      note: "Liste fermée actée en D27 et étendue en D99. Un symbole absent est refusé à la saisie. Les quatre-vingt-six premiers sont servis par le plan gratuit de FMP, les vingt suivants par Finnhub, dont le quota quotidien est plus étroit.",
+      note: "La liste des actions disponibles est contrôlée côté serveur. Un symbole absent est refusé à la saisie. Les quatre-vingt-six premiers sont servis par le plan gratuit de FMP, les vingt suivants par Finnhub, dont le quota quotidien est plus étroit.",
     },
   ];
 }
