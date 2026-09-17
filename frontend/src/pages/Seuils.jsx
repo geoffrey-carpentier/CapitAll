@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
 import { useSeuil } from '../hooks/useSeuil';
@@ -19,6 +18,7 @@ import Confirmation from '../composants/Confirmation';
 import EtatVide from '../composants/EtatVide';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
+import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Message from '../composants/Message';
 import BasculeDevise from '../composants/BasculeDevise';
 import MasquageMontants from '../composants/MasquageMontants';
@@ -69,7 +69,6 @@ function BoutonRetrait({ seuil, surRetrait }) {
 
 export default function Seuils() {
   const { jeton } = useAuthentification();
-  const naviguer = useNavigate();
   const seuilFeuille = useSeuil();
   // Le bouton flottant de la barre mobile ouvre la saisie sur l'écran courant.
   const mouvement = useMouvement();
@@ -207,17 +206,8 @@ export default function Seuils() {
   }
 
   if (erreur && !seuils) {
-    const nature = classifierErreurApi(erreur);
     return (
-      <div className="seuils">
-        <h1 className="seuils__titre">Seuils</h1>
-        <MessageErreur
-          nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={nature === 'session' ? () => naviguer('/connexion') : charger}
-        />
-      </div>
+      <ErreurChargementPage page="seuils" titre="Seuils" erreur={erreur} surReessayer={charger} />
     );
   }
 

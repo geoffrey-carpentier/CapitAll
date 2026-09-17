@@ -2,13 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../services/api';
-import { classifierErreurApi } from '../utils/erreurs';
 import { CLE_DEVISE, CLE_MASQUAGE, lirePreference, ecrirePreference } from '../utils/preferences';
 import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
 import Carte from '../composants/Carte';
 import Message from '../composants/Message';
-import MessageErreur from '../composants/MessageErreur';
+import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Confirmation from '../composants/Confirmation';
 import BasculeDevise from '../composants/BasculeDevise';
 import MasquageMontants from '../composants/MasquageMontants';
@@ -175,17 +174,8 @@ export default function Compte() {
   }
 
   if (erreur && !profil) {
-    const nature = classifierErreurApi(erreur);
     return (
-      <div className="compte">
-        <h1 className="compte__titre">Compte</h1>
-        <MessageErreur
-          nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={nature === 'session' ? () => naviguer('/connexion') : charger}
-        />
-      </div>
+      <ErreurChargementPage page="compte" titre="Compte" erreur={erreur} surReessayer={charger} />
     );
   }
 

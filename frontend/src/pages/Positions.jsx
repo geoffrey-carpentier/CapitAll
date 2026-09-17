@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
 import { api } from '../services/api';
@@ -15,6 +15,7 @@ import MasquageMontants from '../composants/MasquageMontants';
 import EtatVide from '../composants/EtatVide';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
+import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Message from '../composants/Message';
 import { lirePreference, ecrirePreference, CLE_DEVISE, CLE_MASQUAGE } from '../utils/preferences';
 import './Positions.css';
@@ -49,7 +50,6 @@ const TRI_PAR_DEFAUT = { cle: 'valeur', descendant: true };
 
 export default function Positions() {
   const { jeton } = useAuthentification();
-  const naviguer = useNavigate();
   const [parametres, setParametres] = useSearchParams();
 
   const [portefeuille, setPortefeuille] = useState(null);
@@ -221,18 +221,13 @@ export default function Positions() {
   }
 
   if (erreur && !portefeuille) {
-    const nature = classifierErreurApi(erreur);
-
     return (
-      <div className="positions">
-        <h1 className="positions__titre">Positions</h1>
-        <MessageErreur
-          nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={nature === 'session' ? () => naviguer('/connexion') : charger}
-        />
-      </div>
+      <ErreurChargementPage
+        page="positions"
+        titre="Positions"
+        erreur={erreur}
+        surReessayer={charger}
+      />
     );
   }
 

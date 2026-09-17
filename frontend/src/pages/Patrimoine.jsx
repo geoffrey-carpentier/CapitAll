@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
 import { api } from '../services/api';
@@ -19,6 +19,7 @@ import MasquageMontants from '../composants/MasquageMontants';
 import EtatVide from '../composants/EtatVide';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
+import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Repartition from '../composants/Repartition';
 import Message from '../composants/Message';
 import {
@@ -45,7 +46,6 @@ const PERIODE_PAR_DEFAUT = 'mois';
 
 export default function Patrimoine() {
   const { jeton, utilisateur } = useAuthentification();
-  const naviguer = useNavigate();
   const emplacement = useLocation();
 
   const [portefeuille, setPortefeuille] = useState(null);
@@ -202,20 +202,13 @@ export default function Patrimoine() {
   }
 
   if (erreur && !portefeuille) {
-    const nature = classifierErreurApi(erreur);
-
     return (
-      <div className="patrimoine">
-        <h1 className="patrimoine__titre">Patrimoine</h1>
-        <MessageErreur
-          nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={
-            nature === 'session' ? () => naviguer('/connexion') : () => actualiser()
-          }
-        />
-      </div>
+      <ErreurChargementPage
+        page="patrimoine"
+        titre="Patrimoine"
+        erreur={erreur}
+        surReessayer={() => actualiser()}
+      />
     );
   }
 
