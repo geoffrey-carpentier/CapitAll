@@ -1,8 +1,4 @@
-/*
-  Feuille glissante en mobile, dialogue centré en desktop. Le point de rupture est celui
-  du reste de l'application : au-delà, la place ne manque plus et une feuille ancrée en
-  bas d'un grand écran obligerait à parcourir toute la hauteur du regard.
-*/
+/* Feuille glissante en mobile, dialogue centré à partir de 720 px. */
 
 .feuille__voile {
   position: fixed;
@@ -25,15 +21,13 @@
   padding: var(--espace-3) var(--espace-4) var(--espace-4);
 }
 
-/* Le dialogue reçoit le focus à l'ouverture : sans cette règle, le navigateur en
-   dessinerait le contour sur toute la feuille, ce qui se lirait comme une erreur. Le
-   focus reste bien posé, et les contrôles gardent le leur. */
+/* Le dialogue reçoit le focus à l'ouverture sans contour global ; les contrôles
+   gardent le leur. */
 .feuille:focus {
   outline: none;
 }
 
-/* Poignée de préhension : elle annonce une feuille que l'on peut faire glisser, et
-   marque le haut du contenu. Purement décorative, donc masquée à la restitution. */
+/* Poignée décorative, masquée aux lecteurs d'écran. */
 .feuille__poignee {
   align-self: center;
   width: 36px;
@@ -48,9 +42,7 @@
   align-items: flex-start;
   gap: var(--espace-3);
   margin-bottom: var(--espace-3);
-  /* L'en-tête n'est pas du contenu à copier : sans cela, un clic à côté du titre y
-     laissait un curseur de texte, ce qui donnait à une zone inerte l'apparence d'un
-     champ de saisie. */
+  /* Évite qu'un clic sur l'en-tête y laisse un curseur de texte. */
   user-select: none;
   cursor: default;
 }
@@ -66,8 +58,7 @@
   font-weight: var(--graisse-forte);
 }
 
-/* Le nom de la cible, sous le titre : il peut être long, il se coupe plutôt que de
-   pousser le bouton de fermeture hors de l'écran. */
+/* Un nom long se coupe plutôt que de pousser le bouton de fermeture hors de l'écran. */
 .feuille__sous-titre {
   margin: 2px 0 0;
   font-size: var(--taille-legende);
@@ -75,7 +66,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Zone tactile de 44 px en mobile (D77), le glyphe restant plus petit. */
+/* Zone tactile de 44 px en mobile, le glyphe restant plus petit. */
 .feuille__fermer {
   display: flex;
   align-items: center;
@@ -102,27 +93,19 @@
 }
 
 /*
-  Le corps défile, l'en-tête et le pied restent visibles : le bouton d'enregistrement ne
-  doit pas se trouver hors de portée sur un petit écran.
-
-  Le défilement est réel et n'est pas supprimé : le formulaire de mouvement dépasse
-  franchement la hauteur disponible sur un écran de téléphone, et masquer la barre
-  rendrait les derniers champs inatteignables à la souris. Ce qui était en cause, c'est
-  son dessin : le navigateur posait sa barre système, large de 15 px et claire, sur une
-  interface sombre — elle se lisait comme un défaut d'affichage plutôt que comme une
-  zone qui défile. Elle reprend ici les couleurs de l'interface, en largeur fine.
+  Seul le corps défile, l'en-tête restant visible. La barre de défilement reprend les
+  couleurs de l'interface sombre.
 */
 .feuille__corps {
   flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--couleur-contour-controle) transparent;
-  /* Le défilement reste dans la feuille : arrivé en bout de course, il ne se propage
-     pas à la page qui se trouve derrière. */
+  /* Le défilement ne se propage pas à la page derrière la feuille. */
   overscroll-behavior: contain;
 }
 
-/* WebKit ne connaît pas encore scrollbar-color. Même dessin, même largeur. */
+/* Équivalent WebKit de scrollbar-color. */
 .feuille__corps::-webkit-scrollbar {
   width: 8px;
 }
@@ -136,11 +119,9 @@
   border-radius: 4px;
 }
 
-/* Actions de la feuille. Elles vivent dans le formulaire qu'elles valident, et non dans
-   un pied de dialogue : un bouton de soumission séparé de son formulaire ne serait plus
-   déclenché par la touche Entrée. L'inversion place l'annulation sous l'action
-   principale en mobile, là où le pouce arrive naturellement, sans changer pour autant
-   l'ordre du document ni celui de la tabulation. */
+/* Les actions restent dans le formulaire pour que la touche Entrée le soumette. En
+   mobile, l'inversion visuelle place l'annulation sous l'action principale sans changer
+   l'ordre de tabulation. */
 .feuille__actions {
   display: flex;
   flex-direction: column-reverse;
@@ -158,10 +139,6 @@
 
   .feuille {
     max-width: 520px;
-    /* 92vh et non 88 : sur une fenêtre de 780 px, le formulaire de mouvement dépassait
-       de 61 px la hauteur autorisée, alors que 94 px restaient inutilisés au-dessus et
-       au-dessous du dialogue. Il tient désormais d'un seul tenant aux hauteurs de
-       fenêtre courantes, et continue de défiler en dessous. */
     max-height: 92vh;
     border-radius: var(--rayon-carte);
     padding: var(--espace-6);
@@ -171,8 +148,7 @@
     display: none;
   }
 
-  /* Au-dessus du point de rupture, les deux actions reprennent l'ordre du document et
-     s'alignent à droite, comme dans le dialogue de confirmation. */
+  /* Ordre du document, alignement à droite comme dans le dialogue de confirmation. */
   .feuille__actions {
     flex-direction: row;
     justify-content: flex-end;

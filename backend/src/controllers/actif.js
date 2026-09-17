@@ -1,12 +1,8 @@
-// Contrôleurs du portefeuille. L'identifiant du propriétaire vient exclusivement de
-// req.utilisateur, posé par le middleware d'authentification : jamais du corps de la
-// requête ni de l'URL, qui sont sous le contrôle de l'appelant.
+// Contrôleurs du portefeuille. Le propriétaire vient toujours de req.utilisateur (posé
+// par le middleware d'authentification), jamais du corps ni de l'URL.
 //
-// Choix de statut assumé : une ressource qui existe mais appartient à quelqu'un d'autre
-// renvoie 404, et non 403. Un 403 confirmerait au demandeur que l'identifiant existe,
-// ce qui permettrait d'énumérer les actifs des autres comptes par simple balayage.
-// Un utilisateur ne doit pas pouvoir distinguer « cet actif n'existe pas » de
-// « cet actif ne vous appartient pas ».
+// Une ressource d'un autre compte renvoie 404 et non 403 : un 403 confirmerait que
+// l'identifiant existe et permettrait d'énumérer les actifs des autres comptes.
 
 const modeleActif = require('../models/actif');
 const { creerServiceTransaction } = require('../services/transaction');
@@ -94,15 +90,12 @@ async function ajouterTransaction(req, res, next) {
   }
 }
 
-// Effet d'un mouvement avant son enregistrement, pour le récapitulatif de l'écran de
-// saisie. Rien n'est écrit : le corps de la requête est celui d'une création, et la
-// réponse est un 200 et non un 201, aucune ressource n'ayant été créée.
+// Effet d'un mouvement sans l'enregistrer : 200 et non 201, rien n'est créé.
 async function simulerTransaction(req, res, next) {
   try {
     const effet = await serviceTransaction.simuler({
       actifId: req.params.id,
-      // Présent seulement sur la route de correction : la simulation remplace alors le
-      // mouvement visé au lieu d'en ajouter un.
+      // Sur la route de correction, la simulation remplace ce mouvement.
       idTransaction: req.params.idTransaction ?? null,
       utilisateurId: req.utilisateur.id,
       donnees: req.body,
@@ -113,13 +106,8 @@ async function simulerTransaction(req, res, next) {
   }
 }
 
-// Correction d'un mouvement enregistré (D51 révisée). Le corps est celui d'une création,
-// et la réponse un 200 : aucune ressource n'est créée, celle qui existait est corrigée.
-//
-// PATCH et non PUT : le corps ne porte que les champs modifiables du mouvement, jamais
-// sa représentation complète — ni son identifiant, ni son actif, ni les valeurs que le
-// moteur en dérive. Un PUT annoncerait un remplacement de la ressource entière, que
-// cette route ne permet pas.
+// Correction d'un mouvement : 200, la ressource existante est modifiée. PATCH et non PUT,
+// car le corps ne porte que les champs modifiables, pas la ressource complète.
 async function modifierTransaction(req, res, next) {
   try {
     const transaction = await serviceTransaction.modifier({

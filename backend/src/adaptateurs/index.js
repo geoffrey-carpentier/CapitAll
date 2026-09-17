@@ -1,9 +1,5 @@
-// Assemblage des adaptateurs et routage par type d'actif.
-//
-// La logique métier appelle toujours getCours(symbole) sur l'adaptateur que lui rend
-// ce module : elle ignore quel fournisseur répond, et un changement de fournisseur ne
-// la touche pas (D5). Les actions utilisent ainsi leur chaîne de fournisseurs sans
-// modifier le service de cours.
+// Assemblage des adaptateurs et routage par type d'actif. Le service de cours appelle
+// getCours(symbole) sans savoir quel fournisseur répond : en changer ne le touche pas.
 
 const { recupererJson } = require('./clientHttp');
 const { creerAdaptateurCoinbase } = require('./coinbase');
@@ -17,10 +13,8 @@ function creerAdaptateurs({ recupererJson: clientHttp = recupererJson, obtenirTa
   const coinbase = creerAdaptateurCoinbase({ recupererJson: clientHttp });
   const frankfurter = creerAdaptateurFrankfurter({ recupererJson: clientHttp });
 
-  // La conversion des métaux a besoin du taux USD vers EUR. En usage réel, le service
-  // de cours injecte ici sa propre fonction, ce qui fait passer le taux par le cache
-  // au lieu de rappeler Frankfurter à chaque cours de métal. Le repli sur l'adaptateur
-  // direct ne sert qu'aux usages sans service, comme les tests d'adaptateur isolés.
+  // Taux USD vers EUR des métaux : fourni par le service de cours (donc mis en cache) ;
+  // l'appel direct à Frankfurter ne sert qu'aux usages isolés comme les tests.
   const metal = creerAdaptateurMetal({
     recupererJson: clientHttp,
     obtenirTauxUsdEur: obtenirTauxUsdEur ?? frankfurter.obtenirTauxUsdEur,

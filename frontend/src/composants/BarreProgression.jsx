@@ -2,44 +2,20 @@ import './BarreProgression.css';
 import Montant from './Montant';
 import { formaterPourcentage } from '../utils/formatage';
 
-// Avancement d'une valeur vers un seuil.
+// Avancement d'une valeur vers un seuil, accompagné des deux montants écrits.
 //
-// La barre répond à une seule question, celle que pose la spécification devant chaque
-// ligne de seuil : suis-je proche ? Elle ne remplace jamais les chiffres, elle les
-// accompagne — les deux montants sont écrits à côté d'elle, mis en forme par le module
-// de formatage comme partout ailleurs.
+// Seule la largeur de la barre passe par un nombre : c'est de la géométrie, aucune
+// valeur lue n'est un flottant. Pour la même raison, l'échelle ARIA va de 0 à 100 et
+// non en euros ; aria-valuetext porte le texte annoncé.
 //
-// La seule conversion numérique est celle de la fraction, qui donne une largeur en
-// pourcentage. C'est de la géométrie, au même titre que l'ordonnée d'un point de
-// courbe : rien de ce qui est lu par l'utilisateur ne passe par un nombre flottant.
+// L'écart restant (« reste 6 % ») est écrit dans la barre ; l'avancement est porté par
+// sa longueur. La couleur est celle de la classe d'actif surveillée.
 //
-// L'échelle ARIA est volontairement normalisée de 0 à 100 plutôt que calée sur les
-// montants réels. Un aria-valuenow exprimé en euros supposerait de faire traverser un
-// montant par un nombre pour une valeur restituée à la voix, ce que la politique de
-// formatage interdit. aria-valuetext porte les deux montants en toutes lettres, et
-// c'est lui que les lecteurs d'écran annoncent.
-//
-// L'écart restant avant franchissement est écrit dans la barre, à l'extrémité de son
-// remplissage. Il figurait auparavant dans le texte au-dessus, ce qui séparait le chiffre
-// de la forme qui le représente et obligeait à faire l'aller-retour. C'est bien l'écart
-// que la spécification demande, et non l'avancement : dire « il reste 6 % » répond à la
-// question posée devant un seuil, là où « vous en êtes à 94 % » la contourne. L'avancement
-// reste porté par la longueur de la barre et par aria-valuenow. La barre porte la couleur de la
-// classe d'actif surveillée, celle-là même que porte l'anneau de répartition (D98) : c'est
-// le seul repère qui relie un seuil à ce qu'il surveille sans le répéter en toutes lettres.
-//
-// Un cours indisponible ne donne pas une barre à zéro, qui se lirait comme « très
-// loin du seuil » : la barre disparaît au profit d'une mention explicite.
-//
-// Le masquage des montants, préférence globale de l'application, remplace les deux
-// repères par des points plutôt que de les taire : la barre continue de dire à quelle
-// distance on se trouve, sans jamais révéler le chiffre. Le pourcentage qu'annonce
-// aria-valuetext n'est pas masqué, aucun pourcentage ne l'étant ailleurs dans
-// l'application.
-// La barre dit toujours la même chose : à quelle distance du déclenchement on se
-// trouve, pleine au moment du franchissement. Un seuil bas se lit donc à l'envers d'un
-// seuil haut — s'en éloigner, pour lui, c'est monter. Rapporter les deux au même
-// rapport ferait qu'un seuil bas très éloigné afficherait une barre pleine.
+// Sans cours, la barre est remplacée par une mention : une barre vide se lirait « loin
+// du seuil ». Le masquage remplace les montants par des points, pas le pourcentage.
+
+// La barre est pleine au franchissement. Pour un seuil bas, le rapport est inversé :
+// sinon un seuil bas très éloigné afficherait une barre pleine.
 function fraction(valeur, cible, sens) {
   const cours = Number(valeur);
   const seuil = Number(cible);
@@ -77,9 +53,7 @@ export default function BarreProgression({
   const pourcentage = Math.round(avancement * 100);
   const description = sens === 'au_dessus' ? 'seuil haut' : 'seuil bas';
 
-  // Le pourcentage se lit dans la barre plutôt qu'au-dessus d'elle. Il y perd sa place
-  // quand la barre est trop courte pour l'accueillir : en deçà d'un cinquième, il se pose
-  // juste après le remplissage, sur la piste vide.
+  // Sous 22 %, le remplissage est trop court : l'étiquette se pose juste après lui.
   const dansLeRemplissage = pourcentage >= 22;
   const etiquette = ecart === null || ecart === undefined ? null : `reste ${formaterPourcentage(ecart)}`;
 

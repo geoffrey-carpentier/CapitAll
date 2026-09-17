@@ -9,10 +9,8 @@ import Marque from '../composants/Marque';
 
 // Choix d'un nouveau mot de passe à partir d'une clé de réinitialisation.
 //
-// L'opération ne connecte pas : celui qui vient de poser un mot de passe doit s'en
-// servir, ce qui prouve qu'il l'a bien enregistré. Toutes les sessions du compte sont par
-// ailleurs closes — on réinitialise précisément quand on ne maîtrise plus l'accès, et
-// laisser vivre les sessions existantes viderait l'opération de son sens.
+// L'opération ne connecte pas, et le serveur ferme toutes les sessions du compte : on
+// réinitialise justement quand on ne maîtrise plus l'accès.
 
 const LONGUEUR_MINIMALE = 10;
 
@@ -20,8 +18,7 @@ export default function Reinitialisation() {
   const [parametres] = useSearchParams();
   const naviguer = useNavigate();
 
-  // La clé peut arriver par l'adresse, depuis l'écran de demande, ou être recopiée à la
-  // main. Le champ reste modifiable dans les deux cas.
+  // Clé reçue par l'adresse ou recopiée à la main ; le champ reste modifiable.
   const [jeton, setJeton] = useState(() => parametres.get('jeton') ?? '');
   const [motDePasse, setMotDePasse] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -35,10 +32,8 @@ export default function Reinitialisation() {
     evenement.preventDefault();
     setErreur(null);
 
-    // Les deux contrôles de forme se posent sous leur champ, où l'utilisateur regarde.
-    // Le bloc en tête ne sert qu'au cas qu'ils ne couvrent pas — un champ resté vide,
-    // sur lequel il n'y a pas encore de saisie à commenter — et à ce que rend le
-    // serveur. Sans cette distinction, le même message s'afficherait deux fois.
+    // Les erreurs de forme s'affichent sous leur champ ; le bandeau ne couvre que le
+    // champ encore vide et la réponse du serveur, pour ne pas doubler un message.
     if (motDePasse.length < LONGUEUR_MINIMALE) {
       if (!tropCourt) {
         setErreur(`Le mot de passe doit contenir au moins ${LONGUEUR_MINIMALE} caractères.`);
@@ -64,9 +59,8 @@ export default function Reinitialisation() {
         },
       });
     } catch (echec) {
-      // Le serveur rend un refus unique pour les quatre causes possibles — clé inconnue,
-      // déjà servie, expirée, compte désactivé. Le reprendre tel quel évite d'apprendre
-      // à un tiers laquelle s'applique.
+      // Refus unique du serveur (clé inconnue, utilisée, expirée ou compte désactivé),
+      // repris tel quel pour ne pas révéler la cause.
       setErreur(echec.message);
       setEnCours(false);
     }

@@ -1,7 +1,4 @@
-/*
-  Écran Compte. Cinq cartes empilées, sans sous-navigation : la spécification veut un
-  seul écran, chaque section étant assez courte pour se lire d'un trait.
-*/
+/* Écran Compte : cartes empilées, sans sous-navigation. */
 
 .compte {
   display: flex;
@@ -28,8 +25,6 @@
   gap: var(--espace-4);
 }
 
-/* Liste de définitions plutôt qu'un tableau : ce sont des paires libellé/valeur, pas
-   des données à croiser en deux dimensions. */
 .compte__informations {
   display: flex;
   flex-direction: column;
@@ -52,8 +47,7 @@
   margin: 0;
   text-align: right;
   font-weight: var(--graisse-forte);
-  /* L'adresse électronique peut être longue : elle se coupe plutôt que de pousser la
-     carte au-delà de la largeur de l'écran. */
+  /* Une adresse longue se coupe plutôt que d'élargir la carte. */
   overflow-wrap: anywhere;
 }
 
@@ -63,18 +57,13 @@
   font-size: var(--taille-caption, 0.875rem);
 }
 
-/* Même raison que pour le formulaire : l'action d'export garde sa largeur propre. */
+/* Le bouton d'export garde sa largeur propre, comme dans le formulaire. */
 .compte__carte > .bouton {
   align-self: flex-start;
 }
 
-/*
-  Fiche « À propos ». Les lignes y étaient réparties comme celles du bloc d'informations,
-  libellé à gauche et valeur poussée à droite. Cela tient tant que la valeur est courte ;
-  la ligne des actions, qui court sur trois lignes, se retrouvait ferrée à droite en
-  drapeau, décalée de tout le reste. Deux colonnes fixes et un texte aligné à gauche
-  règlent le cas sans traiter cette ligne à part.
-*/
+/* Fiche « À propos » : deux colonnes et texte aligné à gauche, pour que les valeurs
+   longues restent lisibles. */
 .compte__informations--propos {
   display: grid;
   grid-template-columns: minmax(8rem, max-content) 1fr;
@@ -110,8 +99,7 @@
   gap: var(--espace-3);
 }
 
-/* Les champs occupent la largeur de la carte, le bouton la sienne : un bouton étiré sur
-   toute la carte se lit comme une action principale de page, ce qu'il n'est pas. */
+/* Champs sur toute la largeur ; le bouton garde la sienne. */
 .compte__formulaire .champ {
   align-self: stretch;
 }
@@ -134,8 +122,7 @@
   font-weight: var(--graisse-forte);
 }
 
-/* En dessous de 480 px, le réglage et son contrôle ne tiennent plus côte à côte sans
-   réduire la zone tactile sous les 44 px exigés (D77) : ils passent l'un sous l'autre. */
+/* Sous 480 px, réglage et contrôle s'empilent pour garder une zone tactile de 44 px. */
 @media (max-width: 480px) {
   .compte__reglage {
     flex-direction: column;

@@ -1,6 +1,5 @@
-// Logique métier de la gestion du compte : changement de mot de passe, suppression et
-// export des mouvements. Comme les autres services, il ne connaît ni Express ni les
-// codes HTTP, et reçoit ses dépendances en paramètre pour rester testable sans base.
+// Gestion du compte : changement de mot de passe, suppression et export des mouvements.
+// Sans Express ni HTTP, dépendances injectées pour tester sans base.
 
 const bcrypt = require('bcrypt');
 const modeleUtilisateur = require('../models/utilisateur');
@@ -10,13 +9,8 @@ const { derouler, trierChronologiquement } = require('./calculPortefeuille');
 const { construire } = require('../utils/csv');
 const { ErreurValidation, ErreurIntrouvable } = require('../erreurs');
 
-// Colonnes de l'export, dans l'ordre du fichier (D84).
-//
-// frais_montant et frais_unite encadrent la contre-valeur en euros plutôt que d'être
-// rejetés en fin de ligne : les trois colonnes disent une seule chose, et les séparer
-// obligerait à parcourir la ligne pour savoir en quoi les frais ont été prélevés.
-// La colonne type porte désormais trois valeurs, sortie_non_marchande comprise : un
-// transfert n'y apparaît jamais sous l'étiquette vente (D89).
+// Colonnes de l'export, dans l'ordre du fichier. Les trois colonnes de frais restent
+// voisines. La colonne type distingue sortie_non_marchande d'une vente.
 const ENTETES = [
   'date',
   'type',
@@ -36,19 +30,15 @@ function jourCourant() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// pg rend un TIMESTAMPTZ sous forme d'objet Date ; les jeux d'essai le donnent parfois
-// déjà en chaîne. Les deux passent par Date pour ne produire qu'une seule forme.
+// pg rend un TIMESTAMPTZ en Date, les jeux d'essai parfois en chaîne : une seule forme
+// en sortie.
 function enIso(valeur) {
   return new Date(valeur).toISOString();
 }
 
-// Le montant de chaque ligne n'est pas recalculé ici : il est produit par derouler(),
-// le moteur qui le calcule déjà pour l'écran de détail d'une position. La formule, ses
-// échelles intermédiaires et son arrondi gardent ainsi un propriétaire unique (D69), et
-// le fichier exporté porte exactement le chiffre que l'application affiche.
-//
-// derouler() raisonne par position : les mouvements sont donc groupés par actif, puis
-// refondus en une seule liste que l'ordre chronologique du domaine remet en ordre.
+// Les montants viennent de derouler(), le moteur de l'écran de détail : l'export porte
+// exactement les chiffres affichés. derouler() travaillant par position, les mouvements
+// sont groupés par actif puis remis en ordre chronologique.
 function calculerMontants(mouvements) {
   const parActif = new Map();
 
@@ -76,18 +66,14 @@ function creerServiceCompte({
   async function changerMotDePasse({ utilisateurId, ancienMotDePasse, nouveauMotDePasse }) {
     const utilisateur = await utilisateurs.trouverAvecHachageParId(utilisateurId);
 
-    // Le porteur d'un jeton valide dont le compte a disparu entre-temps : le cas est
-    // improbable mais ne doit pas produire une comparaison bcrypt sur undefined.
+    // Compte supprimé depuis l'émission du jeton.
     if (!utilisateur) {
       throw new ErreurIntrouvable('Utilisateur introuvable.');
     }
 
     const ancienValide = await bcrypt.compare(ancienMotDePasse, utilisateur.mot_de_passe_hache);
 
-    // L'erreur est rattachée au champ de l'ancien mot de passe : c'est lui que
-    // l'utilisateur doit corriger, et la spécification demande que le message s'y pose
-    // plutôt qu'en tête de formulaire. Aucun décompte de tentatives n'est tenu, aucune
-    // n'étant prévue par la spécification.
+    // Erreur rattachée au champ à corriger.
     if (!ancienValide) {
       throw new ErreurValidation('Ancien mot de passe incorrect.', [
         { champ: 'ancienMotDePasse', message: 'Ancien mot de passe incorrect.' },
@@ -101,15 +87,9 @@ function creerServiceCompte({
       throw new ErreurIntrouvable('Utilisateur introuvable.');
     }
 
-    // Le changement pose une borne de révocation : tous les jetons émis avant tombent.
-    // C'est l'effet attendu de « je change mon mot de passe parce que je le crois
-    // compromis » — sans elle, une session dérobée survivait jusqu'à deux heures.
-    //
-    // Mais la spécification veut que la session en cours survive au changement, et
-    // celle-ci porte justement un jeton antérieur. Un jeton neuf est donc remis à
-    // l'appelant : ses autres sessions tombent, la sienne continue. Il est rendu ici et
-    // non signé par le contrôleur, pour que la borne et la réémission restent
-    // indissociables.
+    // La mise à jour pose une borne de révocation : tous les jetons antérieurs tombent,
+    // y compris celui de la session courante. Un jeton neuf est donc émis ici, avec la
+    // borne, pour que cette session continue.
     return { token: emettreJeton({ id: utilisateur.id, role: utilisateur.role }) };
   }
 
@@ -120,9 +100,7 @@ function creerServiceCompte({
       throw new ErreurIntrouvable('Utilisateur introuvable.');
     }
 
-    // La confirmation par mot de passe est vérifiée ici, et non par l'interface : elle
-    // est la dernière barrière avant une suppression irréversible, et un jeton dérobé
-    // ne doit pas suffire à la franchir.
+    // Vérifiée côté serveur : un jeton dérobé ne doit pas suffire à supprimer le compte.
     const valide = await bcrypt.compare(motDePasse, utilisateur.mot_de_passe_hache);
 
     if (!valide) {
@@ -139,9 +117,7 @@ function creerServiceCompte({
   }
 
   async function exporterMouvements({ utilisateurId }) {
-    // Le cloisonnement est porté par la requête elle-même, qui joint actif sur son
-    // propriétaire : aucun filtre applicatif ne vient après, et aucun identifiant
-    // d'utilisateur ne transite par la requête HTTP.
+    // Cloisonnement porté par la requête SQL (jointure sur le propriétaire de l'actif).
     const mouvements = await transactions.listerParUtilisateur(utilisateurId);
 
     const lignes = calculerMontants(mouvements).map((mouvement) => [
@@ -149,9 +125,8 @@ function creerServiceCompte({
       mouvement.sens,
       mouvement.symbole,
       mouvement.classe,
-      // Les valeurs décimales sortent telles que la base les rend, point décimal
-      // compris : un fichier d'échange n'est pas un affichage, le formatage à la
-      // française y rendrait les colonnes inexploitables par un tableur.
+      // Décimales brutes de la base, avec un point : pas de formatage à la française
+      // dans un fichier d'échange.
       mouvement.quantite,
       mouvement.prix_unitaire,
       mouvement.frais,
@@ -160,9 +135,7 @@ function creerServiceCompte({
       mouvement.montant,
     ]);
 
-    // Un compte sans mouvement rend malgré tout un fichier : l'en-tête seul dit que
-    // l'export a fonctionné et qu'il n'y avait rien à exporter, là où un fichier vide
-    // laisserait croire à un échec.
+    // Sans mouvement, le fichier contient au moins l'en-tête.
     return {
       nomFichier: `${PREFIXE_FICHIER}-${jourCourant()}.csv`,
       contenu: construire(ENTETES, lignes),
@@ -172,7 +145,7 @@ function creerServiceCompte({
   return { changerMotDePasse, supprimer, exporterMouvements };
 }
 
-// Instance par défaut, utilisée par les contrôleurs, comme pour l'authentification.
+// Instance par défaut, utilisée par les contrôleurs.
 const service = creerServiceCompte();
 
 module.exports = {

@@ -1,15 +1,13 @@
-// Client Redis partagé. Ce module ne connaît rien aux cours : il gère uniquement la
-// connexion, sa résilience et son arrêt. Les clés métier sont l'affaire de cacheCours.
+// Client Redis partagé : connexion, résilience et arrêt. Les clés métier relèvent de
+// cacheCours.
 //
-// Principe directeur : le cache est une optimisation, jamais une dépendance dure.
-// Aucune fonction d'ici ne propage d'exception à l'appelant. Si Redis est absent ou
-// lent, l'application continue en interrogeant directement les fournisseurs de cours.
+// Le cache est une optimisation, jamais une dépendance : aucune fonction ne propage
+// d'exception, et sans Redis l'application interroge directement les fournisseurs.
 
 const { createClient } = require('redis');
 const config = require('../config');
 
-// Au-delà de ce délai, une opération de cache est abandonnée : attendre Redis plus
-// longtemps que le fournisseur lui-même n'aurait aucun sens.
+// Au-delà, l'opération de cache est abandonnée.
 const DELAI_OPERATION_MS = 200;
 
 const RECONNEXION_DELAI_INITIAL_MS = 200;
@@ -24,15 +22,14 @@ function creerClient() {
   const nouveauClient = createClient({
     url: config.redisUrl,
     socket: {
-      // Recul progressif plafonné : sans plafond, les tentatives s'espaceraient
-      // indéfiniment ; sans recul, elles saturerait le journal et le processeur.
+      // Recul exponentiel plafonné.
       reconnectStrategy: (tentatives) =>
         Math.min(RECONNEXION_DELAI_INITIAL_MS * 2 ** tentatives, RECONNEXION_DELAI_MAXIMAL_MS),
     },
   });
 
-  // Sans écouteur d'erreur, le client Redis émet une exception non gérée qui arrête
-  // le processus : c'est exactement ce que l'on veut éviter.
+  // Sans écouteur d'erreur, le client émettrait une exception non gérée qui arrêterait
+  // le processus.
   nouveauClient.on('error', (erreur) => {
     if (!indisponibiliteSignalee) {
       console.error('Cache Redis indisponible, repli sur les fournisseurs :', erreur.message);
@@ -50,8 +47,7 @@ function creerClient() {
   return nouveauClient;
 }
 
-// Connexion paresseuse : le client n'est créé qu'au premier usage réel du cache, et
-// une seule fois pour tout le processus.
+// Connexion paresseuse, une seule fois pour tout le processus.
 async function obtenirClient() {
   if (!client) {
     client = creerClient();
@@ -66,8 +62,7 @@ async function obtenirClient() {
     connexionEnCours = null;
   }
 
-  // Le client a pu être fermé entre-temps : une opération abandonnée par le délai
-  // poursuit son cours en arrière-plan et peut reprendre la main après fermer().
+  // Le client a pu être fermé entre-temps par une opération abandonnée au délai.
   if (!client) {
     return null;
   }
@@ -79,13 +74,9 @@ function estDisponible() {
   return Boolean(client && client.isReady);
 }
 
-// Enveloppe commune à toutes les opérations : borne la durée et absorbe les erreurs.
-// Rend valeurParDefaut si le cache n'a pas répondu à temps ou a échoué.
-//
-// Le délai couvre la connexion autant que l'opération elle-même. C'est indispensable :
-// lorsque Redis est arrêté, la tentative de connexion ne rend jamais la main, puisque
-// le client retente indéfiniment en arrière-plan. Ne borner que l'opération laisserait
-// l'appelant suspendu pour toujours.
+// Borne la durée et absorbe les erreurs ; rend valeurParDefaut en cas d'échec ou de
+// dépassement. Le délai couvre aussi la connexion, qui ne rend jamais la main quand
+// Redis est arrêté.
 function executer(operation, valeurParDefaut = null) {
   const tentative = (async () => {
     const connexion = await obtenirClient();
@@ -100,15 +91,15 @@ function executer(operation, valeurParDefaut = null) {
 
   const echeance = new Promise((resolve) => {
     const minuterie = setTimeout(() => resolve(valeurParDefaut), DELAI_OPERATION_MS);
-    // Sans unref, cette minuterie maintiendrait le processus en vie jusqu'à son terme.
+    // unref : la minuterie ne retient pas le processus.
     minuterie.unref?.();
   });
 
   return Promise.race([tentative, echeance]);
 }
 
-// Fermeture propre : sans elle, le processus resterait suspendu à la connexion ouverte,
-// ou aux tentatives de reconnexion si Redis est arrêté.
+// Fermeture propre, sans laquelle le processus resterait suspendu à la connexion ou aux
+// reconnexions.
 async function fermer() {
   if (!client) {
     return;
@@ -116,15 +107,14 @@ async function fermer() {
 
   try {
     if (client.isReady) {
-      // Connexion établie : on laisse Redis terminer les commandes en cours.
+      // Connexion établie : Redis termine les commandes en cours.
       await client.quit();
     } else {
-      // Client en cours de reconnexion : quit() attendrait une connexion qui ne
-      // viendra pas. La fermeture immédiate est ici le seul moyen de rendre la main.
+      // En reconnexion, quit() attendrait indéfiniment : fermeture immédiate.
       client.destroy();
     }
   } catch {
-    // Une fermeture qui échoue ne doit jamais empêcher l'arrêt du processus.
+    // Un échec de fermeture ne doit pas empêcher l'arrêt du processus.
   }
 
   client = null;

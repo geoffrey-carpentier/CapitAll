@@ -3,7 +3,7 @@
 // Les montants et les quantités ne sont jamais convertis en nombre à virgule flottante :
 // ils sont normalisés en chaîne de caractères et transmis tels quels aux colonnes NUMERIC
 // de PostgreSQL (D4). Convertir en Number ferait perdre de la précision sur des quantités
-// à 8 décimales, ce qui est exactement ce que le choix de NUMERIC vise à éviter.
+// à 18 décimales, ce qui est exactement ce que le choix de NUMERIC vise à éviter.
 
 const { z } = require('zod');
 const { versNotationPositionnelle } = require('../utils/decimal');

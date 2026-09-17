@@ -2,29 +2,14 @@ import './CourbeMiniature.css';
 import Variation from './Variation';
 import { sensVariation } from '../utils/formatage';
 
-// Tendance récente d'une position, dans une cellule de tableau.
+// Tendance sur trente jours dans une cellule de tableau.
 //
-// Tracée à la main en SVG plutôt qu'avec la bibliothèque de graphiques : une polyligne
-// de trente points n'a besoin ni d'axes, ni d'échelle affichée, ni d'infobulle, et
-// charger trois cents kilooctets de bibliothèque pour la dessiner dans une colonne de
-// quatre-vingt-dix pixels serait hors de proportion.
-//
-// La courbe ne porte jamais l'information seule : la variation chiffrée l'accompagne,
-// et c'est elle que lit un lecteur d'écran. Le tracé est décoratif au sens strict, il
-// donne la forme du mouvement, pas sa mesure. Une cellule qui ne contiendrait que le
-// dessin serait vide pour qui ne le voit pas.
-//
-// Les conversions numériques ci-dessous produisent des coordonnées en pixels. Aucune
-// n'aboutit à une valeur affichée : la variation vient du serveur et passe par le
-// module de formatage comme partout ailleurs.
+// Tracée à la main en SVG : une polyligne sans axes ne justifie pas de charger la
+// bibliothèque de graphiques. Le tracé est décoratif (aria-hidden) ; la variation
+// chiffrée l'accompagne. Les conversions numériques ne servent qu'aux coordonnées.
 
-// 120 px et non 80 : sur la dernière colonne du tableau des positions, la courbe se
-// lisait sur une bande étroite alors que la colonne avait la place. Trente points sur
-// 80 px les espacent de moins de trois pixels, ce qui écrase toute inflexion.
 const LARGEUR = 120;
-// 32 px : à 24, trente points écrasaient les inflexions contre les bords du cadre. La
-// hauteur reste inférieure à celle d'une ligne de tableau, la colonne ne s'en trouve pas
-// élargie.
+// Reste inférieure à la hauteur d'une ligne de tableau.
 const HAUTEUR = 32;
 const MARGE = 2;
 
@@ -43,8 +28,7 @@ function trace(points) {
   return hauteurs
     .map((hauteur, index) => {
       const x = (index / (hauteurs.length - 1)) * LARGEUR;
-      // Une série parfaitement plate n'a pas d'amplitude : elle se trace au milieu du
-      // cadre plutôt que de provoquer une division par zéro.
+      // Série plate : tracée au milieu, sans division par zéro.
       const y =
         amplitude === 0
           ? HAUTEUR / 2
@@ -57,8 +41,7 @@ function trace(points) {
 export default function CourbeMiniature({ tendance }) {
   const chemin = tendance ? trace(tendance.points ?? []) : null;
 
-  // Une position trop jeune n'a pas assez de points. Tracer une ligne plate reviendrait
-  // à affirmer une stagnation qui n'a pas été constatée.
+  // Historique trop court : pas de ligne plate, qui ferait croire à une stagnation.
   if (chemin === null) {
     return (
       <span className="courbe-miniature courbe-miniature--absente">
@@ -81,8 +64,6 @@ export default function CourbeMiniature({ tendance }) {
           d={chemin}
           fill="none"
           strokeWidth="1.5"
-          // Le sens vient du module de formatage, seul juge du signe d'un montant,
-          // et non d'une comparaison improvisée ici.
           className={`courbe-miniature__trace courbe-miniature__trace--${
             sensVariation(tendance.variation) ?? 'stable'
           }`}

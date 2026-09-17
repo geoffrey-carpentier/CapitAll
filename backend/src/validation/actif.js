@@ -1,7 +1,5 @@
-// Schémas de validation des actifs (D41).
-// Ni utilisateur_id ni id ne figurent dans ces schémas : le propriétaire vient du jeton
-// et l'identifiant de l'URL. .strict() rejette donc toute tentative de les fournir
-// dans le corps de la requête.
+// Schémas de validation des actifs. utilisateur_id et id n'y figurent pas : ils viennent
+// du jeton et de l'URL, et .strict() refuse de les recevoir dans le corps.
 
 const { z } = require('zod');
 
@@ -11,15 +9,11 @@ const TYPES_ACTIF = ['crypto', 'devise', 'metal', 'action'];
 const LONGUEUR_MAXIMALE_SYMBOLE = 20;
 const LONGUEUR_MAXIMALE_NOM = 100;
 
-// Liste fermée actée en D27, étendue le 06/09/2026 (D99). Le contrôle a lieu avant toute
-// écriture et avant tout appel fournisseur ; les autres classes conservent leurs symboles
-// propres.
-//
-// Deux origines, et la distinction porte à conséquence sur les quotas.
+// Liste fermée des actions, contrôlée avant toute écriture et tout appel fournisseur.
+// Deux origines, qui n'ont pas les mêmes quotas.
 
-// Ce que sert le plan gratuit de FMP, source principale de la chaîne : 250 appels par
-// jour. Hors de cette liste, FMP répond « not available under your current subscription »,
-// quel que soit le symbole. Constatée le 06/09/2026.
+// Symboles servis par le plan gratuit de FMP (250 appels par jour), constatés le
+// 06/09/2026 ; hors de cette liste, FMP refuse la requête.
 const ACTIONS_FMP = [
   'AAPL', 'TSLA', 'AMZN', 'MSFT', 'NVDA', 'GOOGL', 'META', 'NFLX', 'JPM', 'V',
   'BAC', 'PYPL', 'DIS', 'T', 'PFE', 'COST', 'INTC', 'KO', 'TGT', 'NKE', 'SPY',
@@ -32,22 +26,13 @@ const ACTIONS_FMP = [
   'SIRI', 'FUBO', 'RKT',
 ];
 
-// TWTR a été retiré de la liste d'origine : FMP le cote encore, mais sous le nom
-// « Twitter, Inc. (delisted) » et à un prix figé depuis le retrait de la cote en 2022.
-// Un cours qui ne bouge plus n'est pas un cours ; le laisser proposer aurait donné à
-// suivre une position dont la valorisation aurait été fausse par construction.
-//
-// VIAC, ATVI et SQ sont conservés bien que leurs sociétés aient changé de nom ou été
-// absorbées : FMP les cote toujours et le prix suit, ce que le contrôle du 06/09/2026 a
-// vérifié. Leur libellé peut surprendre, la valorisation reste juste.
+// TWTR est exclu : FMP le cote encore, mais à un prix figé depuis son retrait de la
+// cote. VIAC, ATVI et SQ restent : FMP les cotait toujours avec un prix vivant au
+// contrôle du 06/09/2026.
 
-// Grandes capitalisations américaines absentes du plan gratuit de FMP, servies par
-// Finnhub, deuxième maillon de la chaîne. Vérifiées une à une le 06/09/2026.
-//
-// Le repli a un coût : pour ces symboles, FMP est interrogé d'abord et refuse, ce qui
-// consomme un appel sur les 250 quotidiens avant que Finnhub ne réponde. Et Finnhub n'en
-// accorde que 30 par jour. C'est pourquoi la liste reste courte et se limite aux valeurs
-// qu'un particulier détient réellement : le cache de cours absorbe le reste.
+// Grandes capitalisations absentes du plan gratuit de FMP, servies par Finnhub et
+// vérifiées le 06/09/2026. Liste volontairement courte : FMP est interrogé d'abord
+// (un appel consommé) et Finnhub est limité à 30 appels par jour.
 const ACTIONS_FINNHUB = [
   'LLY', 'AVGO', 'ORCL', 'MA', 'HD', 'PG', 'MRK', 'CRM', 'TMO', 'ACN',
   'MCD', 'CAT', 'IBM', 'QCOM', 'TXN', 'ISRG', 'BKNG', 'AXP', 'RTX', 'HON',
@@ -86,8 +71,7 @@ const creationActif = z
     }
   });
 
-// Seul le nom est modifiable : changer le symbole ou le type d'un actif déjà porteur
-// de transactions rendrait son historique incohérent.
+// Seul le nom est modifiable : changer symbole ou type rendrait l'historique incohérent.
 const modificationActif = z.object({ nom }).strict();
 
 module.exports = {

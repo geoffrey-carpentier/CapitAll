@@ -42,7 +42,7 @@ const CATALOGUE = {
       constate_le: '2026-07-21',
       controle: 'à la saisie',
       symboles: [{ symbole: 'AAPL' }, { symbole: 'TSLA' }],
-      note: 'Liste fermée actée en D27.',
+      note: 'La liste des actions disponibles est contrôlée côté serveur.',
     },
   ],
 };

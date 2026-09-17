@@ -16,15 +16,11 @@ const {
 
 const routeur = express.Router();
 
-// Le quota précède la validation sur les chemins protégés : sa clé est l'adresse
-// soumise, qu'il lit dans le corps brut, et le faire passer après laisserait un corps
-// malformé consommer le temps du serveur sans jamais être compté.
+// Le quota précède la validation, pour qu'un corps malformé soit aussi compté.
 //
-// L'inscription n'est pas plafonnée, et c'est un choix explicite. Un quota par adresse
-// n'y protégerait de rien : créer des comptes en série se fait avec des adresses toutes
-// différentes, donc des compteurs tous distincts. Seule une adresse cliente véritable
-// permettrait de s'y opposer, et la mesure a établi qu'il n'y en a pas sur ce
-// déploiement — la poser ici serait une protection de façade.
+// L'inscription n'est pas plafonnée : un quota par adresse ne gênerait pas une création
+// en série avec des adresses différentes, et aucune adresse IP fiable n'est disponible
+// sur ce déploiement.
 routeur.post('/inscription', valider(schemaInscription), controleur.inscription);
 routeur.post('/connexion', quotaConnexion, valider(schemaConnexion), controleur.connexion);
 

@@ -2,28 +2,17 @@ import { useRef } from 'react';
 import './SelecteurPeriode.css';
 import Variation from './Variation';
 
-// Sélecteur de période de la courbe d'évolution.
+// Sélecteur de période de la courbe, chaque onglet affichant sa performance.
 //
-// Chaque plage affiche sa propre performance sans qu'on ait à cliquer : cinq
-// informations pour un regard, là où un sélecteur ordinaire en donnerait une seule et
-// obligerait à parcourir les cinq onglets pour comparer.
-//
-// Véritable groupe d'onglets au sens ARIA, et non une rangée de boutons. Conséquence
-// concrète : une seule tabulation entre dans le groupe, les flèches circulent d'un
-// onglet à l'autre, et le contenu associé est désigné. C'est le motif attendu par les
-// lecteurs d'écran pour ce type de commande.
-//
-// Le masquage des montants ne s'applique pas ici : une performance est une part
-// relative, elle ne dit rien de ce que l'utilisateur possède.
+// Groupe d'onglets ARIA : une seule tabulation pour entrer, les flèches pour circuler.
+// Les performances sont relatives et ne sont donc pas masquées.
 
 const PLAGES = [
   { code: 'jour', libelle: 'Jour', description: 'Depuis hier' },
   { code: 'semaine', libelle: 'Semaine', description: 'Sur sept jours' },
   { code: 'mois', libelle: 'Mois', description: 'Sur trente jours' },
   { code: 'annee', libelle: 'Année', description: 'Sur un an' },
-  // « Origine » désigne ici le premier relevé enregistré, pas le premier achat : c'est
-  // l'évolution de la valeur suivie, distincte de la plus-value latente que le montant
-  // dominant affiche à côté. Les deux portaient le même mot.
+  // Depuis le premier relevé enregistré, pas depuis le premier achat.
   { code: 'origine', libelle: 'Suivi', description: 'Depuis le premier relevé' },
 ];
 
@@ -35,9 +24,7 @@ export default function SelecteurPeriode({
 }) {
   const references = useRef([]);
 
-  // Navigation aux flèches, avec bouclage : depuis le dernier onglet, la flèche droite
-  // revient au premier. Le déplacement sélectionne la plage, ce qui correspond au
-  // comportement attendu d'un groupe d'onglets à activation automatique.
+  // Flèches avec bouclage ; le déplacement sélectionne la plage (activation automatique).
   function auClavier(evenement, index) {
     const deplacements = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: PLAGES.length - 1 - index };
     const deplacement = deplacements[evenement.key];
@@ -66,8 +53,7 @@ export default function SelecteurPeriode({
             id={`onglet-periode-${code}`}
             aria-selected={actif}
             aria-controls={identifiantPanneau}
-            // Un seul onglet est atteignable à la tabulation : c'est ce qui distingue
-            // un groupe d'onglets d'une rangée de boutons.
+            // Seul l'onglet actif est atteignable à la tabulation.
             tabIndex={actif ? 0 : -1}
             ref={(noeud) => {
               references.current[index] = noeud;
@@ -78,8 +64,7 @@ export default function SelecteurPeriode({
           >
             <span className="selecteur-periode__libelle">{libelle}</span>
             <span className="lecteur-ecran-seulement">{description}</span>
-            {/* Une plage sans assez de points n'affiche pas zéro, qui se lirait comme
-                une stagnation constatée, mais un tiret. */}
+            {/* Sans assez de points : un tiret plutôt qu'un zéro trompeur. */}
             {performance === null ? (
               <span className="selecteur-periode__absente" aria-hidden="true">
                 —

@@ -1,13 +1,12 @@
-// Accès aux données de la table alerte. Comme partout, le cloisonnement est porté par
-// le SQL : chaque requête filtre sur le propriétaire, dont l'identifiant vient du jeton.
+// Accès à la table alerte. Chaque requête filtre sur le propriétaire, dont l'identifiant
+// vient du jeton.
 
 const { query } = require('../db');
 
 const CHAMPS = `al.id, al.utilisateur_id, al.actif_id, al.type_cible, al.sens_seuil,
                 al.valeur_seuil, al.statut, al.date_creation, al.date_declenchement`;
 
-// Jointure à gauche : une alerte sur le capital total ne cible aucun actif, elle ne
-// doit pas disparaître de la liste pour autant.
+// Jointure à gauche : une alerte sur le capital total n'a pas d'actif.
 async function listerParUtilisateur(utilisateurId) {
   const { rows } = await query(
     `SELECT ${CHAMPS}, a.symbole, a.nom AS nom_actif
@@ -34,9 +33,8 @@ async function listerActivesParUtilisateur(utilisateurId) {
   return rows;
 }
 
-// Création d'une alerte ciblant un actif. Même motif que les transactions du lot B :
-// le SELECT qui alimente l'INSERT ne rend une ligne que si l'actif appartient au
-// demandeur. Si ce n'est pas le cas, rien n'est inséré et la fonction rend null.
+// Alerte sur un actif : l'INSERT ... SELECT n'insère rien si l'actif n'appartient pas au
+// demandeur, et la fonction rend alors null.
 async function creerSurActif({ utilisateurId, actifId, sensSeuil, valeurSeuil }) {
   const { rows } = await query(
     `INSERT INTO alerte (utilisateur_id, actif_id, type_cible, sens_seuil, valeur_seuil)
@@ -50,8 +48,7 @@ async function creerSurActif({ utilisateurId, actifId, sensSeuil, valeurSeuil })
   return rows[0] || null;
 }
 
-// Alerte sur le capital total : aucun actif à contrôler, l'identifiant du propriétaire
-// vient directement du jeton.
+// Alerte sur le capital total : aucun actif à contrôler.
 async function creerSurCapitalTotal({ utilisateurId, sensSeuil, valeurSeuil }) {
   const { rows } = await query(
     `INSERT INTO alerte (utilisateur_id, actif_id, type_cible, sens_seuil, valeur_seuil)
@@ -75,9 +72,8 @@ async function desactiver(id, utilisateurId) {
   return rows[0] || null;
 }
 
-// Marquage groupé des alertes franchies, en une seule requête. Une boucle d'UPDATE
-// ferait autant d'allers-retours que d'alertes ; ANY($2) traite le lot d'un coup.
-// Le filtre sur le statut évite d'écraser une date de déclenchement déjà posée.
+// Marquage groupé des alertes franchies en une requête (ANY). Le filtre sur le statut
+// préserve une date de déclenchement déjà posée.
 async function marquerDeclenchees(utilisateurId, identifiants) {
   if (identifiants.length === 0) {
     return 0;

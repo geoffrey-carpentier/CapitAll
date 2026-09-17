@@ -17,26 +17,16 @@ import JetonClasse from './JetonClasse';
 import Message from './Message';
 import './FeuilleMouvement.css';
 
-// Saisie d'un mouvement, achat ou vente.
+// Saisie ou correction d'un mouvement : achat, vente ou sortie non marchande.
 //
-// C'est l'écran où se crée la donnée, et le seul de l'application dont le contenu ne
-// soit pas qu'une restitution. Deux principes le gouvernent.
+// L'effet de la saisie (montant, quantité après, prix de revient, plus-value) est
+// affiché avant validation, mais il n'est pas calculé ici : le serveur rejoue
+// l'historique de la position sans rien écrire. Une seconde implémentation de la
+// moyenne pondérée côté interface finirait par diverger du moteur. Ce composant se
+// limite aux contrôles de forme et à des comparaisons exactes, sans flottant.
 //
-// Le premier est que l'utilisateur voit l'effet de sa saisie avant de valider : le
-// récapitulatif annonce le montant de l'opération, la quantité qu'il détiendra ensuite,
-// le nouveau prix de revient et son déplacement, et pour une vente la plus-value
-// dégagée. C'est ce qui distingue un outil de suivi de patrimoine d'un formulaire.
-//
-// Le second est que ce récapitulatif n'est pas calculé ici. Le prix de revient est une
-// moyenne pondérée sur toute l'histoire de la position, et une seconde implémentation de
-// cette règle finirait par diverger de celle du moteur (D69). L'interface interroge donc
-// le serveur, qui rejoue le déroulé sans rien écrire, et affiche ce qu'il rend. Les
-// seules opérations faites ici sont des contrôles de forme sur les champs et des
-// comparaisons de quantités, toutes exactes et sans conversion en flottant.
-//
-// La saisie est en euros, devise de référence des calculs et du stockage (D11). La
-// bascule euro-dollar des écrans de restitution ne s'applique pas ici : elle ne change
-// que l'affichage, alors qu'un montant saisi est celui qui sera enregistré.
+// La saisie est toujours en euros : la bascule euro-dollar ne concerne que l'affichage,
+// alors qu'un montant saisi est celui qui sera enregistré.
 
 const SENS = [
   { code: 'achat', libelle: 'Achat' },
@@ -44,14 +34,10 @@ const SENS = [
   { code: 'sortie_non_marchande', libelle: 'Sortie' },
 ];
 
-// Précisions admises par les colonnes NUMERIC du schéma : dix-huit décimales pour une
-// quantité comme pour un prix depuis D88, deux pour un montant en euros. Ces contrôles
-// reprennent ceux des schémas Zod du serveur, qui reste seul décisionnaire.
-//
-// Les deux premiers plafonnaient encore à huit et deux décimales, ce qui refusait à la
-// saisie les valeurs mêmes que le contrat numérique venait rendre possibles : un cours
-// de 0,0000123 euro était rejeté par le formulaire avant d'atteindre le serveur, qui
-// l'accepte.
+// Précisions des colonnes NUMERIC : dix-huit décimales pour une quantité ou un prix,
+// deux pour un montant en euros. Elles doivent rester alignées sur les schémas Zod du
+// serveur, qui reste seul décisionnaire : une borne plus stricte ici refuserait des
+// valeurs que le serveur accepte.
 const DECIMALES_QUANTITE = 18;
 const DECIMALES_PRIX = 18;
 const DECIMALES_MONTANT = 2;
@@ -60,26 +46,22 @@ const MOTIF_QUANTITE = new RegExp(`^\\d+(\\.\\d{1,${DECIMALES_QUANTITE}})?$`);
 const MOTIF_PRIX = new RegExp(`^\\d+(\\.\\d{1,${DECIMALES_PRIX}})?$`);
 const MOTIF_MONTANT = new RegExp(`^\\d+(\\.\\d{1,${DECIMALES_MONTANT}})?$`);
 
-// Unité de prélèvement des frais. L'euro est le cas courant ; l'actif échangé est celui
-// des plateformes de cryptomonnaies, qui retiennent leur part dans ce qu'elles vendent ;
-// le tiers actif est le cas où aucun taux ne se lit dans le mouvement, et où la
-// contre-valeur doit donc être demandée.
+// Unité de prélèvement des frais : l'euro, l'actif échangé (frais retenus par une
+// plateforme crypto), ou un tiers actif, pour lequel aucun taux ne se déduit du
+// mouvement et dont la contre-valeur doit donc être saisie.
 const FRAIS_EN_EUROS = 'EUR';
 const FRAIS_EN_ACTIF = 'actif';
 const FRAIS_EN_TIERS = 'tiers';
 
-// Confirmation remise à l'écran d'origine. Le mot compte : « vente » sur un transfert
-// est précisément ce que D89 corrige, et une confirmation est ce que l'utilisateur
-// relit le lendemain pour se rappeler ce qu'il a saisi.
+// Confirmation remise à l'écran d'origine : un transfert ne doit pas être annoncé
+// comme une vente.
 const RESUMES = {
   achat: (quantite) => `Achat de ${quantite} enregistré.`,
   vente: (quantite) => `Vente de ${quantite} enregistrée.`,
   sortie_non_marchande: (quantite) => `Sortie de ${quantite} enregistrée.`,
 };
 
-// Ce que deviennent les frais, selon le sens : ils ne jouent pas le même rôle dans le
-// calcul, et l'aide d'un achat affichée sur une sortie décrivait une règle qui ne s'y
-// applique pas.
+// Les frais ne jouent pas le même rôle dans le calcul selon le sens du mouvement.
 const AIDES_FRAIS = {
   achat: "Facultatif. Les frais d'achat entrent dans le prix de revient.",
   vente: 'Facultatif. Les frais de vente sont déduits de la plus-value réalisée.',
@@ -87,35 +69,29 @@ const AIDES_FRAIS = {
     "Facultatif. Les frais d'une sortie s'ajoutent à la valeur qui quitte le portefeuille.",
 };
 
-// Délai d'inactivité avant de demander le récapitulatif. Assez court pour que le chiffre
-// suive la frappe, assez long pour ne pas envoyer une requête par caractère.
+// Délai d'inactivité avant de demander le récapitulatif, pour ne pas envoyer une
+// requête par caractère.
 const DELAI_RECAPITULATIF = 350;
 
-// Jour d'un instant dans le fuseau de l'utilisateur, au format attendu par un champ de
-// date. L'heure UTC ne conviendrait pas : passé minuit, elle désignerait encore la veille.
+// Jour d'un instant dans le fuseau de l'utilisateur. L'heure UTC désignerait encore la
+// veille juste après minuit.
 function jourLocal(instant) {
   const decalage = instant.getTimezoneOffset() * 60000;
   return new Date(instant.getTime() - decalage).toISOString().slice(0, 10);
 }
 
-// Date du jour, selon la même règle.
 function aujourdhui() {
   return jourLocal(new Date());
 }
 
-// Un champ de date rend un jour, la colonne attend un instant.
-//
-// Le jour courant part avec l'heure courante : l'opération a lieu maintenant. Un jour
-// passé part à midi UTC, et non à minuit, pour que la date relue reste la même quel que
-// soit le fuseau d'affichage. Minuit UTC se relit la veille dès qu'on est à l'ouest de
-// Greenwich, ce qui décalerait la frise des mouvements d'un jour.
+// Le jour courant garde l'heure courante. Un jour passé est placé à midi UTC et non à
+// minuit : minuit UTC se relirait la veille à l'ouest de Greenwich.
 function versHorodatage(jour) {
   return jour === aujourdhui() ? new Date().toISOString() : `${jour}T12:00:00.000Z`;
 }
 
-// Une saisie décimale peut arriver avec une virgule, des espaces de groupement, ou les
-// deux : c'est ce que produit un clavier français. La normalisation ne juge pas de la
-// validité, elle rend une chaîne comparable au motif.
+// Accepte la virgule et les espaces de groupement d'un clavier français. Ne juge pas de
+// la validité : le motif s'en charge.
 function normaliser(valeur) {
   return String(valeur ?? '')
     .trim()
@@ -123,12 +99,9 @@ function normaliser(valeur) {
     .replace(',', '.');
 }
 
-// PostgreSQL rend un NUMERIC à l'échelle de sa colonne : quinze euros de frais arrivent
-// écrits « 15.000000000000000000 ». Repris tel quel en correction, ce texte remplissait
-// le champ de zéros et dépassait les deux décimales d'un montant, si bien que la
-// correction ne pouvait plus être enregistrée. Seuls les zéros de fin de la partie
-// décimale sont retirés, sur la chaîne elle-même : la valeur ne passe jamais par un
-// nombre à virgule flottante.
+// PostgreSQL rend un NUMERIC à l'échelle de sa colonne (« 15.000000000000000000 »).
+// Repris tel quel en correction, ce texte dépasserait les deux décimales d'un montant.
+// Les zéros de fin sont retirés sur la chaîne, sans passer par un flottant.
 function sansZerosInutiles(valeur) {
   const texte = String(valeur ?? '');
   if (!texte.includes('.')) {
@@ -141,9 +114,7 @@ function estNul(montant) {
   return montant === null || montant === undefined || comparerDecimales(montant, '0') === 0;
 }
 
-// Correspondance entre les champs du serveur et ceux du formulaire. Les noms coïncident,
-// mais la table est explicite : une erreur de validation doit se poser sur le champ
-// concerné, jamais dans un bloc en marge du formulaire.
+// Champs du serveur dont l'erreur s'affiche sous le champ du formulaire correspondant.
 const CHAMPS_SERVEUR = [
   'sens',
   'quantite',
@@ -174,15 +145,11 @@ function erreursDuServeur(echec) {
 }
 
 export default function FeuilleMouvement({
-  // Positions déjà valorisées par le serveur, telles que l'écran d'origine les a
-  // reçues : aucune requête n'est refaite pour la liste, et la quantité détenue comme
-  // le cours du jour arrivent avec elles.
+  // Positions déjà valorisées par l'écran d'origine, avec quantité détenue et cours.
   actifs = [],
   actifInitialId = null,
-  // Mouvement à corriger, le cas échéant (D51 révisée). Sa présence fait basculer la
-  // feuille en édition : les champs partent de ses valeurs, l'actif n'est plus
-  // sélectionnable — un mouvement ne se déplace pas d'une position à une autre — et la
-  // validation corrige au lieu de créer.
+  // Mouvement à corriger : sa présence passe la feuille en édition, et l'actif n'est
+  // plus modifiable.
   mouvement = null,
   surFermeture,
   surEnregistrement,
@@ -191,8 +158,7 @@ export default function FeuilleMouvement({
   const identifiant = useId();
   const edition = mouvement !== null;
 
-  // Actifs créés depuis la feuille, tant que l'écran d'origine n'a pas rechargé sa
-  // liste. Sans eux, l'actif que l'on vient d'ajouter disparaîtrait du sélecteur.
+  // Actifs créés depuis la feuille, que l'écran d'origine n'a pas encore rechargés.
   const [ajoutes, setAjoutes] = useState([]);
 
   const catalogue = useMemo(() => {
@@ -208,9 +174,7 @@ export default function FeuilleMouvement({
     return actifs.length === 1 ? String(actifs[0].id) : '';
   }, [actifs, actifInitialId]);
 
-  // Origine des frais du mouvement corrigé, déduite de son unité : elle vaut l'euro,
-  // le symbole de sa position, ou un tiers actif. La déduire ici évite de stocker en
-  // base une information que l'unité porte déjà.
+  // Origine des frais du mouvement corrigé, déduite de son unité plutôt que stockée.
   const origineInitiale = useMemo(() => {
     const unite = mouvement?.frais_unite;
     if (!unite || unite === FRAIS_EN_EUROS) {
@@ -229,12 +193,10 @@ export default function FeuilleMouvement({
     }
     return actifs.find((position) => String(position.id) === idInitial)?.cours_eur ?? '';
   });
-  // Le jour d'un mouvement corrigé se lit dans le fuseau de l'utilisateur, comme la frise
-  // l'affiche : relu en UTC, un mouvement saisi peu après minuit apparaissait la veille.
+  // Lu dans le fuseau de l'utilisateur, comme dans la frise des mouvements.
   const jourInitial = mouvement ? jourLocal(new Date(mouvement.date_transaction)) : null;
   const [date, setDate] = useState(() => jourInitial ?? aujourdhui());
-  // En édition, le champ porte le montant réellement prélevé, pas sa contre-valeur :
-  // c'est ce que l'utilisateur avait saisi, et c'est donc ce qu'il doit relire.
+  // En édition, le champ reprend le montant prélevé saisi, pas sa contre-valeur.
   const [frais, setFrais] = useState(() => {
     if (!mouvement) {
       return '';
@@ -250,20 +212,16 @@ export default function FeuilleMouvement({
     origineInitiale === FRAIS_EN_TIERS ? sansZerosInutiles(mouvement?.frais) : ''
   );
 
-  // Un portefeuille vide n'a rien à sélectionner : la feuille s'ouvre alors directement
-  // sur la création, sans quoi le tout premier mouvement serait impossible à saisir.
-  // Une correction porte sur une position qui existe : la question ne s'y pose pas.
+  // Sans position existante, la feuille s'ouvre sur la création d'un actif, faute de
+  // quoi le premier mouvement serait impossible à saisir.
   const [creation, setCreation] = useState(!edition && actifs.length === 0);
   const [nouvelActif, setNouvelActif] = useState({ type: 'crypto', symbole: '', nom: '' });
   const [creationEnCours, setCreationEnCours] = useState(false);
-  // Couverture des symboles par classe, telle que le serveur la déclare (D27). Elle
-  // n'est demandée qu'à l'ouverture du panneau de création : la grande majorité des
-  // saisies porte sur une position déjà suivie et n'en a aucun besoin.
+  // Symboles couverts par classe, demandés seulement à l'ouverture de la création.
   const [couvertures, setCouvertures] = useState(null);
 
-  // Un message d'erreur n'apparaît pas pendant qu'on remplit un champ, mais lorsqu'on
-  // le quitte, ou à la validation : signaler « 0, n'est pas un nombre » à la deuxième
-  // frappe ferait clignoter le formulaire sans rien apprendre.
+  // Les erreurs locales s'affichent quand le champ est quitté ou à la validation, pas
+  // pendant la frappe.
   const [quittes, setQuittes] = useState({});
   const [erreurs, setErreurs] = useState({});
   const [messageServeur, setMessageServeur] = useState(null);
@@ -293,8 +251,7 @@ export default function FeuilleMouvement({
           setCouvertures(catalogue.classes ?? []);
         }
       })
-      // Le catalogue est un confort, pas une condition : s'il n'arrive pas, le champ
-      // reste une saisie libre et le serveur reste seul juge, comme avant.
+      // Sans catalogue, le symbole reste en saisie libre et le serveur tranche.
       .catch(() => {
         if (!annule) {
           setCouvertures([]);
@@ -315,18 +272,15 @@ export default function FeuilleMouvement({
     if (!couvertureChoisie) {
       return 'Le code du marché, par exemple BTC, XAU ou USD.';
     }
-    // La provenance et la date accompagnent la liste : une liste sans date est une liste
-    // dont personne ne peut dire si elle est encore vraie.
+    // Une liste de symboles n'est vérifiable qu'avec sa source et sa date.
     const date = new Date(couvertureChoisie.constate_le).toLocaleDateString('fr-FR');
     return `${couvertureChoisie.note} Source : ${couvertureChoisie.provenance}, constaté le ${date}.`;
   }, [couvertureChoisie]);
 
-  // Une sortie non marchande — retrait, transfert — ne dégage aucun produit : elle n'a
-  // ni prix ni montant, et le formulaire ne les demande donc pas (D89).
+  // Une sortie non marchande (retrait, transfert) n'a ni prix ni montant.
   const sortie = sens === 'sortie_non_marchande';
 
-  // Contrôles de forme, repris de ceux du serveur. Les messages nomment le champ et la
-  // règle : un code d'erreur n'apprendrait rien à qui saisit.
+  // Contrôles de forme alignés sur ceux du serveur.
   const validation = useMemo(() => {
     const trouvees = {};
     const quantiteNormalisee = normaliser(quantite);
@@ -355,8 +309,8 @@ export default function FeuilleMouvement({
       }
     }
 
-    // Les frais réglés en euros se comptent au centime ; prélevés dans un actif, ils
-    // sont une quantité et en gardent la précision.
+    // En euros, les frais se comptent au centime ; prélevés dans un actif, ils gardent la
+    // précision d'une quantité.
     if (fraisNormalises !== '') {
       const motif = enEuros ? MOTIF_MONTANT : MOTIF_QUANTITE;
       if (!motif.test(fraisNormalises)) {
@@ -370,9 +324,7 @@ export default function FeuilleMouvement({
       if (!symboleFrais.trim()) {
         trouvees.frais_unite = "Indiquez l'actif dans lequel les frais ont été prélevés.";
       }
-      // Aucun taux ne se lit dans le mouvement : le serveur refusera de le deviner, et
-      // l'annoncer ici évite un aller-retour pour une information que l'utilisateur a
-      // sous les yeux.
+      // Aucun taux ne se déduit du mouvement : le serveur exige la contre-valeur.
       if (contreValeurNormalisee === '') {
         trouvees.frais_contre_valeur_eur =
           'Indiquez la contre-valeur en euros de ces frais au moment de l’opération.';
@@ -400,20 +352,14 @@ export default function FeuilleMouvement({
     date,
   ]);
 
-  // Bornage de la vente à la quantité réellement détenue.
-  //
-  // La règle appartient au serveur, qui refuse la transaction et dont le message fait
-  // foi : l'interface se contente de l'annoncer avant l'envoi, à partir de la quantité
-  // qu'il a lui-même rendue. Elle est signalée sans attendre que le champ soit quitté,
-  // parce qu'elle annonce un refus et non une faute de frappe.
+  // Annonce avant envoi qu'une sortie dépasse la quantité détenue. La règle appartient
+  // au serveur ; l'alerte est immédiate car elle annonce un refus, pas une faute de
+  // frappe.
   const depassement = useMemo(() => {
     const quantiteNormalisee = normaliser(quantite);
 
-    // En correction, la quantité détenue comprend déjà le mouvement que l'on modifie :
-    // la comparer à la nouvelle valeur refuserait à tort une vente qu'on augmente
-    // légitimement. Le seul juge est alors le récapitulatif du serveur, qui rejoue toute
-    // l'histoire de la position avec le mouvement remplacé — et il tourne à chaque
-    // frappe.
+    // En correction, la quantité détenue inclut déjà le mouvement modifié : seul le
+    // récapitulatif du serveur peut juger.
     if (
       edition ||
       sens === 'achat' ||
@@ -424,26 +370,18 @@ export default function FeuilleMouvement({
       return null;
     }
 
-    // La règle vaut pour toute sortie de quantité, vente ou non : elle ne dépend pas de
-    // ce que le mouvement rapporte.
     const mouvement = sens === 'vente' ? 'une vente' : 'une sortie';
     return `Vous détenez ${formaterQuantite(quantiteDetenue, actif?.type, actif?.symbole)} : ${mouvement} ne peut pas dépasser cette quantité.`;
   }, [edition, sens, quantite, quantiteDetenue, actif]);
 
   const complet = Object.keys(validation).length === 0 && !depassement;
 
-  // Corps envoyé au serveur, identique pour la simulation et pour l'enregistrement : les
-  // deux routes partagent le même schéma de validation.
-  // Les trois formes de frais du serveur sont mutuellement exclusives : le corps en
-  // porte une seule, celle que l'utilisateur a choisie. Envoyer la forme courte et la
-  // forme longue ensemble obligerait le serveur à décider laquelle prime, et il refuse
-  // — à raison — de le faire.
+  // Corps commun à la simulation et à l'enregistrement. Les formes de frais sont
+  // exclusives : le serveur refuse un corps qui en porte plusieurs.
   //
-  // En correction, deux informations que la feuille ne présente pas repartent telles
-  // qu'elles étaient. L'heure d'abord : tant que le jour n'est pas changé, l'horodatage
-  // d'origine est renvoyé, sans quoi midi UTC pouvait placer une vente avant l'achat du
-  // même jour dont elle dépend, et la correction était refusée. La note ensuite : la
-  // correction remplace le mouvement entier, et une note absente du corps était effacée.
+  // En correction, l'horodatage d'origine est conservé tant que le jour ne change pas
+  // (midi UTC pourrait placer une vente avant l'achat du même jour), et la note est
+  // renvoyée, car la correction remplace le mouvement entier.
   const corps = useMemo(() => {
     const montantFrais = normaliser(frais);
     const commun = {
@@ -494,10 +432,7 @@ export default function FeuilleMouvement({
     mouvement,
   ]);
 
-  // Récapitulatif recalculé à chaque modification, après un court délai d'inactivité.
-  //
-  // Seule la réponse la plus récente est retenue : sans le drapeau d'annulation, une
-  // requête partie plus tôt et revenue plus tard écraserait un récapitulatif plus juste.
+  // Le drapeau d'annulation garantit que seule la réponse la plus récente est retenue.
   useEffect(() => {
     if (!complet || !actifId) {
       setRecapitulatif(null);
@@ -536,9 +471,8 @@ export default function FeuilleMouvement({
     };
   }, [jeton, actifId, complet, corps, edition, mouvement?.id]);
 
-  // Changer d'actif change de cours : la proposition de prix suit la sélection. Elle
-  // n'est pas posée par un effet, qui la réappliquerait à chaque rafraîchissement de la
-  // liste et effacerait une valeur saisie à la main.
+  // Le prix proposé suit l'actif choisi. Un effet le réappliquerait à chaque
+  // rafraîchissement de la liste et écraserait une saisie manuelle.
   function choisirActif(identifiantActif) {
     setActifId(identifiantActif);
     setPrixUnitaire(
@@ -546,8 +480,8 @@ export default function FeuilleMouvement({
     );
   }
 
-  // Des frais prélevés dans l'actif qui sort font déjà partie de la quantité retirée :
-  // le serveur les refuse, et l'option disparaît plutôt que de mener à un refus.
+  // Sur une sortie, des frais pris dans l'actif font partie de la quantité retirée : le
+  // serveur les refuse.
   function choisirSens(code) {
     setSens(code);
     if (code === 'sortie_non_marchande' && origineFrais === FRAIS_EN_ACTIF) {
@@ -559,8 +493,7 @@ export default function FeuilleMouvement({
     setQuittes((precedents) => ({ ...precedents, [champ]: true }));
   }
 
-  // Erreur affichée sous un champ : celle du serveur d'abord, puis le contrôle local
-  // une fois le champ quitté ou la validation tentée.
+  // L'erreur du serveur prime sur le contrôle local.
   function erreurDe(champ) {
     return erreurs[champ] ?? (quittes[champ] ? validation[champ] : undefined);
   }
@@ -582,14 +515,11 @@ export default function FeuilleMouvement({
     setMessageServeur(null);
 
     try {
-      // L'actif est créé avant la saisie du mouvement, et non avec lui : le
-      // récapitulatif interroge le serveur sur une position qui existe, et la règle
-      // « pas de validation sans récapitulatif » vaut alors aussi pour un premier achat.
+      // L'actif est créé avant le mouvement pour que la simulation porte sur une
+      // position existante, y compris pour un premier achat.
       const cree = await api.creerActif(jeton, { type: nouvelActif.type, symbole, nom });
 
-      // La création rend la ligne de la table, sans cours ni quantité : la position
-      // n'existe pas encore. Les deux champs sont posés explicitement pour que le reste
-      // de la feuille les lise comme « aucun cours » et « rien de détenu ».
+      // La création ne rend ni cours ni quantité.
       setAjoutes((precedents) => [...precedents, { ...cree, cours_eur: null, quantite_detenue: '0' }]);
       setActifId(String(cree.id));
       setPrixUnitaire('');
@@ -600,7 +530,7 @@ export default function FeuilleMouvement({
       if (duServeur) {
         setErreurs(duServeur);
       } else if (echec instanceof ErreurApi && echec.statut === 409) {
-        // Le symbole est déjà suivi : l'information appartient au champ qui le porte.
+        // Symbole déjà suivi.
         setErreurs({ symbole: echec.message });
       } else {
         setMessageServeur(echec.message);
@@ -634,10 +564,7 @@ export default function FeuilleMouvement({
         ? await api.modifierTransaction(jeton, actifId, mouvement.id, corps)
         : await api.creerTransaction(jeton, actifId, corps);
 
-      // La confirmation est rédigée ici, où le sens, la classe et le symbole sont
-      // connus, et remise à l'écran d'origine qui l'affichera après le rafraîchissement.
-      // La quantité reprise est celle que le serveur a enregistrée, pas celle qui a été
-      // saisie : ce sont les mêmes, et c'est justement ce que la confirmation atteste.
+      // La confirmation reprend la quantité enregistrée par le serveur, pas la saisie.
       const quantiteEnregistree =
         formaterQuantite(enregistre.quantite, actif?.type, actif?.symbole) ?? enregistre.quantite;
 
@@ -655,8 +582,6 @@ export default function FeuilleMouvement({
       if (duServeur) {
         setErreurs(duServeur);
       } else {
-        // Règle de gestion refusée ou incident : le message du serveur part tel quel,
-        // sans être reformulé ni remplacé par un code.
         setMessageServeur(echec.message);
       }
     } finally {
@@ -673,9 +598,7 @@ export default function FeuilleMouvement({
       verrouillee={verrouille}
     >
       <form className="mouvement" onSubmit={soumettre} noValidate>
-        {/* Le sens est un groupe de boutons radio et non une paire de boutons : les deux
-            options sont exclusives, et les flèches du clavier doivent passer de l'une à
-            l'autre sans quitter le groupe. */}
+        {/* Boutons radio : options exclusives, parcourues aux flèches du clavier. */}
         <fieldset className="mouvement__sens" disabled={verrouille}>
           <legend className="mouvement__legende">Sens de l'opération</legend>
           <div className="mouvement__bascule">
@@ -713,9 +636,7 @@ export default function FeuilleMouvement({
                 className="champ__saisie"
                 value={nouvelActif.type}
                 onChange={(evenement) =>
-                  // Le symbole est vidé avec le changement de classe : AAPL n'a rien à
-                  // faire dans une liste de métaux, et une valeur restée en place
-                  // partirait au serveur.
+                  // Un symbole d'une autre classe ne doit pas partir au serveur.
                   setNouvelActif({ ...nouvelActif, type: evenement.target.value, symbole: '' })
                 }
               >
@@ -727,11 +648,7 @@ export default function FeuilleMouvement({
               </select>
             </div>
 
-            {/* Le champ suit la couverture de la classe (D27, S-16). Une classe dont
-                l'application connaît la liste propose un choix : l'utilisateur ne
-                découvre plus le refus après avoir tapé. Une classe dont seul le
-                fournisseur sait garde une saisie libre, et annonce d'où viendra la
-                réponse. */}
+            {/* Liste fermée si la classe a une liste connue, saisie libre sinon. */}
             {couvertureChoisie?.symboles ? (
               <div className="champ">
                 <label className="champ__label" htmlFor={`${identifiant}-symbole`}>
@@ -826,9 +743,6 @@ export default function FeuilleMouvement({
 
             <div className="mouvement__appoint">
               {actif && <JetonClasse classe={actif.type} symbole={actif.symbole} avecLibelle />}
-              {/* Un mouvement ne se déplace pas d'une position à une autre : en
-                  correction, ni le choix de l'actif ni l'ouverture d'une nouvelle
-                  position n'ont de sens. */}
               {!edition && (
                 <button
                   type="button"
@@ -856,9 +770,7 @@ export default function FeuilleMouvement({
               autoComplete="off"
               disabled={verrouille}
             />
-            {/* Raccourci de vente totale : il évite de recopier à la main une quantité à
-                huit décimales, et garantit que la valeur envoyée est exactement celle que
-                le serveur a rendue. */}
+            {/* Reprend exactement la quantité rendue par le serveur, sans recopie. */}
             {sens !== 'achat' && quantiteDetenue !== null && !estNul(quantiteDetenue) && (
               <button
                 type="button"
@@ -895,9 +807,6 @@ export default function FeuilleMouvement({
           </p>
         )}
 
-        {/* Le cours du jour est une proposition et non une contrainte : le dire évite de
-            laisser croire que la valeur affichée est celle de l'opération passée que l'on
-            est en train de saisir. */}
         {actif && !sortie && (
           <p className="mouvement__aide">
             {actif.cours_eur ? (
@@ -942,9 +851,7 @@ export default function FeuilleMouvement({
           />
         </div>
 
-        {/* Unité réellement prélevée. Elle n'apparaît qu'une fois un montant saisi :
-            un champ de plus sur un formulaire où neuf mouvements sur dix n'ont pas de
-            frais en nature pèserait plus qu'il ne servirait. */}
+        {/* Unité des frais, demandée seulement une fois un montant saisi. */}
         {normaliser(frais) !== '' && (
           <div className="champ">
             <label className="champ__label" htmlFor={`${identifiant}-origine-frais`}>
@@ -958,8 +865,6 @@ export default function FeuilleMouvement({
               disabled={verrouille}
             >
               <option value={FRAIS_EN_EUROS}>euros</option>
-              {/* Retirés de la position elle-même, ils font partie de la quantité qui
-                  sort : l'option n'a pas de sens sur une sortie. */}
               {!sortie && actif && (
                 <option value={FRAIS_EN_ACTIF}>{actif.symbole}, l’actif de l’opération</option>
               )}
@@ -1001,8 +906,7 @@ export default function FeuilleMouvement({
           </div>
         )}
 
-        {/* Le récapitulatif est une région vivante : ses recalculs sont annoncés sans
-            interrompre la saisie en cours. */}
+        {/* Région vivante : les recalculs sont annoncés sans interrompre la saisie. */}
         <section
           className="mouvement__recapitulatif"
           aria-live="polite"
@@ -1033,9 +937,6 @@ export default function FeuilleMouvement({
                   <dt>Frais</dt>
                   <dd>
                     <Montant valeur={recapitulatif.frais} />
-                    {/* La conversion est annoncée avant validation, jamais découverte
-                        après : c'est le seul moment où l'utilisateur peut corriger un
-                        prix d'opération dont dépend la contre-valeur. */}
                     {recapitulatif.frais_unite && recapitulatif.frais_unite !== FRAIS_EN_EUROS && (
                       <span className="mouvement__inchange">
                         {formaterQuantiteEnNature(
@@ -1082,8 +983,7 @@ export default function FeuilleMouvement({
                 <dt>Nouveau prix de revient</dt>
                 <dd>
                   <Montant valeur={recapitulatif.pru_apres} type="cours" />
-                  {/* Une vente ne déplace pas le prix de revient : le dire vaut mieux
-                      qu'afficher « +0,00 », que l'utilisateur aurait à interpréter. */}
+                  {/* Une vente ne déplace pas le prix de revient. */}
                   {estNul(recapitulatif.effet_pru) ? (
                     <span className="mouvement__inchange">inchangé</span>
                   ) : (
@@ -1108,9 +1008,7 @@ export default function FeuilleMouvement({
           <Bouton variante="secondaire" onClick={surFermeture} desactive={verrouille}>
             Annuler
           </Bouton>
-          {/* La validation reste bloquée tant que l'effet du mouvement n'a pas pu être
-              calculé : enregistrer sans l'avoir vu retirerait à cet écran sa raison
-              d'être, et signifierait que le serveur n'a pas accepté la saisie. */}
+          {/* Pas d'enregistrement tant que le serveur n'a pas rendu l'effet du mouvement. */}
           <Bouton type="submit" enCours={envoi} desactive={!recapitulatif || verrouille}>
             {edition ? 'Enregistrer la correction' : 'Enregistrer'}
           </Bouton>

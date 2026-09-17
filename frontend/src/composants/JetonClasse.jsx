@@ -2,14 +2,11 @@ import './JetonClasse.css';
 import { CLASSES_QUANTITE } from '../utils/formatage';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
 
-// Marqueur visuel de la classe d'un actif.
+// Marqueur de la classe d'un actif, distinguée d'abord par la forme (cercle, carré
+// arrondi, losange, hexagone) et non par la couleur.
 //
-// La classe se distingue d'abord par la forme, cercle, carré arrondi, losange ou
-// hexagone, et non par la couleur : le repère survit ainsi à un affichage en niveaux de
-// gris comme à un daltonisme. C'est la règle posée par la direction artistique.
-//
-// La forme seule ne se prononce pas : le nom de la classe accompagne toujours le jeton,
-// visible lorsque l'appelant le demande, restitué à la voix dans tous les cas.
+// Le nom de la classe est toujours présent : visible sur demande, sinon réservé aux
+// lecteurs d'écran.
 
 function monogramme(classe, symbole) {
   if (!symbole) return '';

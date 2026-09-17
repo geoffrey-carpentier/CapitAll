@@ -1,28 +1,17 @@
-// Démarrage et arrêt du serveur.
+// Démarrage et arrêt du serveur. L'arrêt est géré ici et non dans app.js, que les tests
+// montent en mémoire sans port ni écouteur de signal.
 //
-// L'arrêt est traité ici et non dans app.js : c'est le processus qu'on arrête, pas
-// l'application Express, qui doit rester montable en mémoire par les tests sans ouvrir
-// de port ni poser d'écouteur de signal.
-//
-// POURQUOI UN ARRÊT ORDONNÉ. Sans écouteur de SIGTERM, `docker stop` laisse dix secondes
-// puis envoie SIGKILL : les requêtes en cours sont coupées au milieu, et une transaction
-// ouverte attend l'expiration de son verrou côté PostgreSQL. Ce qui suit ferme dans
-// l'ordre inverse de l'ouverture — on cesse d'accepter, on laisse finir, puis on rend les
-// connexions.
-//
-// POURQUOI UNE ÉCHÉANCE. `close()` attend la fin des requêtes en cours, et une connexion
-// persistante inactive n'en est pas une : sans borne, une seule fenêtre de navigateur
-// ouverte suffirait à retenir le processus indéfiniment. Les connexions inactives sont
-// donc fermées tout de suite, les autres à l'échéance.
+// Arrêt ordonné : sans lui, `docker stop` coupe les requêtes en cours au bout de dix
+// secondes (SIGKILL). On cesse d'accepter, on laisse finir, puis on ferme cache et base.
+// Les connexions persistantes inactives sont fermées tout de suite, les autres à
+// l'échéance, sans quoi un navigateur ouvert retiendrait le processus.
 
 const config = require('./src/config');
 const app = require('./src/app');
 const { verifierConnexion, pool } = require('./src/db');
 const cache = require('./src/cache/client');
 
-// Au-delà, on ferme les connexions restantes plutôt que d'attendre encore. Dix secondes
-// est le délai que Docker laisse par défaut avant SIGKILL : dépasser cette valeur
-// reviendrait à confier l'arrêt à un signal qui ne laisse rien terminer du tout.
+// Inférieur aux dix secondes que Docker laisse avant SIGKILL.
 const DELAI_ARRET_MS = 8000;
 
 const serveur = app.listen(config.port, async () => {
@@ -38,7 +27,7 @@ const serveur = app.listen(config.port, async () => {
 let arretEnCours = false;
 
 async function arreter(signal) {
-  // Un second signal ne relance pas la procédure : il la force.
+  // Un second signal force l'arrêt.
   if (arretEnCours) {
     console.warn(`${signal} reçu pendant l'arrêt : fermeture immédiate.`);
     process.exit(1);
@@ -50,19 +39,17 @@ async function arreter(signal) {
     console.warn("Requêtes encore en cours à l'échéance : fermeture des connexions restantes.");
     serveur.closeAllConnections?.();
   }, DELAI_ARRET_MS);
-  // La minuterie ne doit pas, à elle seule, maintenir le processus en vie.
+  // unref : la minuterie ne retient pas le processus.
   echeance.unref?.();
 
-  // On cesse d'accepter, et on libère tout de suite ce qui n'est qu'une connexion
-  // persistante inactive : elle n'a aucune requête à terminer.
+  // Plus de nouvelles connexions ; les connexions inactives sont libérées tout de suite.
   await new Promise((resolve) => {
     serveur.close(resolve);
     serveur.closeIdleConnections?.();
   });
   clearTimeout(echeance);
 
-  // Les dépendances viennent après, jamais avant : les fermer d'abord ferait échouer
-  // les requêtes qu'on vient précisément de laisser finir.
+  // Cache et base ensuite seulement, pour ne pas faire échouer les requêtes terminées.
   await cache.fermer();
 
   try {
@@ -75,8 +62,7 @@ async function arreter(signal) {
   process.exit(0);
 }
 
-// SIGTERM est le signal de `docker stop` et des orchestrateurs ; SIGINT celui du Ctrl+C
-// en développement. Les deux méritent le même traitement.
+// SIGTERM : `docker stop` ; SIGINT : Ctrl+C en développement.
 process.on('SIGTERM', () => arreter('SIGTERM'));
 process.on('SIGINT', () => arreter('SIGINT'));
 

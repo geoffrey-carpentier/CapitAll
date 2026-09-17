@@ -1,26 +1,16 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-// Ouverture de la feuille de saisie d'un mouvement, portée par l'adresse de l'écran
-// d'origine.
+// Ouverture de la feuille de mouvement, portée par un paramètre de l'adresse.
 //
-// La saisie n'est pas une page : elle se superpose à l'écran d'où elle est demandée, qui
-// reste visible derrière elle. Elle ne peut donc pas avoir de route à elle. Mais elle ne
-// peut pas non plus n'être qu'un état de composant : un rechargement la ferait
-// disparaître, et l'adresse ne décrirait plus ce qui est affiché.
+// La feuille se superpose à l'écran d'origine et n'a donc pas de route, mais elle doit
+// survivre à un rechargement :
+// - `?mouvement=nouveau` l'ouvre sans actif présélectionné ;
+// - `?mouvement=12` l'ouvre sur la position 12 ;
+// - `?mouvement=12&correction=7` corrige le mouvement 7 de cette position.
 //
-// Un paramètre de requête répond aux deux : `?mouvement=nouveau` ouvre la feuille sans
-// actif présélectionné, `?mouvement=12` l'ouvre sur la position 12. C'est la même
-// convention que les filtres et le tri de l'écran des positions.
-//
-// La correction d'un mouvement enregistré (D51 révisée) suit la même règle et ajoute
-// `?mouvement=12&correction=7` : la feuille s'ouvre sur la position 12 pour corriger son
-// mouvement 7. Deux paramètres plutôt qu'un seul surchargé, parce que la feuille a
-// besoin des deux identifiants et qu'une valeur composée obligerait à la découper.
-//
-// L'ouverture et la fermeture remplacent l'entrée d'historique au lieu d'en empiler une
-// nouvelle : le bouton de retour du navigateur quitte alors l'écran, comme on l'attend,
-// plutôt que de rejouer l'ouverture et la fermeture de la feuille.
+// L'historique est remplacé et non empilé : le bouton retour quitte l'écran au lieu de
+// rouvrir la feuille.
 
 export const PARAMETRE_MOUVEMENT = 'mouvement';
 export const PARAMETRE_CORRECTION = 'correction';
@@ -58,9 +48,8 @@ export function useMouvement() {
 
   return {
     ouvert: ouvert !== null,
-    // Un identifiant d'actif, ou null lorsque la feuille s'ouvre sans présélection.
     actifInitialId: ouvert === MOUVEMENT_NOUVEAU ? null : ouvert,
-    // Identifiant du mouvement à corriger, ou null lorsque la feuille sert à en créer un.
+    // null en création.
     idCorrection: parametres.get(PARAMETRE_CORRECTION),
     ouvrir,
     corriger,

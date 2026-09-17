@@ -16,36 +16,17 @@ import {
 } from '../utils/formatage';
 import { bornes, hauteurDeBascule } from '../utils/echelleCourbe';
 
-// Évolution de la valeur dans le temps, en aire dégradée.
+// Évolution d'une valeur dans le temps, en aire dégradée (deux points au minimum,
+// l'appelant affiche un message sinon).
 //
-// Deux points au minimum. Une courbe à un seul point ne trace rien et donne à croire
-// que l'application a perdu des données : c'est un message qui prend sa place, pas un
-// point isolé.
+// Le tracé porte role="img" et une description textuelle ; les valeurs restent aussi
+// lisibles hors du graphe.
 //
-// Le tracé porte un role="img" et une description en toutes lettres. Il n'est jamais la
-// seule source de l'information : la valeur de départ et celle d'arrivée sont écrites
-// sous le graphe, et la performance de la période l'accompagne dans le sélecteur.
-//
-// La ligne de prix de revient, pointillée, n'apparaît que sur le graphe d'une position :
-// le tableau de bord ne la fournit pas, le patrimoine n'ayant pas de prix de revient
-// unitaire. Le composant l'accepte donc sans l'exiger.
-//
-// Lorsqu'elle est fournie, l'aire se teinte de part et d'autre de cette ligne, en positif
-// au-dessus et en négatif en dessous. C'est le geste graphique propre à l'application :
-// il donne à voir d'un seul regard, sur toute la période, quand la position a été en
-// gain et quand elle a été en perte. Une aire d'une seule teinte ne dirait que le solde
-// du jour, et raterait l'essentiel du produit.
+// La ligne de prix de revient est facultative (absente pour le patrimoine). Fournie,
+// elle partage l'aire en deux teintes : gain au-dessus, perte en dessous.
 
-// Graduation de l'axe des valeurs.
-//
-// Elle arrondissait à l'entier, ce qui convient à un patrimoine de plusieurs milliers
-// d'euros mais réduisait à « 0€ » toutes les graduations d'une série de cours inférieurs
-// à l'unité : le graphe d'un jeton à 0,000012 euro portait un axe entièrement nul.
-//
-// La bibliothèque transmet un nombre, que JavaScript écrit en exposant sous 1e-6 ; il
-// est ramené en écriture positionnelle avant tout formatage. Au-dessus de l'unité,
-// l'entier reste la bonne réponse : l'axe est étroit, et deux décimales n'y ajouteraient
-// que du bruit. En dessous, les chiffres significatifs prennent le relais.
+// Graduation de l'axe : entier au-dessus de l'unité, chiffres significatifs en dessous,
+// sans quoi un cours très faible donnerait un axe entièrement à « 0 ».
 function graduation(valeur, symbole) {
   const texte = versNotationPositionnelle(valeur);
 
@@ -73,9 +54,7 @@ function decrire(points, devise, sujet, prixDeRevient) {
     return evolution;
   }
 
-  // D79 : la ligne de prix de revient est nommée explicitement dans la description.
-  // Sans cela, le tracé annoncerait une évolution sans dire par rapport à quoi il se
-  // teinte, et c'est précisément ce que le graphe existe pour montrer.
+  // La description nomme la ligne de référence qui partage les deux teintes.
   return (
     `${evolution} Le prix de revient, ${formaterMontant(prixDeRevient, { symbole })}, ` +
     "est figuré par une ligne horizontale pointillée : l'aire est teintée en positif " +
@@ -89,30 +68,25 @@ export default function Courbe({
   masque = false,
   sens = 'hausse',
   prixDeRevient = null,
-  // Ce que la courbe donne à lire. Le tableau de bord trace un patrimoine, l'écran de
-  // détail le cours d'une position : la description ne peut pas être la même, et une
-  // description fausse vaut moins qu'une absence de description.
+  // Objet de la courbe, repris dans la description accessible.
   sujet = 'de la valeur du portefeuille',
   ...proprietes
 }) {
   const symbole = symboleDevise(devise);
 
-  // Deux courbes peuvent coexister sur un même écran. Un identifiant de dégradé fixe
-  // serait alors dupliqué dans le document, et le navigateur appliquerait le premier
-  // aux deux tracés.
+  // Identifiant unique : un dégradé dupliqué dans le document s'appliquerait aux deux
+  // courbes d'un même écran.
   const identifiantDegrade = `degrade-courbe-${useId()}`;
 
-  // Conversion numérique réservée à la géométrie du tracé : ces nombres donnent une
-  // ordonnée en pixels et ne sont jamais affichés. Toute valeur lue par l'utilisateur
-  // passe par le module de formatage, à partir de la chaîne d'origine.
+  // Seule conversion en nombre, pour la géométrie du tracé : ces valeurs ne sont jamais
+  // affichées, le texte passe par le module de formatage.
   const series = points.map((point) => ({
     date: point.date,
     hauteur: Number(point.valeur),
   }));
 
-  // Le sens de la période est fourni par l'appelant, qui le tire de la performance
-  // renvoyée par le serveur. Le déduire ici en comparant deux montants convertis en
-  // nombres ferait entrer un flottant dans une décision d'affichage, pour rien.
+  // Le sens vient de la performance calculée par le serveur, pas d'une comparaison de
+  // flottants.
   const teinte = sens === 'baisse' ? 'var(--couleur-negatif)' : 'var(--couleur-positif)';
 
   const seuil = prixDeRevient === null ? null : Number(prixDeRevient);
@@ -137,8 +111,7 @@ export default function Courbe({
             <linearGradient id={identifiantDegrade} x1="0" y1="0" x2="0" y2="1">
               {aireBicolore ? (
                 <>
-                  {/* Deux arrêts confondus à la hauteur du prix de revient : la bascule
-                      de teinte y est franche, exactement sur la ligne pointillée. */}
+                  {/* Deux arrêts confondus : bascule franche sur la ligne pointillée. */}
                   <stop offset={0} stopColor="var(--couleur-positif)" stopOpacity={0.35} />
                   <stop offset={bascule} stopColor="var(--couleur-positif)" stopOpacity={0.04} />
                   <stop offset={bascule} stopColor="var(--couleur-negatif)" stopOpacity={0.04} />
@@ -161,17 +134,14 @@ export default function Courbe({
             minTickGap={32}
           />
 
-          {/* Le masquage porte aussi sur l'axe : laisser l'échelle visible reviendrait
-              à publier l'ordre de grandeur du patrimoine que l'on vient de cacher. */}
+          {/* Le masquage cache aussi l'échelle, qui trahirait l'ordre de grandeur. */}
           <YAxis
             width={masque ? 24 : 56}
             tick={masque ? false : { fill: 'var(--couleur-texte-attenue)', fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(valeur) => graduation(valeur, symbole)}
-            // L'échelle englobe le prix de revient : sans cela, une position toujours
-            // en gain sortirait sa ligne de référence du cadre, et la bascule de teinte
-            // n'aurait plus de sens visible.
+            // L'échelle englobe le prix de revient pour garder sa ligne dans le cadre.
             domain={aireBicolore ? bornes(hauteurs, seuil) : ['auto', 'auto']}
           />
 
@@ -180,20 +150,14 @@ export default function Courbe({
               y={seuil}
               stroke="var(--couleur-texte-attenue)"
               strokeDasharray="4 4"
-              // Le libellé chiffré accompagne la ligne (D79) : sans lui, le trait
-              // pointillé ne dirait pas à quelle hauteur il se trouve, et l'aire
-              // bicolore basculerait sur une frontière sans nom. Il disparaît avec le
-              // masquage, au même titre que l'échelle.
+              // Libellé chiffré de la ligne, masqué comme l'échelle.
               label={
                 masque
                   ? undefined
                   : {
                       value: `Prix de revient ${formaterMontant(prixDeRevient, { symbole })}`,
-                      // Le libellé se pose du côté du trait où il reste de la place.
-                      // Dès que le prix de revient est le minimum de la période, la
-                      // ligne vient se coller au bas du cadre : posé sous elle, le
-                      // libellé tombait sur les dates de l'axe. Dans la moitié basse du
-                      // cadre, il passe donc au-dessus du trait.
+                      // Dans la moitié basse du cadre, le libellé passe au-dessus du
+                      // trait pour ne pas chevaucher les dates de l'axe.
                       position: bascule > 0.5 ? 'insideBottomLeft' : 'insideTopLeft',
                       fill: 'var(--couleur-texte-attenue)',
                       fontSize: 11,
@@ -205,8 +169,7 @@ export default function Courbe({
           <Area
             type="monotone"
             dataKey="hauteur"
-            // Le trait suit la même bascule que l'aire : un trait vert traversant une
-            // zone rouge se lirait comme une contradiction.
+            // Le trait suit la même bascule de teinte que l'aire.
             stroke={aireBicolore ? `url(#${identifiantDegrade})` : teinte}
             strokeWidth={2}
             fill={`url(#${identifiantDegrade})`}

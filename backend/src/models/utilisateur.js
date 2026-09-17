@@ -1,17 +1,14 @@
-// Accès aux données de la table utilisateur. Toutes les requêtes passent par le helper
-// query() du pool et sont paramétrées : aucune valeur n'est concaténée dans du SQL.
+// Accès à la table utilisateur, par requêtes paramétrées.
 //
-// Règle appliquée ici : mot_de_passe_hache ne remonte jamais vers les couches
-// supérieures, à deux exceptions près, trouverParEmail et trouverAvecHachageParId
-// (voir leurs commentaires). Toutes deux servent une comparaison bcrypt, jamais un
-// affichage, et leur résultat ne quitte pas le service qui les appelle.
+// mot_de_passe_hache n'est renvoyé que par trouverParEmail et trouverAvecHachageParId,
+// pour une comparaison bcrypt dans un service ; il ne doit jamais atteindre un
+// contrôleur.
 
 const { query } = require('../db');
 
 const CHAMPS_PUBLICS = 'id, email, pseudo, role, actif, jetons_invalides_avant, date_inscription';
 
-// La colonne role n'est jamais alimentée depuis une entrée utilisateur (D23) :
-// elle prend la valeur par défaut du schéma, donc 'utilisateur'.
+// role n'est jamais alimenté par une entrée utilisateur : valeur par défaut du schéma.
 async function creerUtilisateur({ email, motDePasseHache, pseudo }) {
   const { rows } = await query(
     `INSERT INTO utilisateur (email, mot_de_passe_hache, pseudo)
@@ -22,9 +19,7 @@ async function creerUtilisateur({ email, motDePasseHache, pseudo }) {
   return rows[0];
 }
 
-// Seule fonction à renvoyer le hachage : la connexion en a besoin pour le comparer.
-// Elle n'est appelée que par le service d'authentification, et son résultat ne doit
-// jamais être transmis tel quel à un contrôleur.
+// Renvoie le hachage, pour la comparaison à la connexion.
 async function trouverParEmail(email) {
   const { rows } = await query(
     `SELECT ${CHAMPS_PUBLICS}, mot_de_passe_hache
@@ -45,9 +40,8 @@ async function trouverParId(id) {
   return rows[0] || null;
 }
 
-// Seconde et dernière fonction à renvoyer le hachage. Le changement de mot de passe
-// doit comparer l'ancien mot de passe alors qu'il ne connaît que le porteur du jeton :
-// il dispose de l'identifiant, pas de l'email, d'où cette variante de trouverParEmail.
+// Renvoie le hachage à partir de l'identifiant du porteur du jeton, pour vérifier le
+// mot de passe actuel (changement de mot de passe, suppression du compte).
 async function trouverAvecHachageParId(id) {
   const { rows } = await query(
     `SELECT ${CHAMPS_PUBLICS}, mot_de_passe_hache
@@ -58,15 +52,9 @@ async function trouverAvecHachageParId(id) {
   return rows[0] || null;
 }
 
-// Le changement de mot de passe pose la borne de révocation dans la même requête.
-//
-// Les deux vont ensemble et ne doivent pas pouvoir se dissocier : changer son mot de
-// passe parce qu'on le croit compromis n'aurait aucun effet si les jetons déjà émis
-// continuaient de fonctionner jusqu'à deux heures. Deux requêtes distinctes auraient
-// laissé une fenêtre où la première a réussi et la seconde non.
-//
-// La borne est prise sur l'horloge de la base et non sur celle du serveur applicatif :
-// c'est la même horloge que celle qui datera les comparaisons.
+// Le mot de passe et la borne de révocation des jetons sont écrits dans la même requête,
+// pour qu'aucun jeton antérieur ne survive au changement. La borne vient de l'horloge de
+// la base.
 async function mettreAJourMotDePasse(id, motDePasseHache) {
   const { rowCount } = await query(
     `UPDATE utilisateur
@@ -77,13 +65,8 @@ async function mettreAJourMotDePasse(id, motDePasseHache) {
   return rowCount > 0;
 }
 
-// État d'autorisation d'un porteur de jeton, relu à chaque requête authentifiée.
-//
-// Une seule lecture par clé primaire, sans le hachage du mot de passe : c'est le prix de
-// la révocation immédiate. Un cache de trente secondes l'éviterait, au prix d'une
-// révocation différée d'autant — un compte désactivé resterait joignable une demi-minute.
-// Sur une application personnelle, la lecture est négligeable devant les requêtes que
-// sert la même route, et la garantie est plus simple à défendre qu'un délai.
+// État d'autorisation relu à chaque requête authentifiée, par clé primaire : c'est ce
+// qui rend la révocation immédiate, sans cache.
 async function trouverPourAutorisation(id) {
   const { rows } = await query(
     `SELECT id, role, actif, jetons_invalides_avant
@@ -94,10 +77,7 @@ async function trouverPourAutorisation(id) {
   return rows[0] || null;
 }
 
-// La suppression s'arrête à cette ligne : actif, alerte et snapshot_valorisation
-// référencent utilisateur en ON DELETE CASCADE, et transaction comme snapshot_cours
-// cascadent à leur tour depuis actif. Supprimer table par table dupliquerait une règle
-// que le schéma porte déjà, avec le risque d'en oublier une à la prochaine table ajoutée.
+// Les données liées disparaissent par les ON DELETE CASCADE du schéma.
 async function supprimer(id) {
   const { rowCount } = await query('DELETE FROM utilisateur WHERE id = $1', [id]);
   return rowCount > 0;

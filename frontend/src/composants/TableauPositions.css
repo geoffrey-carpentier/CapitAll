@@ -1,10 +1,6 @@
 /*
-  Niveau 0 de contenant : la liste est à plat sur le fond, séparée par des filets. Ce
-  n'est pas un ensemble de cartes, et lui en donner l'apparence ferait passer chaque
-  position pour un bloc autonome alors que l'intérêt de l'écran est la comparaison.
-
-  Les deux structures, liste et tableau, sont dans le document ; le point de rupture
-  décide laquelle s'affiche.
+  Liste à plat séparée par des filets, pas des cartes : l'écran sert à comparer.
+  Le point de rupture choisit entre la liste mobile et le tableau.
 */
 
 .positions-liste__tableau {
@@ -24,7 +20,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--espace-4);
-  /* Zone tactile confortable, au-delà du minimum de 44 px (D77). */
+  /* Au-delà du minimum tactile de 44 px. */
   min-height: 64px;
   padding: var(--espace-3) var(--espace-2);
   border-bottom: 1px solid var(--couleur-bordure);
@@ -98,8 +94,7 @@
     white-space: nowrap;
   }
 
-  /* Les colonnes de chiffres s'alignent à droite : c'est ce qui permet de comparer les
-     ordres de grandeur d'un coup d'œil, avec les chiffres à chasse fixe. */
+  /* Chiffres alignés à droite et à chasse fixe, pour comparer les ordres de grandeur. */
   .positions-liste__colonne-nombre {
     text-align: right !important;
     font-variant-numeric: tabular-nums;
@@ -108,7 +103,7 @@
   .positions-liste__tri {
     display: inline-flex;
     align-items: center;
-    /* Le pointeur est précis en desktop : 24 px suffisent (D77). */
+    /* 24 px suffisent au pointeur de bureau. */
     min-height: 24px;
     padding: 0;
     border: 0;
@@ -118,15 +113,8 @@
     cursor: pointer;
   }
 
-  /*
-    La cellule reste une cellule de tableau.
-
-    Elle portait display:flex, ce qui la sortait de l'algorithme de mise en page du
-    tableau : n'étant plus une case, elle ne s'étirait plus à la hauteur de sa ligne et
-    s'arrêtait 7,5 px au-dessus des autres, filet compris. La colonne « Actif » semblait
-    donc décalée verticalement de toutes les colonnes de chiffres. La disposition en
-    ligne est de toute façon déjà tenue par le lien qu'elle contient.
-  */
+  /* Pas de display: flex sur la cellule : elle sortirait de la mise en page du tableau
+     et ne s'étirerait plus à la hauteur de sa ligne. Le lien porte la disposition. */
   .positions-liste__cellule-actif {
     white-space: nowrap;
   }

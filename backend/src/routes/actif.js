@@ -24,18 +24,16 @@ routeur.post(
   valider(creationTransaction),
   controleur.ajouterTransaction
 );
-// Même corps et mêmes contrôles que la création, mais sans écriture : la route rend
-// l'effet qu'aurait le mouvement sur la position. Elle est déclarée avant la route
-// paramétrée par identifiant de transaction, qui ne répond qu'en DELETE.
+// Simulation : mêmes contrôles que la création, sans écriture. Déclarée avant la route
+// paramétrée par identifiant de transaction.
 routeur.post(
   '/:id/transactions/simulation',
   validerParamId('id'),
   valider(creationTransaction),
   controleur.simulerTransaction
 );
-// Correction d'un mouvement, et simulation de cette correction (D51 révisée). La
-// simulation est déclarée avant la route de correction elle-même, sans quoi
-// `simulation` serait interprété comme un identifiant de transaction.
+// Correction d'un mouvement et sa simulation, déclarée en premier pour que `simulation`
+// ne soit pas lu comme un identifiant de transaction.
 routeur.post(
   '/:id/transactions/:idTransaction/simulation',
   validerParamId('id'),
