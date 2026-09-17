@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
 import { useSeuil } from '../hooks/useSeuil';
-import { api, ErreurApi } from '../services/api';
+import { api } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { formaterMontant, symboleDevise } from '../utils/formatage';
 import { lirePreference, ecrirePreference, CLE_DEVISE, CLE_MASQUAGE } from '../utils/preferences';
@@ -31,16 +32,6 @@ import './Seuils.css';
 //
 // Un seuil retiré (désactivé) disparaît de la liste.
 const STATUTS_AFFICHES = ['active', 'declenchee'];
-
-function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
-  }
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  return erreur.statut === 401 ? 'session' : 'api';
-}
 
 function formaterDate(horodatage) {
   const date = new Date(horodatage);
@@ -216,7 +207,7 @@ export default function Seuils() {
   }
 
   if (erreur && !seuils) {
-    const nature = natureDeLErreur(erreur);
+    const nature = classifierErreurApi(erreur);
     return (
       <div className="seuils">
         <h1 className="seuils__titre">Seuils</h1>
@@ -270,7 +261,7 @@ export default function Seuils() {
         </div>
       </div>
 
-      {erreur && <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />}
+      {erreur && <MessageErreur nature={classifierErreurApi(erreur)} surAction={charger} />}
 
       {confirmation && <Message>{confirmation}</Message>}
 

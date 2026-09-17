@@ -4,6 +4,7 @@ import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
 import { useSeuil } from '../hooks/useSeuil';
 import { api, ErreurApi } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
@@ -73,17 +74,12 @@ const PERIODE_PAR_DEFAUT = 'mois';
 // ne distingue pas les deux cas.
 
 function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
+  // Un 400 est un refus, pas une panne : réessayer échouerait à l'identique. Les autres
+  // cas sont ceux de toutes les pages.
+  if (erreur instanceof ErreurApi && erreur.statut === 400) {
+    return 'refus';
   }
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  if (erreur.statut === 401) {
-    return 'session';
-  }
-  // Un 400 est un refus, pas une panne : réessayer échouerait à l'identique.
-  return erreur.statut === 400 ? 'refus' : 'api';
+  return classifierErreurApi(erreur);
 }
 
 // Un seuil désactivé n'est pas affiché.

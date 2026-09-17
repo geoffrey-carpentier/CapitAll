@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { CLE_DEVISE, CLE_MASQUAGE, lirePreference, ecrirePreference } from '../utils/preferences';
 import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
@@ -13,16 +14,6 @@ import BasculeDevise from '../composants/BasculeDevise';
 import MasquageMontants from '../composants/MasquageMontants';
 import Squelette from '../composants/Squelette';
 import './Compte.css';
-
-function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
-  }
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  return erreur.statut === 401 ? 'session' : 'api';
-}
 
 // Erreurs du serveur au format [{ champ, message }], indexées par champ.
 function erreursParChamp(echec) {
@@ -184,7 +175,7 @@ export default function Compte() {
   }
 
   if (erreur && !profil) {
-    const nature = natureDeLErreur(erreur);
+    const nature = classifierErreurApi(erreur);
     return (
       <div className="compte">
         <h1 className="compte__titre">Compte</h1>

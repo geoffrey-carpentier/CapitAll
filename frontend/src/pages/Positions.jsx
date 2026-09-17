@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
-import { api, ErreurApi } from '../services/api';
+import { api } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { comparerDecimales, CLASSES_QUANTITE } from '../utils/formatage';
 import Bouton from '../composants/Bouton';
@@ -45,16 +46,6 @@ function valeurDeTri(position, cle) {
 }
 
 const TRI_PAR_DEFAUT = { cle: 'valeur', descendant: true };
-
-function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
-  }
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  return erreur.statut === 401 ? 'session' : 'api';
-}
 
 export default function Positions() {
   const { jeton } = useAuthentification();
@@ -230,7 +221,7 @@ export default function Positions() {
   }
 
   if (erreur && !portefeuille) {
-    const nature = natureDeLErreur(erreur);
+    const nature = classifierErreurApi(erreur);
 
     return (
       <div className="positions">
@@ -273,7 +264,7 @@ export default function Positions() {
       </div>
 
       {erreur && (
-        <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />
+        <MessageErreur nature={classifierErreurApi(erreur)} surAction={charger} />
       )}
 
       {confirmation && <Message>{confirmation}</Message>}

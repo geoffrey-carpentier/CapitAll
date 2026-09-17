@@ -2,7 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
-import { api, ErreurApi } from '../services/api';
+import { api } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
 import { formaterInstant } from '../utils/duree';
@@ -41,17 +42,6 @@ const Courbe = lazy(() => import('../composants/Courbe'));
 const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: null };
 
 const PERIODE_PAR_DEFAUT = 'mois';
-
-function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
-  }
-  // Statut 0 : la requête n'a reçu aucune réponse.
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  return erreur.statut === 401 ? 'session' : 'api';
-}
 
 export default function Patrimoine() {
   const { jeton, utilisateur } = useAuthentification();
@@ -212,7 +202,7 @@ export default function Patrimoine() {
   }
 
   if (erreur && !portefeuille) {
-    const nature = natureDeLErreur(erreur);
+    const nature = classifierErreurApi(erreur);
 
     return (
       <div className="patrimoine">
@@ -264,7 +254,7 @@ export default function Patrimoine() {
       {/* Une erreur postérieure au chargement laisse les valeurs précédentes lisibles. */}
       {erreur && (
         <MessageErreur
-          nature={natureDeLErreur(erreur)}
+          nature={classifierErreurApi(erreur)}
           surAction={() => actualiser()}
           className="patrimoine__incident"
         />
