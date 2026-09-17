@@ -1,10 +1,8 @@
-// Évaluation des alertes de seuil, en fonction pure : elle reçoit les alertes actives
-// et un contexte de valeurs observées, elle rend la liste des franchissements. Aucune
-// base, aucun appel de cours, aucun effet de bord. Le chargement des alertes et leur
-// marquage relèvent du service de portefeuille.
+// Évaluation des alertes de seuil en fonctions pures, sans base ni effet de bord. Le
+// chargement et le marquage des alertes relèvent du service de portefeuille.
 //
-// Aucune tâche de fond n'évalue les alertes (D50) : l'évaluation a lieu au chargement
-// du tableau de bord, quand les valeurs viennent d'être calculées.
+// Aucune tâche de fond : l'évaluation a lieu à l'actualisation du tableau de bord, quand
+// les valeurs viennent d'être calculées.
 
 const {
   ECHELLE_PRIX,
@@ -16,13 +14,11 @@ const {
   formater,
 } = require('../utils/decimal');
 
-// Franchissement inclusif (D56) : un seuil « au-dessus » de 70 000 se déclenche
-// lorsque la valeur atteint 70 000, pas seulement lorsqu'elle le dépasse. C'est ce
-// qu'attend l'utilisateur qui a fixé ce seuil.
+// Franchissement inclusif : un seuil « au-dessus » de 70 000 se déclenche dès que la
+// valeur atteint 70 000.
 function estFranchi(sensSeuil, valeurObservee, valeurSeuil) {
-  // Un seuil se compare à un cours ou à un capital : l'échelle des prix les couvre tous
-  // deux, et permet un seuil sous le centime là où l'échelle du prix de revient n'aurait
-  // rien apporté qu'un chiffre de plus.
+  // L'échelle des prix couvre un cours comme un capital, et admet un seuil sous le
+  // centime.
   const observee = versUnites(valeurObservee, ECHELLE_PRIX);
   const seuil = versUnites(valeurSeuil, ECHELLE_PRIX);
   const position = comparer(observee, seuil);
@@ -30,13 +26,8 @@ function estFranchi(sensSeuil, valeurObservee, valeurSeuil) {
   return sensSeuil === 'au_dessus' ? position >= 0 : position <= 0;
 }
 
-// Valeur à comparer au seuil, selon la cible de l'alerte.
-//
-// Pour une alerte sur un actif, c'est le COURS COURANT de cet actif, et non la valeur
-// de la position détenue. Un seuil de prix porte sur le prix : un utilisateur qui
-// demande à être prévenu quand le bitcoin atteint 70 000 euros parle du cours, pas de
-// ce que vaut son portefeuille de bitcoins. Les deux diffèrent dès que la quantité
-// détenue n'est pas exactement 1, et un test couvre précisément ce cas.
+// Valeur comparée au seuil : pour un actif, son cours courant et non la valeur de la
+// position détenue (les deux diffèrent dès que la quantité n'est pas 1).
 function valeurObservee(alerte, contexte) {
   if (alerte.type_cible === 'capital_total') {
     return contexte.capitalTotal ?? null;
@@ -45,18 +36,9 @@ function valeurObservee(alerte, contexte) {
   return contexte.coursParActif?.[alerte.actif_id] ?? null;
 }
 
-// Écart restant avant franchissement, en pourcentage de la valeur observée (E6).
-//
-// C'est la variation relative que la valeur observée doit encore parcourir pour
-// atteindre le seuil : un seuil haut à 65 000 avec un cours à 61 240 rend 6,14 %, la
-// hausse qu'il reste à faire depuis le cours actuel. Une valeur déjà au-delà du seuil,
-// dans le sens qui le franchit, rend 0 plutôt qu'un nombre négatif, qui n'aurait pas de
-// sens pour un écart restant.
-//
-// Valeur dérivée d'un montant, donc calculée ici et non côté interface (D69) : c'est
-// exactement le cas que la règle nomme, « franchissement de seuil ».
-// Le second paramètre porte un nom distinct de la fonction valeurObservee ci-dessus,
-// bien qu'il en reçoive le résultat : les deux ne doivent pas se confondre à la lecture.
+// Écart restant avant franchissement, en pourcentage de la valeur observée : un seuil
+// haut à 65 000 avec un cours à 61 240 rend 6,14. Un seuil déjà franchi rend 0.
+// Calculé côté serveur, comme toute valeur dérivée d'un montant.
 function ecartRestant(sensSeuil, valeurConstatee, valeurSeuil) {
   if (valeurConstatee === null || valeurConstatee === undefined || valeurConstatee === '') {
     return null;
@@ -82,16 +64,16 @@ function evaluerAlertes(alertesActives, contexte) {
   const franchissements = [];
 
   for (const alerte of alertesActives) {
-    // Une alerte déjà déclenchée n'est pas réévaluée (D56) : sa date de premier
-    // franchissement est l'information utile, la réévaluer l'écraserait.
+    // Une alerte déclenchée n'est pas réévaluée : sa date de premier franchissement
+    // serait écrasée.
     if (alerte.statut !== 'active') {
       continue;
     }
 
     const observee = valeurObservee(alerte, contexte);
 
-    // Cours indisponible : l'alerte n'est pas évaluée du tout. Déclencher sur une
-    // valeur inconnue, ou la traiter comme nulle, serait le pire des comportements.
+    // Valeur inconnue : pas d'évaluation, plutôt qu'un déclenchement sur une donnée
+    // absente.
     if (observee === null || observee === undefined || observee === '') {
       continue;
     }

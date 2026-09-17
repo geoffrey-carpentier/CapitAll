@@ -1,8 +1,5 @@
-// Adaptateur Coinbase : cours des cryptomonnaies, directement en euros.
-// Endpoint public, sans authentification.
-//
-// Factory : le client HTTP est reçu en paramètre, aucun appel réseau n'est écrit en
-// dur ici. L'adaptateur est ainsi testable sans réseau.
+// Adaptateur Coinbase : cours des cryptomonnaies en euros, par un endpoint public. Le
+// client HTTP est injecté pour tester sans réseau.
 
 const { ErreurFournisseur } = require('../erreurs');
 
@@ -16,8 +13,7 @@ function creerAdaptateurCoinbase({ recupererJson }) {
       `${BASE_URL}/exchange-rates?currency=${encodeURIComponent(symboleNormalise)}`
     );
 
-    // La réponse contient plusieurs centaines de paires pour un seul symbole.
-    // Seule la ligne EUR est extraite ici : le reste ne quitte jamais le serveur.
+    // Seule la paire EUR est extraite parmi les centaines renvoyées.
     const taux = reponse?.data?.rates?.EUR;
 
     if (!taux) {
@@ -28,8 +24,7 @@ function creerAdaptateurCoinbase({ recupererJson }) {
 
     return {
       symbole: symboleNormalise,
-      // La valeur est déjà une chaîne côté Coinbase : elle est conservée telle quelle,
-      // sans passer par Number, pour ne pas introduire d'imprécision (D4).
+      // Chaîne conservée telle quelle, sans passer par Number.
       cours_eur: String(taux),
       horodatage: new Date().toISOString(),
       source: SOURCE,

@@ -1,8 +1,5 @@
-// Schémas de validation des alertes de seuil (D15, D41).
-//
-// Ni utilisateur_id ni statut ne figurent dans le schéma de création : le premier vient
-// du jeton, le second est fixé par le serveur. .strict() rejette donc toute tentative
-// de les fournir dans le corps de la requête.
+// Schémas de validation des alertes de seuil. utilisateur_id (jeton) et statut (fixé par
+// le serveur) n'y figurent pas : .strict() refuse de les recevoir dans le corps.
 
 const { z } = require('zod');
 const { versNotationPositionnelle } = require('../utils/decimal');
@@ -10,20 +7,14 @@ const { versNotationPositionnelle } = require('../utils/decimal');
 const TYPES_CIBLE = ['actif', 'capital_total'];
 const SENS_SEUIL = ['au_dessus', 'en_dessous'];
 
-// Un seuil se compare soit à un cours, soit à un capital. Le premier descend sous le
-// centime et suit donc l'échelle des prix (D88) ; le second est un montant en euros, où
-// deux décimales suffisent. La colonne étant commune aux deux, c'est la validation qui
-// applique la règle propre à chaque cible : un seuil de capital à dix-huit décimales
-// n'aurait aucun sens, et un seuil de cours à deux rendait impossible toute surveillance
-// d'un actif coté sous le centime.
+// La colonne est commune, mais la précision dépend de la cible : échelle des prix pour
+// un cours (sous le centime possible), deux décimales pour un capital en euros.
 const DECIMALES_SEUIL_ACTIF = 18;
 const DECIMALES_SEUIL_CAPITAL = 2;
 const CHIFFRES_SEUIL = 12;
 
-// Le seuil est normalisé en chaîne et transmis tel quel à la colonne NUMERIC : le
-// convertir en nombre réintroduirait l'imprécision que le projet écarte partout (D4).
-// La notation scientifique est ramenée en écriture positionnelle, JSON.parse rendant un
-// nombre que JavaScript écrit en exposant sous 1e-6.
+// Seuil normalisé en chaîne pour la colonne NUMERIC, sans passer par un flottant. Un
+// nombre JSON sous 1e-6 arrive en notation scientifique : il est remis en positionnel.
 const valeurSeuil = z
   .union([z.string(), z.number()])
   .transform((valeur) => versNotationPositionnelle(String(valeur).trim()))
@@ -48,10 +39,8 @@ const creationAlerte = z
     actif_id: z.int().positive("L'identifiant d'actif est invalide.").optional(),
   })
   .strict()
-  // Reprise fidèle de la contrainte CHECK du schéma : actif_id est renseigné si et
-  // seulement si la cible est un actif. Détecter le cas ici plutôt que de laisser
-  // PostgreSQL rejeter l'insertion permet de rendre un message compréhensible, et
-  // évite d'exposer une erreur de contrainte brute à l'utilisateur.
+  // Reprend la contrainte CHECK du schéma (actif_id si et seulement si la cible est un
+  // actif), pour rendre un message clair plutôt qu'une erreur de contrainte.
   .refine((donnees) => donnees.type_cible !== 'actif' || donnees.actif_id !== undefined, {
     message: "Une alerte ciblant un actif doit préciser l'actif concerné.",
     path: ['actif_id'],
@@ -60,9 +49,7 @@ const creationAlerte = z
     message: "Une alerte sur le capital total ne cible aucun actif en particulier.",
     path: ['actif_id'],
   })
-  // La précision admise dépend de la cible. Un seuil de capital au millième d'euro
-  // n'est pas une exigence de précision mais une erreur de saisie : l'accepter
-  // laisserait croire à une surveillance plus fine que ce que le patrimoine permet.
+  // Un seuil de capital au-delà du centime est une erreur de saisie.
   .refine(
     (donnees) =>
       donnees.type_cible !== 'capital_total' ||
@@ -73,10 +60,8 @@ const creationAlerte = z
     }
   );
 
-// Seule la désactivation est exposée. La contrainte CHECK du schéma autorise aussi le
-// retour au statut 'active', mais réactiver une alerte déjà déclenchée poserait la
-// question de sa date de déclenchement : le cas n'est pas au périmètre du MVP et
-// l'API ne l'ouvre donc pas, plutôt que de laisser passer un comportement non défini.
+// Seule la désactivation est exposée : la réactivation (que le schéma permettrait) est
+// hors périmètre, le sort de la date de déclenchement n'étant pas défini.
 const modificationAlerte = z
   .object({
     statut: z.literal('desactivee', 'Seule la désactivation est possible.'),

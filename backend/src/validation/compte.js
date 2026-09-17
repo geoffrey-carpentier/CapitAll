@@ -1,19 +1,15 @@
-// Schémas de validation des entrées de gestion du compte (D41).
-//
-// La règle de longueur du nouveau mot de passe est celle de l'inscription, importée
-// plutôt que recopiée : durcir la règle un jour ne doit pas laisser une des deux
-// portes ouverte sur l'ancienne.
+// Schémas de validation de la gestion du compte. La règle du nouveau mot de passe est
+// importée de l'inscription plutôt que recopiée.
 
 const { z } = require('zod');
 const { motDePasse } = require('./utilisateur');
 
-// L'ancien mot de passe n'est contrôlé que sur sa présence. Lui appliquer la règle de
-// longueur courante empêcherait un compte créé sous une règle plus permissive de
-// changer précisément le mot de passe devenu trop court.
+// L'ancien mot de passe n'est contrôlé que sur sa présence : une règle durcie depuis ne
+// doit pas empêcher de changer un mot de passe devenu trop court.
 const schemaChangementMotDePasse = z
   .object({
-    // Le message est donné à z.string autant qu'à min : sans lui, une clé absente
-    // produirait le message anglais par défaut de la bibliothèque.
+    // Message aussi sur z.string, sinon une clé absente produit le message anglais par
+    // défaut.
     ancienMotDePasse: z
       .string("L'ancien mot de passe est obligatoire.")
       .min(1, "L'ancien mot de passe est obligatoire."),
@@ -25,9 +21,8 @@ const schemaChangementMotDePasse = z
     path: ['nouveauMotDePasse'],
   });
 
-// La suppression exige le mot de passe, et c'est le serveur qui le vérifie. Contrôlée
-// côté interface seulement, la confirmation ne protégerait de rien : un jeton dérobé
-// suffirait à supprimer le compte sans jamais connaître le mot de passe.
+// La suppression exige le mot de passe, vérifié par le serveur : un jeton dérobé ne doit
+// pas suffire.
 const schemaSuppressionCompte = z
   .object({
     motDePasse: z
