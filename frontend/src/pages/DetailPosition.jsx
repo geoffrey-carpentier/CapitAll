@@ -29,12 +29,7 @@ import Message from '../composants/Message';
 import EtatVide from '../composants/EtatVide';
 import BasculeDevise from '../composants/BasculeDevise';
 import MasquageMontants from '../composants/MasquageMontants';
-import {
-  lirePreference,
-  ecrirePreference,
-  CLE_DEVISE,
-  CLE_MASQUAGE,
-} from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import './DetailPosition.css';
 
 // La bibliothèque de tracé pèse plus que le reste de l'application : elle n'est chargée
@@ -107,8 +102,7 @@ export default function DetailPosition() {
   const mouvement = useMouvement();
   const seuilFeuille = useSeuil();
 
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -357,21 +351,8 @@ export default function DetailPosition() {
         </div>
 
         <div className="detail__outils">
-          <BasculeDevise
-            devise={devise}
-            indisponible={!taux}
-            surChangement={(choix) => {
-              setDevise(choix);
-              ecrirePreference(CLE_DEVISE, choix);
-            }}
-          />
-          <MasquageMontants
-            masque={masque}
-            surChangement={(valeur) => {
-              setMasque(valeur);
-              ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-            }}
-          />
+          <BasculeDevise devise={devise} indisponible={!taux} surChangement={choisirDevise} />
+          <MasquageMontants masque={masque} surChangement={choisirMasquage} />
         </div>
       </div>
 

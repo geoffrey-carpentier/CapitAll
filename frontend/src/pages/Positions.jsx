@@ -17,7 +17,7 @@ import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
 import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Message from '../composants/Message';
-import { lirePreference, ecrirePreference, CLE_DEVISE, CLE_MASQUAGE } from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import './Positions.css';
 
 // Écran Positions : liste de toutes les positions, valorisées par
@@ -59,8 +59,7 @@ export default function Positions() {
 
   const mouvement = useMouvement();
 
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
   // Filtres et tri vivent dans l'adresse, pour survivre à un rechargement. Les valeurs
   // sont validées contre les listes autorisées, l'adresse pouvant être modifiée à la main.
@@ -187,18 +186,9 @@ export default function Positions() {
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
-        surChangement={(choix) => {
-          setDevise(choix);
-          ecrirePreference(CLE_DEVISE, choix);
-        }}
+        surChangement={choisirDevise}
       />
-      <MasquageMontants
-        masque={masque}
-        surChangement={(valeur) => {
-          setMasque(valeur);
-          ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-        }}
-      />
+      <MasquageMontants masque={masque} surChangement={choisirMasquage} />
     </div>
   );
 

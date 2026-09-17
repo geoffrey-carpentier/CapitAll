@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { api, ErreurApi } from '../services/api';
-import { CLE_DEVISE, CLE_MASQUAGE, lirePreference, ecrirePreference } from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import Bouton from '../composants/Bouton';
 import Champ from '../composants/Champ';
 import Carte from '../composants/Carte';
@@ -44,8 +44,7 @@ export default function Compte() {
   const [erreur, setErreur] = useState(null);
 
   // Mêmes clés de préférences que les autres écrans, qui les relisent au montage.
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
   const [ancienMotDePasse, setAncienMotDePasse] = useState('');
   const [nouveauMotDePasse, setNouveauMotDePasse] = useState('');
@@ -262,13 +261,7 @@ export default function Compte() {
               Les calculs restent en euros ; la bascule ne change que l&apos;affichage.
             </p>
           </div>
-          <BasculeDevise
-            devise={devise}
-            surChangement={(choix) => {
-              setDevise(choix);
-              ecrirePreference(CLE_DEVISE, choix);
-            }}
-          />
+          <BasculeDevise devise={devise} surChangement={choisirDevise} />
         </div>
 
         <div className="compte__reglage">
@@ -278,13 +271,7 @@ export default function Compte() {
               Remplace les montants par des points sur l&apos;ensemble des écrans.
             </p>
           </div>
-          <MasquageMontants
-            masque={masque}
-            surChangement={(valeur) => {
-              setMasque(valeur);
-              ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-            }}
-          />
+          <MasquageMontants masque={masque} surChangement={choisirMasquage} />
         </div>
       </Carte>
 

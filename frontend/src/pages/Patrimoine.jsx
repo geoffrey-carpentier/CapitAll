@@ -22,12 +22,7 @@ import MessageErreur from '../composants/MessageErreur';
 import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Repartition from '../composants/Repartition';
 import Message from '../composants/Message';
-import {
-  lirePreference,
-  ecrirePreference,
-  CLE_DEVISE,
-  CLE_MASQUAGE,
-} from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import './Patrimoine.css';
 
 // La bibliothèque de tracé pèse plus que le reste de l'application : chargée à la
@@ -57,8 +52,7 @@ export default function Patrimoine() {
 
   const mouvement = useMouvement();
 
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
   // Distingue l'arrivée depuis l'inscription d'un portefeuille devenu vide.
   const premierLancement = emplacement.state?.premierLancement === true;
@@ -158,18 +152,9 @@ export default function Patrimoine() {
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
-        surChangement={(choix) => {
-          setDevise(choix);
-          ecrirePreference(CLE_DEVISE, choix);
-        }}
+        surChangement={choisirDevise}
       />
-      <MasquageMontants
-        masque={masque}
-        surChangement={(valeur) => {
-          setMasque(valeur);
-          ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-        }}
-      />
+      <MasquageMontants masque={masque} surChangement={choisirMasquage} />
     </div>
   );
 

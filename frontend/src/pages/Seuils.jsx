@@ -6,7 +6,7 @@ import { api } from '../services/api';
 import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { formaterMontant, symboleDevise } from '../utils/formatage';
-import { lirePreference, ecrirePreference, CLE_DEVISE, CLE_MASQUAGE } from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import Bouton from '../composants/Bouton';
 import Carte from '../composants/Carte';
 import JetonClasse from '../composants/JetonClasse';
@@ -81,8 +81,7 @@ export default function Seuils() {
   const [aRetirer, setARetirer] = useState(null);
   const [retraitEnCours, setRetraitEnCours] = useState(false);
 
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -233,21 +232,8 @@ export default function Seuils() {
         <h1 className="seuils__titre">Seuils</h1>
         <div className="seuils__outils">
           <Bouton onClick={() => seuilFeuille.ouvrir()}>+ Seuil</Bouton>
-          <BasculeDevise
-            devise={devise}
-            indisponible={!taux}
-            surChangement={(choix) => {
-              setDevise(choix);
-              ecrirePreference(CLE_DEVISE, choix);
-            }}
-          />
-          <MasquageMontants
-            masque={masque}
-            surChangement={(valeur) => {
-              setMasque(valeur);
-              ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-            }}
-          />
+          <BasculeDevise devise={devise} indisponible={!taux} surChangement={choisirDevise} />
+          <MasquageMontants masque={masque} surChangement={choisirMasquage} />
         </div>
       </div>
 
