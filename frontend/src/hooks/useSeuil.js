@@ -1,13 +1,8 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-// Ouverture de la feuille de création d'un seuil, portée par l'adresse de l'écran
-// d'origine. Même mécanique que `useMouvement` : la création n'est pas une page, elle se
-// superpose à l'écran qui la demande, et l'adresse doit continuer à décrire ce qui est
-// affiché après un rechargement.
-//
-// `?seuil=nouveau` ouvre la feuille sans cible présélectionnée ; `?seuil=12` l'ouvre sur
-// l'actif d'identifiant 12, ce que fait l'écran de détail d'une position.
+// Ouverture de la feuille de création d'un seuil par l'adresse, comme `useMouvement` :
+// `?seuil=nouveau` sans cible présélectionnée, `?seuil=12` sur l'actif 12.
 
 export const PARAMETRE_SEUIL = 'seuil';
 export const SEUIL_NOUVEAU = 'nouveau';

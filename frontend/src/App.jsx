@@ -20,8 +20,8 @@ export default function App() {
         <Routes>
           <Route path="/connexion" element={<Connexion />} />
           <Route path="/inscription" element={<Inscription />} />
-          {/* Récupération d'un mot de passe oublié (D23) : deux écrans publics, la
-              demande d'une clé puis le choix du nouveau mot de passe. */}
+          {/* Récupération d'un mot de passe oublié : demande de clé, puis nouveau mot
+              de passe. */}
           <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
           <Route path="/reinitialisation" element={<Reinitialisation />} />
 
@@ -39,19 +39,15 @@ export default function App() {
             <Route path="/seuils" element={<Seuils />} />
             <Route path="/compte" element={<Compte />} />
 
-            {/* La saisie d'un mouvement est une feuille posée sur l'écran d'origine, et
-                non une page : elle n'a pas de route à elle. L'adresse reste toutefois
-                atteignable, et ouvre la feuille par-dessus le patrimoine. */}
+            {/* La saisie d'un mouvement n'est pas une page : cette adresse ouvre la
+                feuille par-dessus le patrimoine. */}
             <Route
               path="/mouvement"
               element={<Navigate to="/patrimoine?mouvement=nouveau" replace />}
             />
 
-            {/* L'adresse inconnue reste dans la coquille : l'utilisateur garde sa
-                navigation et repart d'un clic, au lieu d'être déposé sur une page nue
-                qui a l'air d'appartenir à un autre site. Aucun contenu n'étant public,
-                un visiteur non connecté est conduit à la connexion par la route
-                protégée, ce qui est le même parcours que pour toute autre adresse. */}
+            {/* Adresse inconnue : affichée dans la coquille, donc réservée aux
+                utilisateurs connectés. */}
             <Route path="*" element={<Introuvable />} />
           </Route>
 

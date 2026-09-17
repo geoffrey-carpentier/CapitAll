@@ -43,10 +43,8 @@
   align-items: center;
   gap: var(--espace-1);
   padding: var(--espace-2) var(--espace-1);
-  /* Ces cinq libellés sont la structure de l'application, pas une annotation : ils
-     doivent dominer le contenu qu'ils encadrent, et non lui céder le pas. 16 px les
-     place entre le corps de texte et le titre d'écran, et l'espacement vertical suit —
-     une liste plus haute se balaie mieux qu'une liste plus dense. */
+  /* Les libellés de navigation structurent l'application : entre le corps de texte et
+     le titre d'écran. */
   font-size: 16px;
   font-weight: var(--graisse-forte);
   letter-spacing: 0.01em;
@@ -70,9 +68,7 @@
   justify-content: center;
 }
 
-/* Même apparence que le bouton soit un lien, quand il conduit au Patrimoine, ou un
-   bouton, quand il ouvre la saisie sur l'écran courant : la remise à zéro des styles
-   propres au bouton natif évite que la barre change d'aspect d'un écran à l'autre. */
+/* Même apparence qu'il s'agisse d'un lien ou d'un bouton natif. */
 .coquille__ajout {
   display: grid;
   place-items: center;
@@ -114,10 +110,8 @@
 
 .coquille__contenu {
   flex: 1;
-  /* Sans cette ligne, le contenu garde la largeur minimale de ce qu'il porte : un
-     élément de conteneur flexible vaut min-width: auto par défaut, et refuse donc de
-     se réduire sous la largeur intrinsèque d'un tableau large. La page se mettait alors
-     à déborder horizontalement au lieu de laisser le tableau défiler chez lui. */
+  /* Un élément flex vaut min-width: auto : sans cette ligne, un tableau large ferait
+     déborder la page au lieu de défiler dans son cadre. */
   min-width: 0;
   padding: var(--espace-4);
   padding-bottom: 88px;
@@ -152,9 +146,6 @@
     font-weight: var(--graisse-forte);
   }
 
-  /* La marque porte son propre dessin et ses propres couleurs : voir Marque.jsx. Il n'y
-     a plus de pastille à styler ici. */
-
   .coquille__liste {
     flex: none;
     flex-direction: column;
@@ -169,9 +160,6 @@
     display: none;
   }
 
-  /* Le rail latéral reprend la taille posée plus haut : 14 px y ramenaient les libellés
-     sous le poids des chiffres qu'ils encadrent. La marge intérieure verticale suit, pour
-     que quatre entrées plus grosses restent une liste aérée et non un bloc compact. */
   .coquille__lien {
     flex-direction: row;
     justify-content: flex-start;
@@ -198,10 +186,6 @@
   }
 
   .coquille__pseudo {
-    /* Ces cinq libellés sont la structure de l'application, pas une annotation : ils
-     doivent dominer le contenu qu'ils encadrent, et non lui céder le pas. 16 px les
-     place entre le corps de texte et le titre d'écran, et l'espacement vertical suit —
-     une liste plus haute se balaie mieux qu'une liste plus dense. */
   font-size: 16px;
   font-weight: var(--graisse-forte);
   letter-spacing: 0.01em;
