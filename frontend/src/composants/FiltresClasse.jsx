@@ -3,19 +3,10 @@ import JetonClasse from './JetonClasse';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
 import { CLASSES_QUANTITE } from '../utils/formatage';
 
-// Filtres par classe d'actif, cumulables, chacun portant le nombre de positions qu'il
-// laisserait passer.
+// Filtres cumulables par classe d'actif, en boutons à `aria-pressed`.
 //
-// Le compteur n'est pas un ornement : sans lui, l'utilisateur ne sait pas si activer un
-// filtre videra la liste, et découvre l'absence de résultat après coup. Il est calculé
-// sur la totalité des positions, jamais sur ce qui reste après les autres filtres, sans
-// quoi les nombres changeraient à chaque clic et cesseraient d'être des repères.
-//
-// Une classe absente du portefeuille n'a pas de bouton : proposer un filtre qui ne peut
-// mener qu'à une liste vide n'aide personne.
-//
-// Ce sont des boutons à `aria-pressed` et non des cases à cocher : ils ne composent pas
-// une saisie, ils commutent l'affichage.
+// Chaque compteur porte sur toutes les positions, pas sur le résultat des autres filtres,
+// pour rester un repère stable. Une classe absente du portefeuille n'a pas de bouton.
 export default function FiltresClasse({ positions = [], actives = [], surBascule }) {
   const compteurs = positions.reduce((total, position) => {
     total[position.type] = (total[position.type] ?? 0) + 1;

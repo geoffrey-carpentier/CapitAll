@@ -20,9 +20,7 @@ export default function Connexion() {
   // Route demandée avant la redirection vers la connexion, le cas échéant.
   const destination = emplacement.state?.depuis ?? '/patrimoine';
 
-  // Message laissé par l'écran d'où l'on vient, aujourd'hui la suppression du compte :
-  // sans lui, la disparition du compte se solderait par un retour silencieux au
-  // formulaire, impossible à distinguer d'une déconnexion ordinaire.
+  // Message transmis par l'écran précédent, par exemple après suppression du compte.
   const messageArrivee = emplacement.state?.message ?? null;
 
   if (estConnecte) {
@@ -38,9 +36,8 @@ export default function Connexion() {
       await connecter({ email, motDePasse });
       naviguer(destination, { replace: true });
     } catch (echec) {
-      // Le message du serveur est repris tel quel. Il est volontairement générique et
-      // ne distingue jamais l'adresse du mot de passe : le reformuler ici, ou tenter
-      // de préciser la cause, annulerait cette protection.
+      // Message générique du serveur, repris tel quel : il ne doit pas distinguer une
+      // adresse inconnue d'un mauvais mot de passe.
       setErreur(echec.message);
     } finally {
       setEnCours(false);
@@ -57,9 +54,8 @@ export default function Connexion() {
         <h1 className="authentification__titre">Connexion</h1>
         <p className="authentification__intro">Accédez au suivi de votre patrimoine.</p>
 
-        {/* Une session close — expiration, compte désactivé, mot de passe changé
-            ailleurs — ramène ici. Le dire explicitement évite que la reconnexion passe
-            pour une anomalie. */}
+        {/* Une session close (expiration, compte désactivé, mot de passe changé
+            ailleurs) ramène ici avec une explication. */}
         {messageArrivee && <Message variante="information">{messageArrivee}</Message>}
         {sessionExpiree && !erreur && !messageArrivee && (
           <Message variante="information">

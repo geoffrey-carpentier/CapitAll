@@ -6,24 +6,17 @@ import {
   symboleDevise,
 } from '../utils/formatage';
 
-// Variation d'une position ou du portefeuille, en pourcentage ou en euros.
+// Variation d'une position ou du portefeuille, en pourcentage ou en montant.
 //
-// Accessibilité, règle non négociable de la politique de formatage : l'information
-// n'est jamais portée par la couleur seule. Le signe est toujours écrit, la flèche
-// accompagne toute variation d'au moins un pour cent, et la valeur reste donc lisible
-// en niveaux de gris comme par un utilisateur daltonien.
-//
-// Le poids visuel suit l'amplitude, pour qu'une page entière ne crie pas d'une seule
-// voix : pastille pleine au-delà de dix pour cent, texte coloré entre un et dix,
-// texte atténué en deçà.
+// L'information ne repose jamais sur la seule couleur : signe toujours écrit, flèche
+// dès 1 %. Le poids visuel suit l'amplitude (voir Variation.css).
 
 const FLECHES = {
   hausse: '▲',
   baisse: '▼',
 };
 
-// Le libellé vocal ne peut pas se contenter du signe et de la flèche, qui ne se
-// prononcent pas : il énonce le sens en toutes lettres.
+// Le signe et la flèche ne se prononcent pas : le sens est dit en toutes lettres.
 const SENS_PARLE = {
   hausse: 'en hausse de',
   baisse: 'en baisse de',
@@ -50,17 +43,14 @@ export default function Variation({
 
   const sens = sensVariation(valeur);
 
-  // Le tableau des amplitudes s'exprime en pourcentage. En mode absolu, la valeur
-  // affichée est un montant : l'amplitude relative correspondante doit alors être
-  // fournie par l'appelant, qui dispose des deux chiffres. À défaut, la variation
-  // reste lisible mais adopte le traitement discret, jamais la pastille pleine.
+  // Les amplitudes sont en pourcentage : en mode absolu, l'appelant fournit le
+  // pourcentage correspondant, sinon le traitement discret s'applique.
   const reference = mode === 'absolue' ? amplitude : valeur;
   const niveau = amplitudeVariation(reference) ?? (sens === 'stable' ? 'nulle' : 'faible');
 
   const fleche = niveau === 'forte' || niveau === 'moyenne' ? FLECHES[sens] : null;
 
-  // Le signe typographique et la flèche ne se prononcent pas : le libellé vocal reprend
-  // le sens en toutes lettres puis la valeur nue, sans son signe.
+  // Libellé vocal : le sens en toutes lettres, puis la valeur sans signe.
   const libelle = `${SENS_PARLE[sens]} ${texte.replace(/^[+−]/, '')}`;
 
   return (

@@ -1,5 +1,5 @@
 // Contrôleurs du portefeuille consolidé et de son historique. Le propriétaire vient
-// toujours du jeton : aucune de ces routes n'accepte d'identifiant d'utilisateur.
+// toujours du jeton.
 
 const { creerServicePortefeuille } = require('../services/portefeuilleConsolide');
 
@@ -17,15 +17,9 @@ async function consolide(req, res, next) {
   }
 }
 
-// Actualisation demandée : relève les cours du jour et évalue les seuils.
-//
-// Une commande, donc un POST, et non un GET paramétré. Elle change l'état — le point du
-// jour est écrit, les seuils franchis sont marqués — et c'est justement ce qu'un GET ne
-// doit pas faire. Le verbe suffit à empêcher qu'un préchargeur ou un rechargement la
-// rejoue.
-//
-// Elle rend le portefeuille dans la même forme que la lecture : l'appelant qui vient
-// d'actualiser n'a pas à enchaîner un second appel pour afficher le résultat.
+// Actualisation : écrit le point du jour et marque les seuils franchis. POST et non GET,
+// puisqu'elle modifie l'état. Elle rend le portefeuille dans la même forme que la
+// lecture, pour éviter un second appel.
 async function actualiser(req, res, next) {
   try {
     const portefeuille = await servicePortefeuille.actualiserPortefeuille(req.utilisateur.id);

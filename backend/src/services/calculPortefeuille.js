@@ -62,7 +62,7 @@ function trierChronologiquement(transactions) {
 // L'effet de chaque mouvement sur le prix de revient est donc un fait calculé ici, du
 // côté qui détient le moteur, et non une reconstitution faite par l'interface (D69).
 function derouler(transactions) {
-  // Quantité et PRU sont tenus à l'échelle des quantités et du PRU, soit 8 décimales.
+  // Quantité et PRU sont tenus à leur échelle : 18 décimales pour la quantité, 24 pour le PRU.
   let quantite = 0n;
   let pru = 0n;
   let plusValueRealisee = 0n;

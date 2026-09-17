@@ -5,10 +5,7 @@ import Bouton from '../composants/Bouton';
 import Marque from '../composants/Marque';
 import './Coquille.css';
 
-// Navigation principale. Les écrans non encore développés figurent déjà dans la
-// barre, désactivés : l'utilisateur voit où il ira, sans pouvoir atteindre une page
-// vide. Leur indisponibilité est portée par l'attribut aria-disabled et par une
-// mention textuelle, jamais par la seule couleur atténuée.
+// Navigation principale, commune à tous les écrans de l'espace connecté.
 //
 // Les libellés et les chemins suivent le lexique du projet : un même objet porte le
 // même nom dans l'interface, dans le code et dans les routes. « Patrimoine » et non

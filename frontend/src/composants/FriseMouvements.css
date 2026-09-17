@@ -2,8 +2,7 @@
   list-style: none;
   margin: 0;
   padding: 0 0 0 var(--espace-4);
-  /* Le filet vertical est la frise elle-même : il relie les événements entre eux et
-     matérialise la continuité du temps, qu'une simple pile de cartes ne montrerait pas. */
+  /* Filet vertical qui relie les événements. */
   border-left: 1px solid var(--couleur-bordure);
   display: flex;
   flex-direction: column;
@@ -14,8 +13,7 @@
   position: relative;
 }
 
-/* Le point posé sur le filet marque la date de l'événement. Décoratif : la liste
-   ordonnée porte déjà la chronologie pour un lecteur d'écran. */
+/* Point décoratif : la liste ordonnée porte déjà la chronologie. */
 .frise-mouvements__evenement::before {
   content: '';
   position: absolute;
@@ -92,8 +90,7 @@
   font-weight: var(--graisse-forte);
 }
 
-/* L'effet sur le prix de revient occupe toute la largeur : c'est l'information propre à
-   cet écran, elle ne se range pas comme une donnée de saisie parmi les autres. */
+/* En mobile, l'effet sur le prix de revient occupe toute la largeur. */
 .frise-mouvements__effet {
   grid-column: 1 / -1;
   border-top: 1px solid var(--couleur-bordure);
@@ -105,9 +102,7 @@
   font-weight: var(--graisse-normale);
 }
 
-/* Les deux commandes d'un mouvement, sur une même ligne. L'écart les sépare assez pour
-   qu'un doigt ne prenne pas l'une pour l'autre : elles ne font pas la même chose, et
-   l'une des deux est irréversible. */
+/* Écart suffisant pour ne pas toucher la suppression en voulant corriger. */
 .frise-mouvements__actions {
   display: flex;
   gap: var(--espace-4);
@@ -122,8 +117,7 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  /* Zone tactile de 44 px en mobile (D77), obtenue par le remplissage : le libellé
-     reste discret, il n'a pas à concurrencer les chiffres. */
+  /* Zone tactile de 44 px en mobile, libellé discret. */
   padding: var(--espace-3) 0;
   min-height: 44px;
   text-decoration: underline;
@@ -160,15 +154,13 @@
   }
 }
 
-/* Le montant réellement prélevé, rappelé entre parenthèses derrière sa contre-valeur en
-   euros. Il éclaire le chiffre principal sans lui disputer la lecture. */
+/* Montant prélevé en nature, après sa contre-valeur en euros. */
 .frise-mouvements__frais-origine {
   color: var(--couleur-texte-attenue);
   font-size: var(--taille-legende);
 }
 
-/* Une sortie non marchande n'est ni un achat ni une vente : elle prend le registre
-   neutre de l'avertissement, qui n'annonce ni gain ni perte. */
+/* Sortie non marchande : couleur d'avertissement, ni gain ni perte. */
 .frise-mouvements__evenement--sortie_non_marchande::before {
   background: var(--couleur-avertissement);
 }

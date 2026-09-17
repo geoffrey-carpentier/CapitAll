@@ -1,5 +1,4 @@
-// Contrôleurs d'authentification : lecture de la requête, code de statut, format de
-// réponse. Aucune règle métier ici, et aucune erreur traitée sur place : elles sont
+// Contrôleurs d'authentification : requête, statut et réponse. Les erreurs sont
 // transmises au gestionnaire centralisé par next().
 
 const serviceAuthentification = require('../services/authentification');
@@ -24,9 +23,7 @@ async function inscription(req, res, next) {
 async function connexion(req, res, next) {
   try {
     const resultat = await serviceAuthentification.connecter(req.body);
-    // Une connexion réussie efface les échecs comptés pour cette adresse. Sans cela, un
-    // tiers qui aurait épuisé neuf tentatives laisserait le titulaire du compte avec une
-    // seule, alors qu'il vient précisément de prouver qu'il est le titulaire.
+    // Une connexion réussie efface les échecs comptés pour cette adresse.
     reinitialiserQuotaConnexion(req.body?.email);
     res.status(200).json(resultat);
   } catch (erreur) {
@@ -34,11 +31,7 @@ async function connexion(req, res, next) {
   }
 }
 
-// Demande de récupération d'un mot de passe oublié.
-//
-// 202 et non 201 : la demande est prise en compte, et la réponse ne dit pas si elle a
-// produit quelque chose. C'est exactement ce que le statut signifie, et c'est ce qui
-// interdit d'utiliser ce formulaire pour découvrir quelles adresses ont un compte.
+// Demande de récupération : 202, la demande est acceptée sans dire si un compte existe.
 async function demanderRecuperation(req, res, next) {
   try {
     const resultat = await serviceRecuperation.demander(req.body);
@@ -51,16 +44,14 @@ async function demanderRecuperation(req, res, next) {
 async function reinitialiser(req, res, next) {
   try {
     await serviceRecuperation.reinitialiser(req.body);
-    // Aucun jeton n'est remis : la réinitialisation ne connecte pas. Celui qui vient de
-    // poser un mot de passe doit s'en servir, ce qui prouve qu'il l'a bien enregistré.
+    // Aucun jeton remis : la réinitialisation ne connecte pas.
     res.status(204).end();
   } catch (erreur) {
     next(erreur);
   }
 }
 
-// Profil du porteur du jeton. Sert aussi de route protégée de référence pour vérifier
-// le middleware d'authentification.
+// Profil du porteur du jeton.
 async function profil(req, res, next) {
   try {
     const utilisateur = await modeleUtilisateur.trouverParId(req.utilisateur.id);

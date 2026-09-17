@@ -25,9 +25,8 @@
   letter-spacing: 0.04em;
 }
 
-/* Bascule achat ou vente. Le choix retenu se distingue par sa couleur, mais aussi par
-   sa graisse et par son fond : la couleur ne porte jamais seule l'information, et un
-   bouton radio coché reste annoncé comme tel quoi qu'il arrive. */
+/* Bascule du sens : le choix retenu se distingue aussi par la graisse et le fond, pas
+   par la seule couleur. */
 .mouvement__bascule {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -59,32 +58,27 @@
   background: color-mix(in srgb, var(--couleur-positif) 16%, transparent);
 }
 
-/* Le fond portait encore rgba(240, 86, 79), l'ancien rouge abandonné quand le jeton est
-   passé à #F8645D : une valeur recopiée ne suit pas la correction du jeton dont elle
-   dérive. Même correctif qu'au bouton de danger. */
+/* Fond dérivé du jeton négatif (#F8645D) : à garder aligné si le jeton change. */
 .mouvement__choix--vente.mouvement__choix--actif {
   color: var(--couleur-negatif);
   background: color-mix(in srgb, var(--couleur-negatif) 16%, transparent);
 }
 
-/* Une sortie non marchande n'est ni un gain ni une perte : elle emprunte le registre
-   neutre de l'avertissement plutôt que le rouge des ventes, qui annoncerait un
-   résultat que ce mouvement ne produit pas. */
+/* Une sortie n'est ni un gain ni une perte : couleur d'avertissement plutôt que rouge. */
 .mouvement__choix--sortie_non_marchande.mouvement__choix--actif {
   color: var(--couleur-avertissement);
   background: color-mix(in srgb, var(--couleur-avertissement) 16%, transparent);
 }
 
-/* Le bouton radio est masqué visuellement, jamais retiré de l'ordre de tabulation :
-   c'est lui qui reçoit le focus, et le libellé qui le montre. */
+/* Le bouton radio, masqué visuellement, reste dans l'ordre de tabulation : le libellé
+   montre son focus. */
 .mouvement__choix:focus-within {
   outline: 2px solid var(--couleur-accent);
   outline-offset: 2px;
 }
 
-/* minmax(0, 1fr) et non 1fr : une colonne 1fr ne descend pas sous la largeur minimale de
-   son contenu, et un champ de saisie en garde une d'environ vingt caractères. Entre 381 et
-   490 px, les deux champs dépassaient alors la feuille, qui défilait de côté. */
+/* minmax(0, 1fr) et non 1fr : une colonne 1fr ne descend pas sous la largeur minimale
+   d'un champ de saisie, ce qui faisait déborder la feuille entre 381 et 490 px. */
 .mouvement__paire {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -111,8 +105,7 @@
   margin-bottom: var(--espace-4);
 }
 
-/* Action secondaire présentée en lien : elle n'entre pas en concurrence visuelle avec
-   l'enregistrement. La zone tactile reste à 44 px de haut (D77). */
+/* Action secondaire en forme de lien ; zone tactile de 44 px de haut. */
 .mouvement__lien {
   display: inline-flex;
   align-items: center;
@@ -144,9 +137,8 @@
   gap: var(--espace-3);
 }
 
-/* Bloc de texte ordinaire et non conteneur flex : en flex, chaque morceau de la phrase
-   devenait un élément distinct, et le point qui suit le montant du cours du jour passait
-   seul à la ligne. L'espace après le pictogramme est porté par le texte lui-même. */
+/* Pas de flex : chaque morceau de la phrase deviendrait un élément distinct, et la
+   ponctuation pourrait passer seule à la ligne. */
 .mouvement__aide {
   margin: 0 0 var(--espace-4);
   padding: var(--espace-3);
@@ -156,8 +148,7 @@
   border-radius: var(--rayon-carte);
 }
 
-/* Récapitulatif : niveau 2 de contenant, seul fond accentué admis par la palette (D70).
-   C'est le bloc que l'œil doit trouver en dernier, et sur lequel il doit s'arrêter. */
+/* Récapitulatif sur fond accentué, pour arrêter l'œil avant l'enregistrement. */
 .mouvement__recapitulatif {
   padding: var(--espace-3) var(--espace-4);
   background: var(--couleur-carte-haute);

@@ -1,8 +1,9 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
-import { api, ErreurApi } from '../services/api';
+import { api } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { sensVariation } from '../utils/formatage';
 import { formaterInstant } from '../utils/duree';
@@ -18,60 +19,28 @@ import MasquageMontants from '../composants/MasquageMontants';
 import EtatVide from '../composants/EtatVide';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
+import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Repartition from '../composants/Repartition';
 import Message from '../composants/Message';
-import {
-  lirePreference,
-  ecrirePreference,
-  CLE_DEVISE,
-  CLE_MASQUAGE,
-} from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import './Patrimoine.css';
 
-// La courbe est chargée à la demande. Elle apporte la bibliothèque de tracé, qui pèse
-// plus lourd que tout le reste de l'application réunie : la charger d'emblée retarderait
-// l'affichage du patrimoine, seule information réellement attendue à l'ouverture, et
-// cela sur l'écran d'arrivée d'une interface pensée pour le mobile. Le squelette occupe
-// sa place pendant le chargement, comme pour les données.
-//
-// La répartition, elle, est une liste : elle n'a plus rien à charger depuis que l'anneau
-// a été retiré (D74), et se rend directement.
+// La bibliothèque de tracé pèse plus que le reste de l'application : chargée à la
+// demande, elle ne retarde pas l'affichage du patrimoine sur mobile.
 const Courbe = lazy(() => import('../composants/Courbe'));
 
-// Écran Patrimoine.
-//
-// Il répond à quatre questions dans cet ordre : combien je possède, comment cela a
-// évolué, comment c'est réparti, qu'est-ce qui demande mon attention. La composition
-// suit cet ordre et l'assume : le patrimoine domine, les chiffres de contexte sont des
-// lignes de texte et non des cartes, parce que ce sont des repères et non des
-// indicateurs de tête.
-//
-// Aucune valeur n'est mise en forme ici : tout passe par le composant Montant, donc par
-// le module de formatage. La seule opération numérique de l'écran est l'application du
-// taux d'affichage, en arithmétique exacte, sans requête supplémentaire.
+// Écran Patrimoine : valeur totale, évolution, répartition et seuils franchis.
+// Les montants passent par le composant Montant ; l'écran n'applique que le taux
+// d'affichage, en arithmétique exacte.
 
-// Nombre de jours retenus pour chaque plage. Le découpage se fait à l'affichage, sur la
-// série entière déjà reçue : changer de plage ne demande plus rien au serveur.
+// Fenêtre de chaque plage, découpée côté interface dans la série déjà reçue : changer de
+// plage ne rappelle pas le serveur.
 const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: null };
 
-// Période par défaut : le mois, plus proche du rythme réel de consultation. L'année
-// reste à un clic.
 const PERIODE_PAR_DEFAUT = 'mois';
-
-function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
-  }
-  // Le client d'API rend un statut 0 lorsque la requête n'a reçu aucune réponse.
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  return erreur.statut === 401 ? 'session' : 'api';
-}
 
 export default function Patrimoine() {
   const { jeton, utilisateur } = useAuthentification();
-  const naviguer = useNavigate();
   const emplacement = useLocation();
 
   const [portefeuille, setPortefeuille] = useState(null);
@@ -83,20 +52,13 @@ export default function Patrimoine() {
 
   const mouvement = useMouvement();
 
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
-  // L'arrivée depuis l'inscription est signalée par la navigation : c'est ce qui
-  // distingue un premier lancement d'un portefeuille devenu vide.
+  // Distingue l'arrivée depuis l'inscription d'un portefeuille devenu vide.
   const premierLancement = emplacement.state?.premierLancement === true;
 
-  // Actualisation du tableau de bord : elle relève le point du jour et évalue les seuils
-  // (D49, D50). C'est une commande explicite, et le seul appel de l'application qui
-  // écrive quelque chose en consultant.
-  //
-  // Elle ne dépend pas de la période : la série arrive entière et le sélecteur ne fait
-  // qu'en découper une fenêtre. Auparavant, chaque changement de plage rechargeait le
-  // portefeuille complet, donc rappelait les fournisseurs de cours et réécrivait tout.
+  // Commande explicite qui relève le point du jour et évalue les seuils : seul appel
+  // de consultation qui écrit en base. Elle ne dépend pas de la période affichée.
   const actualiser = useCallback(async () => {
     setChargement(true);
     setErreur(null);
@@ -135,9 +97,7 @@ export default function Patrimoine() {
     [devise, taux]
   );
 
-  // Points du graphe : la fenêtre de la plage choisie, puis la conversion d'affichage.
-  // La conversion vient après le découpage, convertir des points qu'on ne trace pas
-  // étant du travail perdu.
+  // Découpage à la plage avant conversion, pour ne convertir que les points tracés.
   const points = useMemo(
     () =>
       fenetreDePeriode(historique?.points ?? [], JOURS_PAR_PERIODE[periode]).map((point) => ({
@@ -147,9 +107,8 @@ export default function Patrimoine() {
     [historique, periode, afficher]
   );
 
-  // Heure du dernier relevé. Le point du jour est écrit à la première actualisation de la
-  // journée : son heure dépend de l'utilisateur, et la courbe doit le dire plutôt que de
-  // laisser croire à un relevé de clôture.
+  // Le point du jour est pris à la première actualisation : son heure varie, et la
+  // légende l'indique.
   const dernierReleve = useMemo(() => {
     const serie = historique?.points ?? [];
     return serie.length > 0 ? formaterInstant(serie[serie.length - 1].heure_releve) : null;
@@ -160,9 +119,7 @@ export default function Patrimoine() {
   const sansCours = portefeuille?.cours_indisponibles ?? [];
   const seuilsFranchis = portefeuille?.alertes_declenchees ?? [];
 
-  // Le mouvement enregistré change le patrimoine, le prix de revient et les plus-values :
-  // c'est le serveur qui les recalcule, l'écran se recharge plutôt que d'ajuster ses
-  // chiffres de son côté.
+  // Le serveur recalcule tout après un mouvement : l'écran se recharge.
   function apresEnregistrement({ resume }) {
     mouvement.fermer();
     setConfirmation(resume);
@@ -183,11 +140,7 @@ export default function Patrimoine() {
       <Bouton className="patrimoine__ajout" onClick={() => mouvement.ouvrir()}>
         + Mouvement
       </Bouton>
-      {/* L'actualisation était implicite : le simple affichage de l'écran relevait les
-          cours du jour et marquait les seuils franchis. Elle est désormais demandée,
-          ici et au chargement de l'écran, et nulle part ailleurs. */}
-      {/* `enCours` du composant Bouton impose le libellé « Envoi en cours… », qui
-          conviendrait à une soumission de formulaire, pas à une relève de cours. */}
+      {/* `enCours` de Bouton afficherait « Envoi en cours… », libellé de formulaire. */}
       <Bouton
         variante="secondaire"
         onClick={actualiser}
@@ -199,24 +152,13 @@ export default function Patrimoine() {
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
-        surChangement={(choix) => {
-          setDevise(choix);
-          ecrirePreference(CLE_DEVISE, choix);
-        }}
+        surChangement={choisirDevise}
       />
-      <MasquageMontants
-        masque={masque}
-        surChangement={(valeur) => {
-          setMasque(valeur);
-          ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-        }}
-      />
+      <MasquageMontants masque={masque} surChangement={choisirMasquage} />
     </div>
   );
 
-  // Le squelette reprend la composition de l'écran : le bloc de patrimoine et la
-  // répartition côte à côte, le graphe sur toute la largeur, puis les trois chiffres de
-  // contexte. Le contenu remplace la forme sans rien déplacer.
+  // Le squelette reprend la composition de l'écran pour éviter tout décalage.
   if (chargement && !portefeuille) {
     return (
       <div className="patrimoine" aria-busy="true">
@@ -245,24 +187,16 @@ export default function Patrimoine() {
   }
 
   if (erreur && !portefeuille) {
-    const nature = natureDeLErreur(erreur);
-
     return (
-      <div className="patrimoine">
-        <h1 className="patrimoine__titre">Patrimoine</h1>
-        <MessageErreur
-          nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={
-            nature === 'session' ? () => naviguer('/connexion') : () => actualiser()
-          }
-        />
-      </div>
+      <ErreurChargementPage
+        page="patrimoine"
+        titre="Patrimoine"
+        erreur={erreur}
+        surReessayer={() => actualiser()}
+      />
     );
   }
 
-  // Aucune position : ni courbe, ni répartition, ni chiffres. Un texte, une action.
   if (actifs.length === 0) {
     return (
       <div className="patrimoine">
@@ -295,18 +229,15 @@ export default function Patrimoine() {
         {outils}
       </div>
 
-      {/* Une erreur survenue alors que des données sont déjà affichées ne vide pas
-          l'écran : le message s'ajoute, les valeurs précédentes restent lisibles. */}
+      {/* Une erreur postérieure au chargement laisse les valeurs précédentes lisibles. */}
       {erreur && (
         <MessageErreur
-          nature={natureDeLErreur(erreur)}
+          nature={classifierErreurApi(erreur)}
           surAction={() => actualiser()}
           className="patrimoine__incident"
         />
       )}
 
-      {/* Confirmation brève après un enregistrement. Elle n'est pas une alerte : elle
-          confirme ce qui vient d'être demandé, sans interrompre. */}
       {confirmation && <Message>{confirmation}</Message>}
 
       {enRepli.length > 0 && (
@@ -341,12 +272,8 @@ export default function Patrimoine() {
               className="patrimoine__valeur"
             />
           )}
-          {/* Trois repères et non un seul chiffre suivi d'une file de variations. La
-              carte portait le patrimoine puis deux valeurs collées à sa suite, sans dire
-              laquelle répondait à quelle question ; elle en pose maintenant trois, chacune
-              nommée. Le pourcentage est rapporté au coût des positions encore détenues, et
-              non « depuis l'origine » : le sélecteur de période emploie déjà ce mot pour
-              l'évolution de la valeur suivie, qui est un autre calcul. */}
+          {/* Le pourcentage est rapporté au coût des positions détenues, à ne pas
+              confondre avec la performance « depuis l'origine » du sélecteur de période. */}
           <dl className="patrimoine__reperes">
             <div className="patrimoine__repere">
               <dt>Gains latents</dt>
@@ -382,9 +309,7 @@ export default function Patrimoine() {
         {/* Une répartition n'a de sens qu'à partir de deux positions. */}
         {actifs.length > 1 && portefeuille.repartition.length > 0 && (
           <Carte titre="Répartition" className="patrimoine__repartition">
-            {/* Les montants de la répartition sont en euros, comme le total : ils passent
-                par la même conversion, faute de quoi la bascule les suffixerait de « $ »
-                sans les convertir. */}
+            {/* Montants en euros : ils doivent être convertis comme le total. */}
             <Repartition
               repartition={portefeuille.repartition.map((part) => ({
                 ...part,
@@ -405,8 +330,6 @@ export default function Patrimoine() {
           identifiantPanneau="panneau-evolution"
         />
         <div id="panneau-evolution" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
-          {/* Une courbe à un seul point ne trace rien et laisse croire à une perte de
-              données : un message prend sa place tant que le suivi est trop jeune. */}
           {points.length < 2 ? (
             <p className="patrimoine__evolution-absente">
               L'évolution s'affichera après quelques jours de suivi.
@@ -418,11 +341,8 @@ export default function Patrimoine() {
           )}
         </div>
 
-        {/* Le pas de la courbe n'est pas régulier, et le taire serait mentir sur un
-            chiffre. Le point du jour est relevé à la première actualisation de la
-            journée : deux points voisins peuvent être distants de trente-huit heures
-            autant que de vingt-quatre. Un relevé à heure fixe demanderait un processus
-            de fond, que D49 écarte du périmètre ; l'annoncer ne coûte rien. */}
+        {/* Pas de relevé à heure fixe (aucune tâche planifiée) : l'écart entre deux
+            points varie, la légende le signale. */}
         {points.length >= 2 && (
           <p className="patrimoine__legende">
             Relevé quotidien, pris à l'heure de votre consultation : l'écart entre deux
@@ -463,17 +383,13 @@ export default function Patrimoine() {
         </div>
       </dl>
 
-      {/* Le bloc disparaît entièrement lorsqu'aucun seuil n'est franchi : une carte
-          vide intitulée « Seuils franchis » inquiéterait pour rien. */}
       {seuilsFranchis.length > 0 && (
         <Carte titre="Seuils franchis">
           <ul className="patrimoine__seuils">
             {seuilsFranchis.map((seuil) => (
               <li key={seuil.id}>
-                {/* Les valeurs comparées ici sont celles que contraint le schéma :
-                    'actif' ou 'capital_total' pour la cible, 'au_dessus' ou 'en_dessous'
-                    pour le sens. Elles se lisent dans backend/db/schema.sql, et non dans
-                    une documentation qui pourrait avoir vieilli. */}
+                {/* Valeurs contraintes par le schéma : cible 'actif' ou 'capital_total',
+                    sens 'au_dessus' ou 'en_dessous'. */}
                 {seuil.type_cible === 'capital_total'
                   ? 'Patrimoine total'
                   : (seuil.symbole ?? 'Position')}{' '}

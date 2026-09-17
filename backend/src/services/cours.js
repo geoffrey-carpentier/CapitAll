@@ -1,16 +1,11 @@
-// Point d'entrée unique des cours. Tout le reste du back-end passe par ici : jamais
-// par un adaptateur directement, et jamais par le cache directement.
-//
-// Les cours ne sont appelés que côté serveur (D6). Aucune URL de fournisseur ne
-// remonte jusqu'au front, qui ne voit que la forme commune renvoyée ci-dessous.
+// Point d'entrée unique des cours : le reste du serveur ne passe jamais directement par
+// un adaptateur ou par le cache. Les fournisseurs ne sont appelés que côté serveur.
 
 const cacheCours = require('./cacheCours');
 const { creerAdaptateurs } = require('../adaptateurs');
 const { ErreurFournisseur } = require('../erreurs');
 
-// Durées de vie du cache par classe d'actif (D21). Elles suivent le rythme réel de
-// publication de chaque source : les taux BCE ne bougent qu'une fois par jour ouvré,
-// une cryptomonnaie cote en continu. Regroupées ici, jamais recopiées ailleurs.
+// Durées de vie du cache par classe, selon le rythme de publication de chaque source.
 const DUREES_VIE_SECONDES = {
   crypto: 120,
   devise: 3600,
@@ -23,9 +18,8 @@ const DUREES_VIE_SECONDES = {
 const DUREE_VIE_PAR_DEFAUT = 300;
 
 function creerServiceCours({ adaptateurs, cache = cacheCours } = {}) {
-  // Référence au service lui-même, renseignée en fin de fonction. Elle permet à
-  // l'adaptateur des métaux d'obtenir le taux de change en repassant par ce service,
-  // donc par le cache, plutôt qu'en rappelant Frankfurter à chaque cours de métal.
+  // Renseigné en fin de fonction : l'adaptateur des métaux obtient le taux USD/EUR par
+  // ce service, donc par le cache.
   let service;
 
   const jeuAdaptateurs =
@@ -40,9 +34,7 @@ function creerServiceCours({ adaptateurs, cache = cacheCours } = {}) {
   async function getCours(symbole, type) {
     const symboleNormalise = symbole.toUpperCase();
 
-    // 1. Le cache d'abord : un cours frais évite un appel sortant. La classe entre dans
-    // la clé au même titre que le symbole : les deux forment l'identité de l'instrument,
-    // et un cours de cryptomonnaie n'a rien à répondre à une demande de devise.
+    // 1. Le cache d'abord. La classe fait partie de la clé avec le symbole.
     const enCache = await cache.lireCoursCache(type, symboleNormalise);
     if (enCache) {
       return { ...enCache, source: 'cache' };
@@ -66,13 +58,8 @@ function creerServiceCours({ adaptateurs, cache = cacheCours } = {}) {
 
       return { ...cours, source: 'fournisseur' };
     } catch (erreur) {
-      // 4. Fournisseur indisponible : plutôt qu'une erreur, le dernier cours connu,
-      // signalé comme tel avec son horodatage d'origine. Le front peut alors afficher
-      // « dernier cours connu le ... », comportement prévu par cas-utilisation.md.
-      //
-      // Le repli reste borné à la classe demandée. Un cours de repli emprunté à une
-      // autre classe serait un chiffre faux présenté comme une donnée d'archive, soit
-      // le pire des deux mondes.
+      // 4. Fournisseur indisponible : dernier cours connu, signalé comme repli avec son
+      // horodatage d'origine, et toujours pris dans la même classe.
       const dernierConnu = await cache.lireDernierCoursConnu(type, symboleNormalise);
 
       if (dernierConnu) {
@@ -83,16 +70,14 @@ function creerServiceCours({ adaptateurs, cache = cacheCours } = {}) {
         return { ...dernierConnu, source: 'repli' };
       }
 
-      // 5. Ni fournisseur ni repli : il n'y a rien à afficher, l'appelant doit le savoir.
+      // 5. Ni fournisseur ni repli.
       throw new ErreurFournisseur(
         `Cours indisponible pour ${symboleNormalise} et aucun cours connu en cache.`
       );
     }
   }
 
-  // Le tableau de bord demandera plusieurs cours d'un coup. La déduplication évite
-  // d'appeler deux fois le même symbole, cas fréquent lorsque plusieurs actifs
-  // partagent une même devise de conversion.
+  // Plusieurs cours d'un coup, dédupliqués par classe et symbole.
   async function getCoursMultiples(demandes) {
     const uniques = new Map();
     for (const { symbole, type } of demandes) {

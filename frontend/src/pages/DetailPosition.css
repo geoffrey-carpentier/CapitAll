@@ -14,7 +14,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Zone tactile de 44 px (D77) pour une flèche qui n'en mesure que douze. */
+  /* Zone tactile de 44 px autour d'une flèche de 12 px. */
   min-width: 44px;
   min-height: 44px;
   margin-left: calc(-1 * var(--espace-3));
@@ -37,9 +37,8 @@
   font-weight: var(--graisse-forte);
 }
 
-/* Le titre et sa commande de renommage, puis le formulaire qui prend leur place. Les
-   éléments passent à la ligne plutôt que de rétrécir : un nom long ne doit pas repousser
-   le bouton hors de l'écran en mobile. */
+/* Titre et renommage passent à la ligne : un nom long ne repousse pas le bouton hors de
+   l'écran. */
 .detail__nom-ligne {
   display: flex;
   align-items: baseline;
@@ -55,7 +54,7 @@
   border: 0;
   cursor: pointer;
   text-decoration: underline;
-  /* Zone tactile de 44 px en mobile (D77), obtenue par le remplissage. */
+  /* Zone tactile de 44 px en mobile. */
   padding: var(--espace-3) 0;
   min-height: 44px;
 }
@@ -88,11 +87,7 @@
   margin-left: auto;
 }
 
-/*
-  Bloc dominant de l'écran, seul de niveau 2 ici comme le total l'est sur le patrimoine.
-  Le fond relevé le détache sans le border d'une carte : c'est un aplat de valeur, pas
-  un contenant.
-*/
+/* Bloc dominant de l'écran, en aplat relevé plutôt qu'en carte bordée. */
 .detail__valorisation {
   background: var(--couleur-carte-haute);
   border-radius: var(--rayon-carte);
@@ -127,11 +122,7 @@
   color: var(--couleur-texte-attenue);
 }
 
-/*
-  Trio de contexte : quantité, cours, prix de revient. Trois lignes filetées et non
-  trois cartes, pour la même raison que sur l'écran Patrimoine — ce sont des repères,
-  pas des indicateurs de tête (D78).
-*/
+/* Quantité, cours et prix de revient : lignes filetées plutôt que cartes. */
 .detail__trio {
   display: flex;
   flex-direction: column;
@@ -211,8 +202,6 @@
 }
 
 @media (min-width: 768px) {
-  /* En desktop, le trio devient une rangée : la place existe, et les trois repères se
-     comparent mieux côte à côte qu'empilés. */
   .detail__trio {
     flex-direction: row;
     gap: var(--espace-4);
@@ -242,20 +231,15 @@
   color: var(--couleur-texte-attenue);
 }
 
-/*
-  Bande principale de la fiche : la valorisation et les trois repères de la position.
-  Empilées en mobile, côte à côte au-dessus du point de rupture, dans la même proportion
-  que le patrimoine et sa répartition sur l'écran d'accueil.
-*/
+/* Valorisation et repères : empilés en mobile, côte à côte au-dessus de 768 px, dans la
+   même proportion que l'écran Patrimoine. */
 .detail__principal {
   display: flex;
   flex-direction: column;
   gap: var(--espace-6);
 }
 
-/* Deux repères nommés sous le grand chiffre, plutôt qu'une file de variations dont on
-   devait deviner à quelle question chacune répondait. Même traitement que l'écran
-   Patrimoine, filet vertical compris. */
+/* Repères nommés sous la valorisation, comme sur l'écran Patrimoine. */
 .detail__reperes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -288,13 +272,8 @@
     align-items: stretch;
   }
 
-  /* Dans la bande, le trio reprend la colonne : trois lignes empilées y tiennent mieux
-     qu'une rangée, la largeur disponible étant celle d'une colonne et non d'un écran.
-
-     La marge intérieure est portée par les lignes et non par le cadre : posée sur le
-     cadre, elle arrêtait les filets de séparation à seize pixels du bord, et le cadre
-     paraissait plus large que son contenu. Les filets vont maintenant d'un bord à
-     l'autre, et le texte respire à l'intérieur. */
+  /* Dans la bande, le trio reste empilé. La marge intérieure est portée par les lignes
+     pour que les filets aillent d'un bord à l'autre du cadre. */
   .detail__principal .detail__trio {
     flex-direction: column;
     justify-content: center;

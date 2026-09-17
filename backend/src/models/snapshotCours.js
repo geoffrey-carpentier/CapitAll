@@ -1,27 +1,17 @@
 // Accès à la table snapshot_cours : l'historique du cours de chaque position.
 //
-// Même dérogation assumée que pour snapshot_valorisation (D8, D16, D81) : un cours
-// passé ne se recalcule pas. Les fournisseurs ne conservent pas leur historique de la
-// même façon selon la classe d'actif, et l'un d'eux n'en expose aucun. Ce que
-// l'application n'a pas relevé le jour même est définitivement perdu, ce qui fait de
-// chaque ligne un fait daté et non une valeur redondante.
+// Ces données ne sont pas redondantes : un cours passé ne peut pas être recalculé, tous
+// les fournisseurs n'exposant pas d'historique.
 //
-// Aucune requête de ce module ne prend un identifiant d'utilisateur pour le comparer
-// après coup : le propriétaire entre dans le SQL, par jointure sur actif, exactement
-// comme pour les transactions. Une lecture portant sur l'actif d'un autre compte ne
-// rend rien, et rien n'est indiscernable d'un actif inexistant (D52).
+// Le propriétaire est vérifié dans le SQL, par jointure sur actif : l'actif d'un autre
+// compte ne rend rien, comme un actif inexistant.
 
 const { query } = require('../db');
 
-// Écriture des cours du jour pour toutes les positions à la fois.
+// Cours du jour de toutes les positions, en une seule instruction.
 //
-// Une seule instruction plutôt qu'une par position : le tableau de bord charge six
-// actifs chez un utilisateur ordinaire, et autant d'allers-retours pour un effet de
-// bord d'historisation coûterait plus cher que le calcul lui-même.
-//
-// ON CONFLICT DO NOTHING s'appuie sur l'unicité (actif_id, date_snapshot). Deux onglets
-// ouverts en même temps passeraient tous deux un contrôle d'existence préalable ; ici,
-// c'est la base qui arbitre, comme pour la valorisation totale.
+// ON CONFLICT DO NOTHING s'appuie sur l'unicité (actif_id, date_snapshot) : c'est la
+// base qui arbitre entre deux écritures concurrentes.
 async function enregistrerSiAbsent(utilisateurId, positions) {
   const aHistoriser = positions.filter(
     (position) => position.cours_eur !== null && position.cours_eur !== undefined
@@ -47,17 +37,14 @@ async function enregistrerSiAbsent(utilisateurId, positions) {
     ]
   );
 
-  // Aucune ligne rendue signifie que l'historique du jour existait déjà : c'est le cas
-  // courant dès la seconde consultation, pas une erreur.
+  // Aucune ligne : l'historique du jour existait déjà.
   return rows;
 }
 
-// Historique d'une position, du plus ancien au plus récent, prêt à être tracé.
+// Historique d'une position, du plus ancien au plus récent.
 //
-// La date est formatée en chaîne par PostgreSQL plutôt que rendue comme colonne DATE :
-// le pilote la convertirait sinon en instant interprété dans le fuseau du serveur, et
-// la sérialisation JSON afficherait la veille à l'est de Greenwich. Une date de
-// snapshot est un jour calendaire, pas un instant.
+// La date est formatée par PostgreSQL : rendue en DATE, le pilote la convertirait en
+// instant dans le fuseau du serveur, et le JSON pourrait afficher la veille.
 async function listerParActif(actifId, utilisateurId, nombreDeJours) {
   const conditionDeDate = nombreDeJours ? 'AND sc.date_snapshot >= CURRENT_DATE - $3::integer' : '';
   const parametres = nombreDeJours ? [actifId, utilisateurId, nombreDeJours] : [actifId, utilisateurId];
@@ -76,11 +63,8 @@ async function listerParActif(actifId, utilisateurId, nombreDeJours) {
   return rows;
 }
 
-// Historique récent de toutes les positions d'un utilisateur, en une seule requête.
-//
-// C'est ce qui alimente la colonne de tendance du tableau des positions. Interroger
-// chaque actif séparément multiplierait les allers-retours par le nombre de lignes du
-// tableau, pour une information secondaire.
+// Historique récent de toutes les positions d'un utilisateur, en une requête, pour la
+// colonne de tendance du tableau des positions.
 async function listerRecentsParUtilisateur(utilisateurId, nombreDeJours) {
   const { rows } = await query(
     `SELECT sc.actif_id,

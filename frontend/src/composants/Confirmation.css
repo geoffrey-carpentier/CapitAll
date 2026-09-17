@@ -37,10 +37,8 @@
   gap: var(--espace-3);
 }
 
-/* Sous le point de rupture, les deux boutons s'empilent sur toute la largeur, et
-   l'inversion place l'annulation en bas, là où le pouce arrive naturellement. Le
-   bouton destructeur reste ainsi celui qu'il faut aller chercher, sans changer pour
-   autant l'ordre du document ni celui de la tabulation. */
+/* En mobile, l'annulation passe visuellement en bas, sous le pouce, sans changer l'ordre
+   de tabulation. */
 @media (max-width: 480px) {
   .confirmation__actions {
     flex-direction: column-reverse;

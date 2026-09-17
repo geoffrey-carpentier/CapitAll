@@ -1,8 +1,4 @@
-/*
-  L'anneau et sa légende. En dessous de 480 px ils s'empilent, au-dessus l'anneau prend
-  la gauche et la liste occupe le reste : c'est la seule mise en page qui garde les deux
-  colonnes de chiffres alignées quelle que soit la largeur.
-*/
+/* Anneau à gauche et liste à droite ; empilés sous 480 px. */
 .repartition {
   display: flex;
   align-items: center;
@@ -15,10 +11,7 @@
   height: 132px;
 }
 
-/*
-  Les quatre teintes de classe (D98). Elles ne sont posées qu'ici et sur le jeton : aucun
-  autre élément de l'interface ne les emploie, et aucune n'est un jeton sémantique.
-*/
+/* Teintes de classe, réservées à l'anneau et au jeton de classe. */
 .repartition__segment {
   stroke: var(--couleur-accent);
 }
@@ -44,28 +37,21 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* Les entrées portant désormais leur propre marge intérieure, l'écart se resserre. */
   gap: var(--espace-1);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/*
-  Trois colonnes : le jeton et son libellé, la part, le montant. La part est alignée à
-  droite du bloc de texte et le montant en bout de ligne, pour que les deux colonnes de
-  chiffres se lisent verticalement.
-*/
+/* Trois colonnes (jeton, part, montant), chiffres alignés à droite. */
 .repartition__entree {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: baseline;
   gap: var(--espace-4);
   font-size: var(--taille-corps);
-  /* Chaque entrée mène aux positions de sa classe. Le lien n'est pas souligné au repos :
-     quatre lignes soulignées dans une carte de synthèse se liraient comme un formulaire.
-     Il se signale au survol et au clavier, et sa zone reste haute de 44 px, comme toute
-     zone interactive en mobile (D77). */
+  /* Lien non souligné au repos, signalé au survol et au clavier ; zone de 44 px en
+     mobile. */
   padding: var(--espace-1) var(--espace-2);
   margin: 0 calc(-1 * var(--espace-2));
   min-height: 44px;
@@ -84,8 +70,7 @@
   text-decoration: underline;
 }
 
-/* Au-dessus du point de rupture, la souris vise juste : la hauteur minimale retombe à
-   24 px, comme les autres zones interactives de bureau. */
+/* 24 px suffisent au pointeur de bureau. */
 @media (min-width: 768px) {
   .repartition__entree {
     min-height: 24px;
@@ -105,8 +90,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Sur les écrans les plus étroits, l'anneau et la liste ne tiennent pas côte à côte
-   sans écraser les montants : l'anneau passe au-dessus, centré. */
 @media (max-width: 479px) {
   .repartition {
     flex-direction: column;

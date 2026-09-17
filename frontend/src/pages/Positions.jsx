@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthentification } from '../contexte/contexteAuthentification';
 import { useMouvement } from '../hooks/useMouvement';
-import { api, ErreurApi } from '../services/api';
+import { api } from '../services/api';
+import { classifierErreurApi } from '../utils/erreurs';
 import { convertir } from '../utils/conversion';
 import { comparerDecimales, CLASSES_QUANTITE } from '../utils/formatage';
 import Bouton from '../composants/Bouton';
@@ -14,42 +15,29 @@ import MasquageMontants from '../composants/MasquageMontants';
 import EtatVide from '../composants/EtatVide';
 import Squelette from '../composants/Squelette';
 import MessageErreur from '../composants/MessageErreur';
+import ErreurChargementPage from '../composants/ErreurChargementPage';
 import Message from '../composants/Message';
-import { lirePreference, ecrirePreference, CLE_DEVISE, CLE_MASQUAGE } from '../utils/preferences';
+import { usePreferencesAffichage } from '../hooks/usePreferencesAffichage';
 import './Positions.css';
 
-// Écran Positions.
-//
-// Vue exhaustive et comparable de ce qui est détenu. Il consomme la même réponse que le
-// tableau de bord : `GET /api/portefeuille` renvoie déjà chaque position valorisée, avec
-// son cours, son prix de revient, sa valeur et sa plus-value. Aucune de ces valeurs
-// n'est recalculée ici, conformément à la règle de répartition du calcul (D69).
-//
-// Le tri et le filtrage sont, eux, de la présentation : ils ne créent aucun fait
-// nouveau. Le tri passe malgré tout par le comparateur exact du module de formatage,
-// parce que comparer deux montants convertis en nombres rouvrirait la porte au flottant
-// que toute la chaîne s'emploie à tenir fermée.
+// Écran Positions : liste de toutes les positions, valorisées par
+// `GET /api/portefeuille`. Rien n'est recalculé ici ; le tri, simple présentation, passe
+// par le comparateur exact du module de formatage.
 
-// Colonnes triables, et leur libellé pour le menu de tri du mobile. Les en-têtes du
-// tableau desktop reprennent ces mêmes libellés : deux listes divergeraient.
+// Colonnes triables. Le menu mobile et les en-têtes du tableau partagent ces libellés.
 const TRIS = [
   { cle: 'valeur', libelle: 'Valorisation' },
   { cle: 'plus_value_latente', libelle: 'Plus-value' },
   { cle: 'quantite_detenue', libelle: 'Quantité' },
   { cle: 'cours_eur', libelle: 'Cours' },
   { cle: 'pru', libelle: 'Prix de revient' },
-  // La tendance sur trente jours n'existe que dans le tableau desktop : la liste
-  // mobile ne l'affiche pas, et proposer de trier sur une colonne invisible rendrait
-  // l'ordre de la liste inexplicable. Elle reste triable par son en-tête de colonne,
-  // et donc admise dans l'adresse.
+  // Absente de la liste mobile, donc de son menu de tri ; triable en desktop.
   { cle: 'tendance', libelle: '30 jours', surMobile: false },
 ];
 
 const TRIS_AUTORISES = TRIS.map((option) => option.cle);
 
-// Le tri porte sur des chaînes de montants. Toutes se lisent directement sur la
-// position, sauf la tendance, qui est un objet : son accès est décrit ici plutôt que
-// dans le comparateur, qui n'a pas à connaître la forme de la réponse.
+// Accès aux valeurs de tri qui ne sont pas une propriété directe de la position.
 const VALEURS_DE_TRI = {
   tendance: (position) => position.tendance_30j?.variation ?? null,
 };
@@ -58,23 +46,10 @@ function valeurDeTri(position, cle) {
   return (VALEURS_DE_TRI[cle] ?? ((ligne) => ligne[cle]))(position);
 }
 
-// Tri par défaut : la valorisation décroissante. C'est l'ordre qui répond à la question
-// posée en arrivant sur l'écran, « qu'est-ce qui pèse le plus ».
 const TRI_PAR_DEFAUT = { cle: 'valeur', descendant: true };
-
-function natureDeLErreur(erreur) {
-  if (!(erreur instanceof ErreurApi)) {
-    return 'api';
-  }
-  if (erreur.statut === 0) {
-    return 'reseau';
-  }
-  return erreur.statut === 401 ? 'session' : 'api';
-}
 
 export default function Positions() {
   const { jeton } = useAuthentification();
-  const naviguer = useNavigate();
   const [parametres, setParametres] = useSearchParams();
 
   const [portefeuille, setPortefeuille] = useState(null);
@@ -84,12 +59,10 @@ export default function Positions() {
 
   const mouvement = useMouvement();
 
-  const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
-  const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
+  const { devise, choisirDevise, masque, choisirMasquage } = usePreferencesAffichage();
 
-  // Filtres et tri vivent dans l'URL, pas dans l'état du composant : une liste filtrée
-  // se partage par son adresse et survit à un rechargement. Les valeurs reçues sont
-  // filtrées contre les listes autorisées, une adresse pouvant être bricolée à la main.
+  // Filtres et tri vivent dans l'adresse, pour survivre à un rechargement. Les valeurs
+  // sont validées contre les listes autorisées, l'adresse pouvant être modifiée à la main.
   const classesFiltrees = useMemo(
     () => (parametres.get('classes') ?? '').split(',').filter((c) => CLASSES_QUANTITE.includes(c)),
     [parametres]
@@ -135,8 +108,7 @@ export default function Positions() {
     [devise, taux]
   );
 
-  // Les positions sont converties une fois, ici, puis descendues telles quelles : la
-  // liste n'a pas à savoir quelle devise est affichée pour mettre en forme un montant.
+  // Conversion unique ici : le tableau n'a pas à connaître la devise affichée.
   const positions = useMemo(() => {
     const brutes = portefeuille?.actifs ?? [];
 
@@ -171,9 +143,7 @@ export default function Positions() {
   }
 
   function changerTri(cle) {
-    // Cliquer la colonne déjà triée inverse le sens ; cliquer une autre colonne la trie
-    // d'abord en décroissant, l'intérêt étant presque toujours de voir les plus grandes
-    // valeurs en premier.
+    // Même colonne : inversion du sens ; nouvelle colonne : décroissant d'abord.
     const descendant = tri.cle === cle ? !tri.descendant : true;
     modifierParametres({ tri: cle, sens: descendant ? 'desc' : 'asc' });
   }
@@ -192,17 +162,15 @@ export default function Positions() {
     setParametres(suivants, { replace: true });
   }
 
-  // Le mouvement change la position, son prix de revient et sa valorisation : l'écran se
-  // recharge, le serveur restant seul à recalculer.
+  // Le serveur recalcule tout après un mouvement : l'écran se recharge.
   function apresEnregistrement({ resume }) {
     mouvement.fermer();
     setConfirmation(resume);
     charger();
   }
 
-  // La feuille reçoit les positions telles que le serveur les a rendues, en euros, et
-  // non celles converties pour l'affichage : la saisie se fait dans la devise de
-  // référence, et un prix pré-rempli en dollars serait enregistré comme des euros.
+  // La feuille reçoit les positions en euros : un prix pré-rempli en dollars serait
+  // enregistré comme des euros.
   const feuille = mouvement.ouvert && (
     <FeuilleMouvement
       actifs={portefeuille?.actifs ?? []}
@@ -218,18 +186,9 @@ export default function Positions() {
       <BasculeDevise
         devise={devise}
         indisponible={!taux}
-        surChangement={(choix) => {
-          setDevise(choix);
-          ecrirePreference(CLE_DEVISE, choix);
-        }}
+        surChangement={choisirDevise}
       />
-      <MasquageMontants
-        masque={masque}
-        surChangement={(valeur) => {
-          setMasque(valeur);
-          ecrirePreference(CLE_MASQUAGE, valeur ? 'oui' : 'non');
-        }}
-      />
+      <MasquageMontants masque={masque} surChangement={choisirMasquage} />
     </div>
   );
 
@@ -240,7 +199,6 @@ export default function Positions() {
         <p className="lecteur-ecran-seulement" role="status">
           Chargement des positions.
         </p>
-        {/* Le squelette reprend la forme d'une liste de lignes, pas celle d'un bloc. */}
         <div className="positions__squelette">
           <Squelette forme="ligne" />
           <Squelette forme="ligne" />
@@ -253,18 +211,13 @@ export default function Positions() {
   }
 
   if (erreur && !portefeuille) {
-    const nature = natureDeLErreur(erreur);
-
     return (
-      <div className="positions">
-        <h1 className="positions__titre">Positions</h1>
-        <MessageErreur
-          nature={nature}
-          message={nature === 'api' ? erreur.message : undefined}
-          libelleAction={nature === 'session' ? 'Se reconnecter' : 'Réessayer'}
-          surAction={nature === 'session' ? () => naviguer('/connexion') : charger}
-        />
-      </div>
+      <ErreurChargementPage
+        page="positions"
+        titre="Positions"
+        erreur={erreur}
+        surReessayer={charger}
+      />
     );
   }
 
@@ -296,7 +249,7 @@ export default function Positions() {
       </div>
 
       {erreur && (
-        <MessageErreur nature={natureDeLErreur(erreur)} surAction={charger} />
+        <MessageErreur nature={classifierErreurApi(erreur)} surAction={charger} />
       )}
 
       {confirmation && <Message>{confirmation}</Message>}
@@ -322,9 +275,8 @@ export default function Positions() {
           surBascule={basculerClasse}
         />
 
-        {/* Le tri par en-tête de colonne n'existe qu'en desktop : sous le point de
-            rupture, la liste n'a pas de colonnes à cliquer. Ce menu le remplace, et
-            reste dans le document en desktop sans être affiché. */}
+        {/* Menu de tri mobile, qui remplace le tri par en-tête de colonne ; masqué en
+            desktop par le CSS. */}
         <div className="positions__tri-mobile">
           <label htmlFor="tri-positions">Trier par</label>
           <select
@@ -345,9 +297,8 @@ export default function Positions() {
         </div>
       </div>
 
-      {/* Absence de données après filtrage : l'en-tête et les filtres restent affichés,
-          seul le contenu de la liste change. C'est un résultat de recherche vide, pas un
-          portefeuille vide, et les deux ne se disent pas de la même façon. */}
+      {/* Filtre sans résultat, distinct d'un portefeuille vide : les filtres restent
+          affichés. */}
       {visibles.length === 0 ? (
         <div className="positions__sans-resultat" role="status">
           <p>Aucune position ne correspond aux classes sélectionnées.</p>

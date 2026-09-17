@@ -1,7 +1,5 @@
-// Contrôle des identifiants passés dans l'URL avant toute requête en base : un
-// paramètre non entier partirait sinon jusqu'à PostgreSQL, qui répondrait par une
-// erreur de conversion de type traduite en 500 alors qu'il s'agit d'une requête
-// malformée, donc d'un 400.
+// Contrôle des identifiants d'URL avant la base : un paramètre non entier doit donner
+// un 400, pas une erreur de conversion PostgreSQL traduite en 500.
 
 function validerParamId(nomParametre) {
   return (req, res, next) => {

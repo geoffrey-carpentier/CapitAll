@@ -1,12 +1,6 @@
-// Logique métier des alertes : aiguillage entre les deux cibles, traduction des
-// absences en erreurs métier, et enrichissement de la liste par l'écart restant avant
-// franchissement. Les règles de franchissement et l'écart lui-même vivent dans
-// evaluationAlertes.js, qui reste pur ; ce module est celui qui les alimente en
-// valeurs réelles.
-//
-// Comme les services du portefeuille, de l'authentification et des transactions, le
-// service reçoit ses dépendances en paramètre : il s'exécute alors sans base ni réseau
-// dans les tests, avec le même code qu'en production.
+// Service des alertes : création selon la cible, désactivation, et liste enrichie des
+// valeurs observées. Les règles de calcul restent dans evaluationAlertes.js (pur).
+// Dépendances injectées pour tester sans base ni réseau.
 
 const modeleAlerte = require('../models/alerte');
 const { creerServicePortefeuille } = require('./portefeuilleConsolide');
@@ -33,8 +27,7 @@ function creerServiceAlerte({
       valeurSeuil: donnees.valeur_seuil,
     });
 
-    // Aucune ligne insérée : l'actif n'existe pas ou appartient à quelqu'un d'autre.
-    // Les deux cas sont indiscernables pour l'appelant, conformément à D52.
+    // Aucune ligne insérée : actif inexistant ou d'un autre compte, cas indiscernables.
     if (!alerte) {
       throw new ErreurIntrouvable('Actif introuvable.');
     }
@@ -52,11 +45,8 @@ function creerServiceAlerte({
     return alerte;
   }
 
-  // Liste des alertes, chacune enrichie de la valeur actuellement observée sur sa
-  // cible et de l'écart restant avant franchissement, en pourcentage (E6, D69) : ce
-  // sont des valeurs dérivées d'un montant, elles ne se recalculent pas côté
-  // interface. Un cours indisponible sur la cible rend les deux champs nuls plutôt
-  // qu'une valeur inventée ; l'écran affiche alors une mention explicite.
+  // Chaque alerte reçoit la valeur observée et l'écart restant en pourcentage, calculés
+  // ici plutôt que dans l'interface. Sans cours, les deux valent null.
   async function lister(utilisateurId) {
     const alertesUtilisateur = await depotAlertes.listerParUtilisateur(utilisateurId);
 
@@ -68,10 +58,8 @@ function creerServiceAlerte({
       await servicePortefeuille.obtenirValeursObservees(utilisateurId);
 
     return alertesUtilisateur.map((alerte) => {
-      // Un capital amputé d'une position détenue est traité comme une valeur observée
-      // indisponible, exactement comme un cours manquant sur une alerte d'actif. L'écart
-      // restant se calculerait sinon contre un sous-total, et annoncerait une distance au
-      // seuil qui n'est pas la bonne. L'écran porte déjà la mention prévue pour ce cas.
+      // Un capital incomplet (position sans cours) est traité comme indisponible, pour
+      // ne pas calculer l'écart contre un sous-total.
       const observee = valeurObservee(alerte, {
         capitalTotal: capitalComplet ? capitalTotal : null,
         coursParActif,

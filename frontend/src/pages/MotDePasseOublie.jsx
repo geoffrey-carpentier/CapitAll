@@ -7,16 +7,11 @@ import Message from '../composants/Message';
 import './Authentification.css';
 import Marque from '../composants/Marque';
 
-// Demande de réinitialisation d'un mot de passe oublié (D23).
+// Demande de réinitialisation d'un mot de passe oublié, par l'utilisateur lui-même :
+// l'administrateur n'a pas accès aux comptes d'autrui.
 //
-// D23 laisse à l'administrateur un privilège minimal et lui interdit d'accéder aux
-// données d'autrui : réinitialiser le mot de passe d'un tiers reviendrait à lui donner
-// les clés d'un portefeuille. La récupération appartient donc à l'utilisateur seul.
-//
-// L'écran affiche toujours le même message, que l'adresse corresponde ou non à un
-// compte. C'est ce qui interdit de s'en servir pour découvrir qui est inscrit, et c'est
-// pour cela que le formulaire disparaît après l'envoi : le laisser en place inviterait à
-// réessayer une autre adresse pour comparer les réponses.
+// Le message est identique que l'adresse existe ou non, pour ne pas révéler qui est
+// inscrit, et le formulaire disparaît après l'envoi pour ne pas inviter à comparer.
 
 export default function MotDePasseOublie() {
   const [email, setEmail] = useState('');
@@ -57,14 +52,9 @@ export default function MotDePasseOublie() {
           <>
             <Message variante="information">{reponse.message}</Message>
 
-            {/* Le projet n'envoie pas de courriel : aucun service d'envoi n'est au
-                périmètre. La clé est donc affichée, pour que le parcours soit
-                démontrable de bout en bout.
-
-                Cette commodité est fermée par défaut côté serveur et n'a rien à faire
-                sur un déploiement réel : une clé qui n'apparaît que si l'adresse existe
-                révèle l'existence du compte. Le dire à l'écran vaut mieux que de le
-                laisser découvrir. */}
+            {/* Sans envoi de courriel, la clé est affichée pour la démonstration. Désactivé
+                par défaut côté serveur : en production, cet affichage révélerait
+                l'existence du compte. */}
             {reponse.jeton && (
               <div className="authentification__cle">
                 <p className="authentification__cle-titre">

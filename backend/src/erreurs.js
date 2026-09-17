@@ -1,6 +1,5 @@
-// Erreurs métier. Les services lèvent ces erreurs plutôt que de manipuler des codes
-// HTTP : la couche métier reste testable sans Express, et le gestionnaire centralisé
-// se charge seul de la traduction en réponse HTTP.
+// Erreurs métier : les services les lèvent sans connaître HTTP, le gestionnaire
+// centralisé les traduit en réponse.
 
 class ErreurMetier extends Error {
   constructor(message, statut) {
@@ -10,13 +9,8 @@ class ErreurMetier extends Error {
   }
 }
 
-// Règle de gestion non respectée, au-delà de la simple forme des données.
-//
-// Le second paramètre, facultatif, rattache l'erreur à un ou plusieurs champs du
-// formulaire, au format exact que produit déjà le middleware de validation :
-// [{ champ, message }]. Il sert aux règles qu'un schéma ne peut pas trancher seul
-// parce qu'elles demandent la base — un ancien mot de passe à comparer, par exemple.
-// Sans lui, l'interface ne saurait que signaler l'erreur en tête de formulaire.
+// Règle de gestion non respectée. `champs`, facultatif, rattache l'erreur à des champs
+// du formulaire au format du middleware de validation : [{ champ, message }].
 class ErreurValidation extends ErreurMetier {
   constructor(message, champs = null) {
     super(message, 400);
@@ -24,16 +18,14 @@ class ErreurValidation extends ErreurMetier {
   }
 }
 
-// Ressource inexistante, ou appartenant à quelqu'un d'autre : les deux cas renvoient
-// volontairement le même statut, voir le commentaire des contrôleurs du portefeuille.
+// Ressource inexistante ou d'un autre compte : même statut, pour ne rien révéler.
 class ErreurIntrouvable extends ErreurMetier {
   constructor(message) {
     super(message, 404);
   }
 }
 
-// Un fournisseur de cours externe est indisponible ou a renvoyé une réponse
-// inexploitable. 503 : le défaut est passager et ne vient pas de la requête du client.
+// Fournisseur de cours indisponible ou réponse inexploitable : 503, défaut passager.
 class ErreurFournisseur extends ErreurMetier {
   constructor(message) {
     super(message, 503);

@@ -1,6 +1,3 @@
-/* La page vit désormais dans la coquille : elle n'a plus à poser son propre fond ni son
-   propre centrage de page, seulement à occuper la zone de contenu. */
-
 .introuvable {
   display: flex;
   flex-direction: column;

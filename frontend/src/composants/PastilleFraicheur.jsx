@@ -1,23 +1,14 @@
 import './PastilleFraicheur.css';
 import { formaterAnciennete } from '../utils/duree';
 
-// Ancienneté et provenance d'un cours.
+// Ancienneté et provenance d'un cours, en deux états : à jour ou dernier cours connu.
 //
-// Deux états seulement, et ils ne se déduisent jamais d'un seuil d'ancienneté calculé
-// ici. La raison tient à la durée de vie du cache, qui est différenciée par classe côté
-// serveur : deux minutes pour une cryptomonnaie, cinq pour une action, dix pour un
-// métal, une heure pour une devise. Un cours de métal vieux de quatre minutes est donc
-// parfaitement frais là où un cours de crypto du même âge ne l'est plus. Un seuil unique
-// appliqué côté client se tromperait sur trois classes sur quatre, et reproduire les
-// quatre durées ici les dédoublerait, avec la certitude qu'elles divergent un jour.
+// L'état n'est jamais déduit d'un seuil d'ancienneté côté client : la durée de vie du
+// cache varie selon la classe d'actif, et seul le serveur sait qu'un cours vient du
+// repli. Le composant affiche ce fait sans le décider.
 //
-// Le serveur est seul à pouvoir trancher, et il le fait déjà : la réponse du
-// portefeuille énumère dans cours_indisponibles les actifs servis depuis le dernier
-// cours connu. La pastille rend compte de ce fait, elle ne le décide pas. Deux états,
-// jamais trois.
-//
-// La couleur ne porte rien seule : l'état tiède ajoute un symbole et l'ancienneté est
-// écrite en toutes lettres.
+// L'état tiède ajoute un symbole et l'ancienneté est écrite : la couleur ne porte rien
+// seule.
 
 export default function PastilleFraicheur({ source, horodatage, enRepli = false, ...proprietes }) {
   const anciennete = formaterAnciennete(horodatage);

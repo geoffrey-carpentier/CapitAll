@@ -34,9 +34,7 @@
   margin-top: var(--espace-6);
 }
 
-/* Indicateur de robustesse du mot de passe, à l'inscription.
-   Aucune couleur nouvelle : les segments acquis reprennent l'accent de l'interface.
-   La teinte ne porte rien à elle seule, la phrase sous la jauge dit tout. */
+/* Robustesse du mot de passe : la phrase sous la jauge porte l'information. */
 .robustesse {
   margin: calc(var(--espace-2) * -1) 0 var(--espace-4);
 }
@@ -63,8 +61,7 @@
   color: var(--couleur-texte-attenue);
 }
 
-/* Clé de réinitialisation affichée en mode démonstration. Le cadre la détache du reste
-   du texte : c'est une valeur à recopier, pas une phrase à lire. */
+/* Clé de réinitialisation affichée en mode démonstration, encadrée pour être recopiée. */
 .authentification__cle {
   margin: var(--espace-4) 0;
   padding: var(--espace-3);
@@ -83,7 +80,7 @@
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: var(--taille-legende);
-  /* La clé fait soixante-quatre caractères : elle doit se couper plutôt que déborder. */
+  /* Clé de 64 caractères : coupure plutôt que débordement. */
   word-break: break-all;
   color: var(--couleur-texte);
 }
@@ -94,11 +91,7 @@
   color: var(--couleur-texte-attenue);
 }
 
-/*
-  La marque en tête de carte. Les écrans d'authentification sont les seuls où le rail de
-  navigation n'existe pas encore : sans elle, rien n'y nomme l'application, et l'écran de
-  connexion d'un outil patrimonial gagne à dire tout de suite chez qui l'on est.
-*/
+/* Marque en tête de carte : sans navigation, rien d'autre ne nomme l'application. */
 .authentification__marque {
   display: flex;
   align-items: center;
@@ -109,12 +102,8 @@
   letter-spacing: 0.01em;
 }
 
-/*
-  Une lueur très basse derrière la carte, dans les deux teintes de la marque. Elle donne
-  un fond à un écran qui n'était qu'un aplat, sans rien ajouter à charger : c'est un
-  dégradé calculé par le navigateur, pas une image. Les valeurs sont volontairement
-  faibles — au-delà, le contraste du texte de la carte s'en trouverait affecté.
-*/
+/* Lueur en dégradé CSS derrière la carte, volontairement faible pour préserver le
+   contraste du texte. */
 .authentification {
   position: relative;
   isolation: isolate;

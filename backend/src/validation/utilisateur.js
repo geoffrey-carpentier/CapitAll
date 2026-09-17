@@ -1,9 +1,6 @@
-// Schémas de validation des entrées d'authentification (D41).
-// Deux règles de sécurité gouvernent ces schémas :
-//   - le champ role n'apparaît dans aucun schéma d'entrée (D23), un rôle ne s'obtient
-//     que par le seed ou une intervention SQL directe ;
-//   - .strict() rejette toute clé inconnue plutôt que de l'ignorer silencieusement,
-//     ce qui bloque au passage toute tentative d'injecter role dans le corps de requête.
+// Schémas de validation des entrées d'authentification.
+//   - role n'apparaît dans aucun schéma : un rôle ne s'obtient que par le seed ou en SQL ;
+//   - .strict() rejette toute clé inconnue, donc toute tentative d'injecter role.
 
 const { z } = require('zod');
 
@@ -44,12 +41,10 @@ const schemaConnexion = z
   })
   .strict();
 
-// Demande de récupération : l'adresse seule. La réponse est la même que l'adresse
-// corresponde ou non à un compte, ce qui interdit d'en faire un outil d'énumération.
+// Demande de récupération : l'adresse seule.
 const schemaDemandeRecuperation = z.object({ email }).strict();
 
-// Longueur du jeton rendu par le service : trente-deux octets en hexadécimal. Le motif
-// refuse tout ce qui n'a pas cette forme avant même d'interroger la base.
+// Jeton de 32 octets en hexadécimal : toute autre forme est refusée avant la base.
 const LONGUEUR_JETON_HEXADECIMAL = 64;
 
 const schemaReinitialisation = z
@@ -60,14 +55,12 @@ const schemaReinitialisation = z
       .toLowerCase()
       .length(LONGUEUR_JETON_HEXADECIMAL, 'Cette demande de réinitialisation est invalide.')
       .regex(/^[0-9a-f]+$/, 'Cette demande de réinitialisation est invalide.'),
-    // Le nouveau mot de passe obéit à la règle de l'inscription : une réinitialisation
-    // ne doit pas être un chemin pour poser un mot de passe plus faible qu'à la création.
+    // Même règle qu'à l'inscription.
     nouveauMotDePasse: motDePasse,
   })
   .strict();
 
-// motDePasse est exporté pour que le changement de mot de passe (validation/compte.js)
-// applique exactement la même règle de longueur qu'à l'inscription, sans la recopier.
+// motDePasse est réutilisé par validation/compte.js, sans recopier la règle.
 module.exports = {
   schemaInscription,
   schemaConnexion,

@@ -1,15 +1,8 @@
 // Lecture d'une valeur numérique venue d'un fournisseur.
 //
-// Le client HTTP rend désormais les littéraux numériques sous forme de chaînes, pour ne
-// pas perdre les chiffres exacts à l'analyse du JSON. Les adaptateurs reçoivent donc des
-// chaînes en production. Leurs tests, eux, injectent souvent des nombres écrits
-// directement dans une fixture, et il n'y a aucune raison de les contraindre à écrire
-// des chaînes pour satisfaire une mécanique interne : les deux formes sont acceptées.
-//
-// Une valeur reçue sous forme de nombre a déjà perdu ce qui dépassait la capacité d'un
-// flottant. Rien ne le rattrape ici : le rôle de cette fonction est de rendre la
-// meilleure écriture décimale disponible, pas de prétendre reconstituer une précision
-// perdue en amont.
+// En production, le client HTTP rend des chaînes ; les tests injectent souvent des
+// nombres. Les deux formes sont acceptées, mais un nombre a déjà perdu la précision au-delà
+// d'un flottant.
 
 const { versNotationPositionnelle } = require('../utils/decimal');
 
@@ -26,7 +19,7 @@ function chaineDecimale(valeur) {
 }
 
 // Même lecture, restreinte aux valeurs strictement positives : un cours nul ou négatif
-// n'est pas une cotation, c'est une réponse à écarter.
+// est écarté.
 function chaineDecimalePositive(valeur) {
   const texte = chaineDecimale(valeur);
 

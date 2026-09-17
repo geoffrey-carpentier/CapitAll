@@ -1,15 +1,9 @@
 import './BasculeDevise.css';
 
-// Bascule de la devise d'affichage.
+// Bascule de la devise d'affichage, sans requête : le taux est déjà dans la réponse du
+// portefeuille, et les données restent en euros.
 //
-// Elle ne déclenche aucune requête : le taux accompagne déjà la réponse du portefeuille,
-// et c'est l'interface qui l'applique. Rien n'est recalculé ni stocké dans une seconde
-// devise, les montants restent en euros de bout en bout, l'euro étant la devise de
-// référence des calculs.
-//
-// Deux boutons plutôt qu'un interrupteur : l'état courant est alors lisible sans avoir
-// à deviner ce que la bascule ferait si on l'actionnait. Ils forment un groupe de
-// boutons radio, ce qui donne la navigation aux flèches sans code supplémentaire.
+// Deux boutons radio plutôt qu'un interrupteur : l'état courant se lit directement.
 
 const DEVISES = [
   { code: 'EUR', libelle: '€', description: 'Afficher les montants en euros' },
@@ -31,8 +25,7 @@ export default function BasculeDevise({ devise = 'EUR', surChangement, indisponi
           role="radio"
           aria-checked={devise === code}
           aria-label={description}
-          // Le taux vient du serveur : sans lui, la conversion serait une invention.
-          // Le bouton euro reste actif, c'est la devise de référence.
+          // Sans taux transmis par le serveur, seul l'euro reste disponible.
           disabled={indisponible && code !== 'EUR'}
           className={`bascule-devise__choix${devise === code ? ' bascule-devise__choix--actif' : ''}`}
           onClick={() => surChangement?.(code)}

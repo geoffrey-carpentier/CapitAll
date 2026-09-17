@@ -1,8 +1,5 @@
-// Contexte d'authentification et hook d'accès.
-//
-// Séparés du fournisseur, qui est un composant : un module qui exporte à la fois des
-// composants et des valeurs empêche le rechargement à chaud de fonctionner
-// correctement pendant le développement.
+// Contexte d'authentification et hook d'accès, séparés du fournisseur pour préserver le
+// rechargement à chaud.
 
 import { createContext, useContext } from 'react';
 

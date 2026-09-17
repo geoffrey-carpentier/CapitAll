@@ -9,16 +9,11 @@ import Montant from './Montant';
 import Message from './Message';
 import './FeuilleSeuil.css';
 
-// Création d'un seuil de surveillance, sur un actif ou sur le patrimoine total.
+// Création d'un seuil sur un actif ou sur le patrimoine total.
 //
-// La feuille présente la valeur actuelle de la cible en grand, puis la bascule au-dessus
-// ou en dessous, le champ de seuil et des décalages rapides qui le pré-remplissent à
-// distance de cette valeur. Rien de tout cela n'est un calcul métier : la valeur
-// affichée en grand est celle transmise par l'écran d'origine, et un décalage n'est
-// qu'une proposition de saisie, revalidée comme toute autre valeur par le schéma du
-// serveur. La règle de franchissement, elle, n'est jamais recalculée ici (D69) : la
-// feuille ne fait qu'énoncer en clair qu'elle est inclusive et qu'elle ne joue qu'une
-// fois, ce que le serveur applique déjà.
+// Les décalages rapides ne sont qu'une proposition de saisie, revalidée par le serveur.
+// La règle de franchissement n'est pas recalculée ici : la feuille se contente de
+// l'énoncer.
 
 const SENS = [
   { code: 'au_dessus', libelle: 'Au-dessus de' },
@@ -36,20 +31,9 @@ function normaliser(valeur) {
     .replace(',', '.');
 }
 
-// Application exacte d'un décalage en points de pourcentage à une valeur, sans jamais
-// passer par un nombre à virgule flottante : un décalage n'est qu'une proposition de
-// saisie, mais la proposition doit être aussi exacte qu'une valeur saisie à la main,
-// faute de quoi le champ afficherait un artefact d'arrondi.
-//
-// Le calcul travaillait auparavant en centimes, et refusait donc toute valeur portant
-// plus de deux décimales : les quatre boutons restaient sans effet sur un cours de
-// 88 123,4567891 comme sur un taux de 1,12345678. Ce n'était pas un défaut propre aux
-// cryptomonnaies, contrairement à ce qu'on en avait déduit, mais une limite de précision
-// qui touchait toutes les classes.
-//
-// Il travaille désormais à l'échelle de la valeur reçue, quelle qu'elle soit. Le facteur
-// reste toujours positif, les quatre décalages proposés étant compris entre -10 et +10
-// points, ce qui dispense de traiter un facteur négatif.
+// Décalage exact en points de pourcentage, en BigInt à l'échelle de la valeur reçue,
+// pour éviter tout artefact d'arrondi dans le champ. Les décalages restant entre -10 et
+// +10 points, le facteur est toujours positif.
 function decalerMontant(montant, pointsDePourcentage) {
   if (typeof montant !== 'string' || !MOTIF_MONTANT.test(montant)) {
     return null;
@@ -91,17 +75,12 @@ function erreursDuServeur(echec) {
 }
 
 export default function FeuilleSeuil({
-  // Positions valorisées du portefeuille, avec leur cours ; capitalTotal est la valeur
-  // totale déjà consolidée par le serveur. Les deux viennent de GET /api/portefeuille,
-  // chargé par l'écran d'origine.
+  // Positions valorisées et valeur totale, issues de GET /api/portefeuille.
   actifs = [],
   capitalTotal = '0',
   cibleInitiale = 'capital_total',
-  // Faux depuis l'écran de détail d'une position (E4) : celui-ci ne connaît qu'un
-  // actif et ne charge pas la valeur totale du patrimoine. Retirer l'option évite
-  // d'afficher une valeur actuelle trompeuse (zéro) si elle était sélectionnée, sans
-  // pour autant obliger l'écran de détail à charger le portefeuille pour cette seule
-  // occasion.
+  // Faux sur l'écran de détail, qui ne charge pas la valeur totale : l'option afficherait
+  // une valeur actuelle fausse.
   permettrePatrimoineTotal = true,
   surFermeture,
   surEnregistrement,
@@ -149,9 +128,7 @@ export default function FeuilleSeuil({
       ? 'Le seuil est obligatoire.'
       : !MOTIF_MONTANT.test(valeurNormalisee)
         ? 'Le seuil doit être une valeur positive.'
-        : // La positivité se lit sur les chiffres. Passer par Number ferait rentrer le
-          // flottant que toute la chaîne tient à l'écart, et sur un seuil de cours très
-          // faible la conversion perdrait précisément ce qui distingue la valeur de zéro.
+        : // Positivité lue sur les chiffres, sans conversion en flottant.
           !/[1-9]/.test(valeurNormalisee)
           ? 'Le seuil doit être strictement positif.'
           : null;
@@ -276,9 +253,7 @@ export default function FeuilleSeuil({
           </p>
         )}
 
-        {/* Décalages rapides : une proposition de saisie, jamais une valeur imposée.
-            Ils restent indisponibles tant que la valeur actuelle de la cible ne l'est
-            pas non plus, faute de base à décaler. */}
+        {/* Indisponibles sans valeur actuelle de la cible. */}
         <div className="seuil__decalages" role="group" aria-label="Décalages rapides">
           {DECALAGES.map((points) => {
             const propose = valeurActuelle !== null ? decalerMontant(valeurActuelle, points) : null;
@@ -290,11 +265,8 @@ export default function FeuilleSeuil({
                 disabled={envoi || propose === null}
                 onClick={() => {
                   setValeurSeuil(propose);
-                  // Le sens suit le signe du décalage. Sans cela, un décalage négatif
-                  // laissait le sens par défaut « au-dessus » sur un seuil placé sous la
-                  // valeur actuelle : l'alerte était franchie à l'instant même de sa
-                  // création. Le sens reste modifiable ensuite, le décalage ne fait que
-                  // proposer celui qui correspond à l'intention exprimée.
+                  // Le sens suit le signe du décalage, sinon un seuil négatif « au-dessus »
+                  // serait franchi dès sa création.
                   setSens(points < 0 ? 'en_dessous' : 'au_dessus');
                   setQuitte(true);
                 }}

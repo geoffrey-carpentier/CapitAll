@@ -7,8 +7,6 @@
   padding: var(--espace-8) var(--espace-4);
 }
 
-/* Forme décorative, volontairement abstraite : une illustration figurative daterait
-   plus vite que le reste de l'interface et n'apporterait aucune information. */
 .etat-vide__illustration {
   width: 64px;
   height: 64px;
