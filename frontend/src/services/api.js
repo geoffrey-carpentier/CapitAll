@@ -194,8 +194,6 @@ export const api = {
   // statut qu'accepte le schéma de validation du serveur.
   desactiverAlerte: (jeton, id) =>
     requete(`/alertes/${id}`, { methode: 'PATCH', corps: { statut: 'desactivee' }, jeton }),
-  // Le compte agit toujours sur le porteur du jeton : aucune de ces trois routes ne
-  // reçoit d'identifiant d'utilisateur, il n'y en a donc aucun à transmettre.
   // Récupération d'un mot de passe oublié (D23). La réponse est la même que l'adresse
   // corresponde ou non à un compte : le formulaire ne peut pas servir à découvrir
   // quelles adresses sont inscrites.
@@ -203,6 +201,8 @@ export const api = {
     requete('/auth/mot-de-passe-oublie', { methode: 'POST', corps: donnees }),
   reinitialiserMotDePasse: (donnees) =>
     requete('/auth/reinitialisation', { methode: 'POST', corps: donnees }),
+  // Le compte agit toujours sur le porteur du jeton : aucune de ces trois routes ne
+  // reçoit d'identifiant d'utilisateur, il n'y en a donc aucun à transmettre.
   changerMotDePasse: (jeton, donnees) =>
     requete('/compte/mot-de-passe', { methode: 'PATCH', corps: donnees, jeton }),
   // Le mot de passe accompagne la suppression : c'est le serveur qui le vérifie, la
