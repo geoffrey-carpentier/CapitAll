@@ -1,29 +1,17 @@
 /*
-  Composition en trois bandes. Le patrimoine et sa répartition se partagent la première,
-  la courbe occupe seule la seconde sur toute la largeur, les chiffres de contexte
-  ferment l'écran. Ces derniers sont des lignes de texte séparées par des filets, jamais
-  des cartes, parce que trois cartes de même poids donneraient à croire à trois
-  indicateurs de tête là où il n'y en a qu'un.
-
-  La courbe a quitté la colonne latérale où elle tenait sur un tiers de largeur : c'est
-  la seule figure de l'écran qui gagne à s'étendre, et la répartition, désormais dotée de
-  son anneau (D98), occupe cette colonne bien mieux qu'elle.
-
-  Deux niveaux de contenant seulement, comme le veut la grammaire visuelle : la carte au
-  fond accentué pour le patrimoine, la carte bordée pour le graphe et la répartition.
-  Les chiffres de contexte ne sont pas dans un contenant, ils sont à plat sur le fond.
+  Composition en trois bandes : patrimoine et répartition, puis la courbe sur toute la
+  largeur, puis les chiffres de contexte. Ces derniers sont des lignes à plat séparées
+  par des filets, pas des cartes, pour ne pas concurrencer le patrimoine.
 */
 
 .patrimoine {
   display: flex;
   flex-direction: column;
-  /* Rythme vertical : 32 px avant un changement de section. */
+  /* 32 px avant un changement de section. */
   gap: var(--espace-8);
 }
 
-/* L'en-tête se replie plutôt que de pousser la page au débordement. Le bouton
-   d'actualisation, désormais affiché en mobile, portait la barre d'outils à 378 px : en
-   deçà de cette largeur, c'est la page entière qui défilait latéralement. */
+/* L'en-tête passe à la ligne pour éviter un défilement horizontal en mobile. */
 .patrimoine__entete {
   display: flex;
   align-items: center;
@@ -44,14 +32,8 @@
   gap: var(--espace-2);
 }
 
-/* La borne suit celle de la navigation, pas celle du passage en tableau : le bouton
-   central de la barre basse reste affiché jusqu'à 899 px, et l'action ne doit exister
-   qu'une fois à l'écran. En deçà de 900 px, l'en-tête laisse donc faire la barre.
-
-   La règle vise le seul bouton de saisie, désigné par sa classe. Elle portait sur la
-   classe générique des boutons : le bouton d'actualisation, ajouté ensuite dans la même
-   barre, disparaissait avec lui en mobile — sur une application pensée pour le mobile,
-   la commande n'existait donc que sur grand écran. */
+/* Sous 900 px, la barre de navigation basse porte déjà le bouton de saisie : seul
+   celui-ci est masqué, le bouton d'actualisation reste visible. */
 @media (max-width: 899px) {
   .patrimoine__outils > .patrimoine__ajout {
     display: none;
@@ -65,11 +47,7 @@
   gap: var(--espace-6);
 }
 
-/*
-  Niveau 2, le seul bloc au fond accentué de toute l'application. Le fond est le dérivé
-  dédié (D70) et non la couleur de carte ordinaire : c'est lui qui distingue ce bloc des
-  cartes bordées, sans qu'il ait besoin d'une bordure d'accent pour se signaler.
-*/
+/* Seul bloc au fond accentué de l'application. */
 .patrimoine__total {
   padding: var(--espace-6);
   border-radius: var(--rayon-carte);
@@ -93,12 +71,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/*
-  Les deux repères qui suivent le patrimoine. Chacun porte son intitulé : deux valeurs
-  posées à la suite du grand chiffre laissaient deviner laquelle répondait à quelle
-  question. Ils sont séparés par un filet vertical, comme les chiffres de contexte du bas
-  d'écran, plutôt que par des cartes qui leur donneraient le poids d'indicateurs de tête.
-*/
+/* Repères nommés sous le patrimoine, séparés par un filet vertical. */
 .patrimoine__reperes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -141,7 +114,6 @@
   font-size: var(--taille-corps);
 }
 
-/* Légende du graphe : elle qualifie la courbe sans lui disputer l'attention. */
 .patrimoine__legende {
   margin: var(--espace-2) 0 0;
   color: var(--couleur-texte-attenue);
@@ -149,7 +121,6 @@
   line-height: 1.4;
 }
 
-/* Chiffres de contexte : à plat, séparés par des filets. */
 .patrimoine__contexte {
   margin: 0;
 }
@@ -187,18 +158,12 @@
   font-size: var(--taille-corps);
 }
 
-/*
-  À partir du point de rupture, le patrimoine occupe environ les deux tiers de la
-  largeur et la courbe le reste, les chiffres de contexte passant en colonne latérale.
-  C'est la composition asymétrique de la spécification : rien n'est une grille de
-  quatre cartes égales.
-*/
+/* Composition asymétrique : patrimoine et répartition côte à côte, chiffres de
+   contexte en colonnes. */
 @media (min-width: 768px) {
   .patrimoine__principal {
     display: grid;
-    /* La répartition prend la plus grande part. Le bloc de patrimoine porte trois
-       chiffres et n'a pas besoin de plus, tandis que la répartition doit loger un anneau
-       et quatre lignes chiffrées : c'est elle que l'espace supplémentaire sert. */
+    /* La répartition, plus chargée en lignes chiffrées, prend la plus grande part. */
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     align-items: stretch;
   }
@@ -223,8 +188,6 @@
     gap: var(--espace-1);
     padding: 0 0 0 var(--espace-4);
     border-bottom: 0;
-    /* Le filet devient vertical : il sépare toujours, sans découper la page en
-       cartes. */
     border-left: 1px solid var(--couleur-bordure);
   }
 }

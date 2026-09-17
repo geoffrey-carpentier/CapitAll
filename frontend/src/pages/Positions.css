@@ -1,12 +1,11 @@
 .positions {
   display: flex;
   flex-direction: column;
-  /* 24 px entre blocs d'une même section, selon le rythme vertical. */
+  /* 24 px entre blocs d'une même section. */
   gap: var(--espace-6);
 }
 
-/* Même précaution que sur les deux autres écrans à barre d'outils : l'en-tête se
-   replie, il ne comprime rien et ne pousse jamais la page au débordement. */
+/* L'en-tête passe à la ligne plutôt que de déborder. */
 .positions__entete {
   display: flex;
   align-items: center;
@@ -20,8 +19,7 @@
   font-size: var(--taille-titre);
 }
 
-/* Le nombre de positions affichées suit le titre : il change avec les filtres et sert
-   de retour immédiat à leur activation. */
+/* Nombre de positions affichées, mis à jour par les filtres. */
 .positions__compte {
   margin-left: var(--espace-2);
   color: var(--couleur-texte-attenue);
@@ -42,10 +40,7 @@
   }
 }
 
-/* Même borne que sur l'écran Patrimoine, et pour la même raison : le bouton central de
-   la barre basse porte l'action jusqu'à 899 px. Aligner cette règle sur le passage en
-   tableau, à 768 px, faisait coexister les deux commandes sur toute la bande
-   intermédiaire. */
+/* Sous 900 px, la barre de navigation basse porte déjà le bouton de saisie. */
 @media (max-width: 899px) {
   .positions__outils > .bouton {
     display: none;
@@ -97,16 +92,11 @@
   margin: 0;
 }
 
-/* Le tableau porte sept colonnes dont le contenu ne se coupe pas : sa largeur minimale
-   dépasse l'espace disponible dès que le rail latéral prend ses 220 px, c'est-à-dire à
-   partir de 900 px et jusqu'à ce que la fenêtre soit assez large. C'est au tableau de
-   défiler dans son propre cadre, jamais à la page de défiler horizontalement.
+/* Le tableau défile dans son cadre plutôt que la page, notamment quand le rail latéral
+   réduit la largeur disponible.
 
-   Le positionnement relatif fait partie du cadre et n'est pas décoratif. Les textes
-   réservés aux lecteurs d'écran que porte le tableau sont en position absolue, et un
-   élément absolu n'est pas rogné par le débordement d'un ancêtre qui n'est pas son bloc
-   conteneur : ils restaient à leur place dans le tableau déroulé, en dehors du cadre, et
-   étendaient à eux seuls la zone de défilement de la page. */
+   position: relative est nécessaire : les textes réservés aux lecteurs d'écran sont en
+   position absolue et, sans lui, échapperaient au cadre et élargiraient la page. */
 @media (min-width: 768px) {
   .positions-liste {
     position: relative;
@@ -121,7 +111,7 @@
     justify-content: space-between;
   }
 
-  /* Les en-têtes de colonne portent le tri : le menu ferait double emploi. */
+  /* Les en-têtes de colonne portent le tri. */
   .positions__tri-mobile {
     display: none;
   }

@@ -36,13 +36,11 @@ import {
 } from '../utils/preferences';
 import './DetailPosition.css';
 
-// Même arbitrage que sur le tableau de bord : la bibliothèque de tracé pèse plus lourd
-// que tout le reste de l'application, elle n'est chargée qu'à l'affichage du graphe.
+// La bibliothèque de tracé pèse plus que le reste de l'application : elle n'est chargée
+// qu'à l'affichage du graphe.
 const Courbe = lazy(() => import('../composants/Courbe'));
 
-// Ce que la suppression d'un mouvement recalcule, dit avant de la confirmer. La
-// conséquence n'est pas la même selon la nature du mouvement, et l'annoncer de travers
-// sur un mouvement irréversible vaut moins que de ne rien annoncer du tout.
+// Ce que la suppression recalcule dépend de la nature du mouvement.
 const TITRES_SUPPRESSION = {
   achat: 'Supprimer cet achat ?',
   vente: 'Supprimer cette vente ?',
@@ -58,32 +56,21 @@ const CONSEQUENCES_SUPPRESSION = {
     'La suppression de cette sortie recalculera la quantité détenue et la valeur sortie du portefeuille.',
 };
 
-// Nombre de jours retenus pour chaque plage. C'est de la présentation, les performances
-// de chaque plage restant calculées par le serveur sur la série entière.
-//
-// La fenêtre se compte en jours et non en points : la série n'est pas continue — un
-// point n'existe que si l'utilisateur a consulté ce jour-là, et il n'est pas écrit du
-// tout quand le cours manque. Garder les sept derniers points pouvait donc couvrir trois
-// semaines sous l'étiquette « Semaine ». Les bornes sont désormais celles que le serveur
-// applique pour calculer la performance affichée juste à côté.
+// Fenêtre de chaque plage, en jours et non en points : la série est trouée (un point
+// n'existe que les jours de consultation). Les bornes sont celles que le serveur
+// applique pour calculer la performance affichée.
 const JOURS_PAR_PERIODE = { jour: 1, semaine: 7, mois: 30, annee: 365, origine: null };
 
 const PERIODE_PAR_DEFAUT = 'mois';
 
-// Écran de détail d'une position.
+// Écran de détail d'une position : valeur, coût, historique des mouvements et seuils.
 //
-// Il répond à quatre questions : ce que la position vaut, ce qu'elle a coûté, comment
-// on y est arrivé, et ce qui la surveille. La composition suit cet ordre.
+// Tout ce qui est chiffré vient de `GET /api/actifs/:id`, y compris l'effet de chaque
+// mouvement sur le prix de revient. L'écran n'applique que le taux d'affichage, en
+// arithmétique exacte.
 //
-// Tout ce qui est chiffré vient de `GET /api/actifs/:id`. L'effet de chaque mouvement
-// sur le prix de revient y compris : il est calculé par le serveur, qui détient le
-// moteur, et non reconstitué ici (D69). Les seules opérations numériques de l'écran
-// sont l'application du taux d'affichage, en arithmétique exacte, et la géométrie des
-// barres de progression.
-//
-// Une position appartenant à un autre compte répond 404 et non 403 (D52). L'écran la
-// traite donc exactement comme une position inexistante, sans chercher à distinguer
-// les deux : c'est précisément ce que la règle vise.
+// Une position d'un autre compte répond 404, comme une position inexistante : l'écran
+// ne distingue pas les deux cas.
 
 function natureDeLErreur(erreur) {
   if (!(erreur instanceof ErreurApi)) {
@@ -95,14 +82,11 @@ function natureDeLErreur(erreur) {
   if (erreur.statut === 401) {
     return 'session';
   }
-  // Un 400 n'est pas une panne : le serveur a répondu, et il a refusé. Le distinguer
-  // ici évite d'annoncer « le serveur n'a pas pu répondre » alors qu'il a répondu, et
-  // de proposer une action qui échouerait à l'identique.
+  // Un 400 est un refus, pas une panne : réessayer échouerait à l'identique.
   return erreur.statut === 400 ? 'refus' : 'api';
 }
 
-// Seuls les seuils encore en vigueur ou déjà franchis concernent l'écran : un seuil
-// désactivé n'a plus rien à surveiller.
+// Un seuil désactivé n'est pas affiché.
 const STATUTS_AFFICHES = ['active', 'declenchee'];
 
 export default function DetailPosition() {
@@ -118,8 +102,7 @@ export default function DetailPosition() {
   const [periode, setPeriode] = useState(PERIODE_PAR_DEFAUT);
   const [aSupprimer, setASupprimer] = useState(null);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
-  // Null tant que le nom n'est pas en cours d'édition : la chaîne vide est un nom vide,
-  // pas une absence d'édition, et confondre les deux ouvrirait le formulaire tout seul.
+  // null hors édition ; la chaîne vide est un nom vide en cours d'édition.
   const [renommage, setRenommage] = useState(null);
   const [renommageEnCours, setRenommageEnCours] = useState(false);
   const [erreurRenommage, setErreurRenommage] = useState(null);
@@ -139,8 +122,7 @@ export default function DetailPosition() {
       const detail = await api.actif(jeton, id);
       setPosition(detail);
 
-      // Les seuils sont secondaires : leur indisponibilité ne doit pas emporter la
-      // fiche entière, qui reste lisible sans l'onglet de surveillance.
+      // Un échec sur les seuils ne doit pas empêcher d'afficher la fiche.
       try {
         const alertes = await api.alertes(jeton);
         setSeuils(
@@ -178,9 +160,7 @@ export default function DetailPosition() {
     [devise, taux]
   );
 
-  // Points du graphe, bornés à la plage choisie puis convertis à l'affichage. La
-  // conversion vient après le découpage : convertir quatre-vingt-dix points pour n'en
-  // tracer sept serait du travail perdu.
+  // Découpage à la plage avant conversion, pour ne convertir que les points tracés.
   const points = useMemo(() => {
     const serie = position?.historique?.points ?? [];
     const fenetre = fenetreDePeriode(serie, JOURS_PAR_PERIODE[periode]);
@@ -205,8 +185,7 @@ export default function DetailPosition() {
 
     try {
       const renomme = await api.renommerActif(jeton, id, nom);
-      // La réponse porte la ligne telle que la base la rend : c'est elle qui est
-      // affichée, et non le texte saisi. Le nom montré est donc le nom enregistré.
+      // Affiche le nom enregistré par la base, pas le texte saisi.
       setPosition((precedente) => ({ ...precedente, nom: renomme.nom }));
       setRenommage(null);
       setConfirmation(`Position renommée en ${renomme.nom}.`);
@@ -223,16 +202,13 @@ export default function DetailPosition() {
     try {
       if (aSupprimer.type === 'position') {
         await api.supprimerActif(jeton, id);
-        // La position n'existe plus : rester sur sa fiche afficherait un écran mort.
         naviguer('/positions', { replace: true });
         return;
       }
 
       await api.supprimerTransaction(jeton, id, aSupprimer.mouvement.id);
       setASupprimer(null);
-      // Le prix de revient et toutes les valeurs qui en dépendent viennent de changer :
-      // c'est le serveur qui les recalcule, l'écran se recharge plutôt que de retirer
-      // une ligne de son côté.
+      // Le serveur recalcule prix de revient et plus-values : l'écran se recharge.
       await charger();
     } catch (echec) {
       setASupprimer(null);
@@ -259,8 +235,6 @@ export default function DetailPosition() {
     );
   }
 
-  // Une position introuvable, ou appartenant à un autre compte : le serveur répond 404
-  // dans les deux cas et l'écran ne fait pas la différence non plus.
   if (erreur && !position) {
     const nature = natureDeLErreur(erreur);
 
@@ -305,9 +279,8 @@ export default function DetailPosition() {
   const enRepli = position.source_cours === 'repli';
   const sansCours = position.cours_eur === null;
   const mouvements = position.transactions ?? [];
-  // Copie de la frise pour l'affichage : ses montants suivent la devise choisie, comme le
-  // reste de la fiche. Les mouvements d'origine, en euros, restent ceux que la feuille de
-  // correction reçoit, la saisie se faisant dans la devise de référence.
+  // Montants de la frise convertis pour l'affichage. La feuille de correction reçoit les
+  // mouvements d'origine, en euros.
   const mouvementsAffiches = mouvements.map((mouvement) => ({
     ...mouvement,
     prix_unitaire: afficher(mouvement.prix_unitaire),
@@ -319,8 +292,7 @@ export default function DetailPosition() {
   }));
   const performances = position.historique?.performances ?? {};
 
-  // Le sens du tracé vient de la performance calculée par le serveur, jamais d'une
-  // comparaison entre deux montants convertis en nombres.
+  // Le sens du tracé vient de la performance calculée par le serveur.
   const sensDeLaPeriode = sensVariation(performances[periode] ?? '0') ?? 'stable';
   const natureErreur = erreur ? natureDeLErreur(erreur) : null;
 
@@ -334,12 +306,8 @@ export default function DetailPosition() {
 
         <JetonClasse classe={position.type} symbole={position.symbole} />
         <div className="detail__identite">
-          {/* Le nom d'une position lui appartient : c'est celui que l'utilisateur a saisi,
-              pas celui du fournisseur, et rien ne le rendait modifiable alors que la
-              route existait depuis la création des actifs (D51 révisée, S-26). Le symbole
-              et la classe, eux, ne changent pas : ils identifient l'actif et en changer
-              ferait porter à des mouvements déjà enregistrés une nature qu'ils n'ont pas
-              eue. */}
+          {/* Seul le nom est modifiable : symbole et classe identifient l'actif, et les
+              changer modifierait la nature des mouvements déjà enregistrés. */}
           {renommage === null ? (
             <div className="detail__nom-ligne">
               <h1 className="detail__nom">{position.nom}</h1>
@@ -411,9 +379,8 @@ export default function DetailPosition() {
         </div>
       </div>
 
-      {/* Une erreur survenue alors que la fiche est déjà affichée ne la vide pas. Un
-          refus métier y porte le motif rendu par le serveur, et aucune action : la même
-          demande serait refusée de la même façon. */}
+      {/* Une erreur postérieure au chargement ne vide pas la fiche. Un refus métier
+          n'offre pas de nouvelle tentative. */}
       {erreur && position && (
         <MessageErreur
           nature={natureErreur}
@@ -436,12 +403,6 @@ export default function DetailPosition() {
         </Message>
       )}
 
-      {/*
-        Valorisation et repères de la position se partagent une bande, comme le patrimoine
-        et sa répartition sur l'écran d'accueil. La valorisation occupait auparavant toute
-        la largeur pour trois chiffres, laissant ses deux tiers droits vides, et les repères
-        s'alignaient en dessous sur une rangée qui n'avait plus rien à quoi se comparer.
-      */}
       <div className="detail__principal">
       <section className="detail__valorisation" aria-labelledby="titre-valorisation">
         <h2 id="titre-valorisation" className="detail__intitule">
@@ -527,12 +488,8 @@ export default function DetailPosition() {
       </dl>
       </div>
 
-      {/*
-        Le graphe de cours et sa ligne de prix de revient (D79). L'aire se teinte de part
-        et d'autre de cette ligne : c'est le geste graphique propre à l'application, celui
-        qui donne à voir d'un regard quand la position a été en gain et quand elle a été
-        en perte. Il s'insère entre le trio de contexte et la carte à onglets.
-      */}
+      {/* Graphe du cours : l'aire se teinte de part et d'autre de la ligne du prix de
+          revient, pour montrer les périodes de gain et de perte. */}
       <Carte className="detail__evolution">
         <SelecteurPeriode
           periode={periode}
@@ -541,9 +498,8 @@ export default function DetailPosition() {
           identifiantPanneau="panneau-cours"
         />
         <div id="panneau-cours" role="tabpanel" aria-labelledby={`onglet-periode-${periode}`}>
-          {/* Une série trop courte ne trace rien et laisserait croire à une perte de
-              données. L'historique s'amorce à la première consultation : il n'est jamais
-              interpolé pour combler les jours manquants. */}
+          {/* L'historique commence à la première consultation et n'est jamais
+              interpolé. */}
           {points.length < 2 ? (
             <p className="detail__evolution-absente">
               L'évolution du cours s'affichera après quelques jours de suivi.
@@ -603,8 +559,7 @@ export default function DetailPosition() {
                   {seuils.map((seuil) => (
                     <li key={seuil.id}>
                       <p className="detail__seuil-intitule">
-                        {/* Valeurs contraintes par le schéma : 'au_dessus' ou 'en_dessous'.
-                            Elles se lisent dans backend/db/schema.sql. */}
+                        {/* Valeurs contraintes par le schéma : 'au_dessus' ou 'en_dessous'. */}
                         {seuil.sens_seuil === 'au_dessus' ? 'Au-dessus de' : 'En dessous de'}{' '}
                         {masque ? (
                           <span aria-label="Montant masqué">••••</span>
@@ -634,8 +589,6 @@ export default function DetailPosition() {
       </Carte>
 
       <div className="detail__actions">
-        {/* La feuille s'ouvre déjà réglée sur cette position : elle est la seule que
-            l'écran connaisse, et le sélecteur n'aurait rien d'autre à proposer. */}
         <Bouton variante="secondaire" onClick={() => mouvement.ouvrir(position.id)}>
           Nouveau mouvement
         </Bouton>
@@ -669,17 +622,13 @@ export default function DetailPosition() {
         />
       )}
 
-      {/* L'écran de détail ne connaît qu'une position : la feuille reçoit celle-ci et
-          elle seule, avec son cours et sa quantité détenue, sans requête de plus. Les
-          montants transmis sont ceux du serveur, en euros, et non ceux convertis pour
-          l'affichage : la saisie se fait dans la devise de référence. */}
+      {/* La feuille reçoit la seule position de l'écran, avec ses montants en euros. */}
       {mouvement.ouvert && (
         <FeuilleMouvement
           actifs={[position]}
           actifInitialId={position.id}
-          // Le mouvement à corriger est cherché dans la frise déjà chargée : l'adresse
-          // ne porte que son identifiant, et une adresse recopiée sur un mouvement
-          // supprimé depuis ouvre alors la feuille en création plutôt qu'en erreur.
+          // Un identifiant de correction inconnu (mouvement supprimé depuis) ouvre la
+          // feuille en création plutôt qu'en erreur.
           mouvement={
             mouvement.idCorrection
               ? (mouvements.find(
@@ -696,11 +645,8 @@ export default function DetailPosition() {
         />
       )}
 
-      {/* Même principe que la feuille de mouvement ci-dessus : l'écran de détail ne
-          connaît qu'une position, donc qu'une cible possible. Le sélecteur de
-          patrimoine total est retiré (spécification E4, « Création d'un seuil
-          pré-réglée sur cet actif ») plutôt que de charger la valeur totale du
-          patrimoine pour cette seule occasion. */}
+      {/* Seuil pré-réglé sur cette position : la cible « patrimoine total » n'est pas
+          proposée, l'écran ne chargeant pas la valeur totale. */}
       {seuilFeuille.ouvert && (
         <FeuilleSeuil
           actifs={[position]}

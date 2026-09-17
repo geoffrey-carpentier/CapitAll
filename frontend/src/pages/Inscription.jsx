@@ -7,16 +7,11 @@ import Message from '../composants/Message';
 import './Authentification.css';
 import Marque from '../composants/Marque';
 
-// Contrôles repris de ceux du serveur, qui reste l'autorité : cette validation n'est
-// qu'un confort, elle évite un aller-retour réseau pour une erreur évidente.
+// Validation locale de confort, alignée sur le serveur qui reste l'autorité.
 const LONGUEUR_MINIMALE_MOT_DE_PASSE = 10;
 
-// Robustesse du mot de passe, évaluée à la frappe (spécification E1). Quatre critères
-// indépendants, simplement comptés : il ne s'agit pas de prétendre mesurer une entropie,
-// mais de dire à l'utilisateur ce qui manque pendant qu'il saisit.
-//
-// Le serveur reste l'autorité et n'exige que la longueur minimale : cet indicateur
-// conseille, il ne bloque pas. Un mot de passe long et sans chiffre reste acceptable.
+// Indicateur de robustesse : quatre critères comptés, pour dire ce qui manque. Il
+// conseille sans bloquer ; le serveur n'exige que la longueur minimale.
 const CRITERES_MOT_DE_PASSE = [
   {
     cle: 'longueur',
@@ -91,15 +86,11 @@ export default function Inscription() {
 
     setEnCours(true);
     try {
-      // L'inscription enchaîne sur la connexion : inutile de ressaisir les mêmes
-      // identifiants immédiatement après avoir créé le compte.
+      // L'inscription connecte directement l'utilisateur.
       await inscrire({ email, motDePasse, ...(pseudo ? { pseudo } : {}) });
-      // Le tableau de bord distingue le premier lancement d'un portefeuille devenu
-      // vide : le compte vient d'être créé, l'accueil n'est pas le même.
       naviguer('/patrimoine', { replace: true, state: { premierLancement: true } });
     } catch (echec) {
-      // Le serveur renvoie une erreur par champ sur une validation, et un message
-      // global sur un conflit d'adresse déjà utilisée.
+      // Erreurs par champ sur une validation, message global sur une adresse déjà prise.
       if (echec.champs) {
         setErreursChamps(
           Object.fromEntries(echec.champs.map((entree) => [entree.champ, entree.message]))
@@ -147,10 +138,8 @@ export default function Inscription() {
             obligatoire
           />
 
-          {/* La jauge ne fait que redire ce que la phrase énonce déjà : elle est donc
-              masquée aux technologies d'assistance, et aucune information ne repose sur
-              la seule couleur. Le nombre de segments remplis double la teinte pour ceux
-              qui ne la perçoivent pas. */}
+          {/* La jauge redit la phrase : masquée aux lecteurs d'écran, et le nombre de
+              segments double la couleur. */}
           {motDePasse.length > 0 && (
             <div className="robustesse">
               <div className="robustesse__jauge" aria-hidden="true">

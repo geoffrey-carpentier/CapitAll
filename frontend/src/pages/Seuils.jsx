@@ -23,27 +23,13 @@ import BasculeDevise from '../composants/BasculeDevise';
 import MasquageMontants from '../composants/MasquageMontants';
 import './Seuils.css';
 
-// Écran Seuils.
+// Écran Seuils : les seuils franchis, puis ceux en cours, visibles ensemble.
 //
-// Il répond à une seule question devant chaque ligne : suis-je proche ? Deux groupes,
-// les seuils franchis puis ceux en cours, plutôt qu'un filtre à bascule : la
-// spécification les veut visibles ensemble, le franchissement étant l'information la
-// plus importante et devant donc ouvrir la liste plutôt que se cacher derrière un clic.
+// L'écart restant et la valeur observée arrivent calculés par `GET /api/alertes` : rien
+// n'est recalculé ici. L'écart est écrit en toutes lettres, la barre ne porte jamais
+// seule l'information.
 //
-// L'écart restant avant franchissement est une valeur dérivée d'un montant : elle vient
-// déjà calculée dans la réponse de `GET /api/alertes`, avec la valeur actuellement
-// observée sur la cible (D69). Rien n'est recalculé ici. Il est écrit en toutes lettres
-// à côté de la barre de progression, qui ne porte jamais seule l'information.
-//
-// Un seuil désactivé ne surveille plus rien : comme dans l'onglet Seuils de l'écran de
-// détail, il disparaît de la liste après son retrait plutôt que d'y rester barré.
-//
-// La devise d'affichage et le masquage des montants sont des préférences globales,
-// déjà appliquées aux écrans Patrimoine, Positions et Détail d'une position : cet écran
-// reprend exactement le même mécanisme (D83), y compris dans le texte de confirmation
-// du retrait, qui masque le seuil au même titre que n'importe quel autre montant
-// affiché — rien ne justifie qu'un dialogue de confirmation échappe à une préférence
-// qui s'applique partout ailleurs.
+// Un seuil retiré (désactivé) disparaît de la liste.
 const STATUTS_AFFICHES = ['active', 'declenchee'];
 
 function natureDeLErreur(erreur) {
@@ -73,15 +59,8 @@ function nomCible(seuil) {
   return seuil.type_cible === 'capital_total' ? 'Patrimoine total' : (seuil.nom_actif ?? seuil.symbole);
 }
 
-// Retrait d'un seuil.
-//
-// Le bouton était une commande pleine largeur au bas de chaque carte : il pesait autant
-// que le seuil qu'il supprime, et sur une liste de six seuils, six commandes de
-// suppression occupaient plus de place que l'information. Il devient une croix au coin
-// supérieur droit, à l'emplacement où l'on ferme une chose depuis toujours.
-//
-// La croix seule ne se prononce pas : le nom accessible dit ce qu'elle retire, et la
-// confirmation qui suit rappelle le seuil concerné. Sa zone reste à 44 px.
+// Croix de retrait : son nom accessible précise le seuil concerné, et sa zone tactile
+// reste à 44 px.
 function BoutonRetrait({ seuil, surRetrait }) {
   return (
     <button
@@ -101,9 +80,7 @@ export default function Seuils() {
   const { jeton } = useAuthentification();
   const naviguer = useNavigate();
   const seuilFeuille = useSeuil();
-  // Le bouton flottant de la barre mobile ouvre la saisie d'un mouvement sur l'écran
-  // courant plutôt que d'y renvoyer depuis le Patrimoine : cet écran doit donc héberger
-  // la feuille, comme le font le tableau de bord, les positions et le détail.
+  // Le bouton flottant de la barre mobile ouvre la saisie sur l'écran courant.
   const mouvement = useMouvement();
 
   const [seuils, setSeuils] = useState(null);
@@ -122,10 +99,8 @@ export default function Seuils() {
     setErreur(null);
 
     try {
-      // Le portefeuille sert à la fois à la feuille de création, qui a besoin des cours
-      // et de la valeur totale, et à la bascule euro/dollar, qui a besoin du taux
-      // d'affichage porté par cette même réponse (D69, D43) : son échec ne doit donc
-      // pas priver l'écran de la liste des seuils, qui reste l'information principale.
+      // Le portefeuille fournit cours, valeur totale et taux d'affichage ; son échec ne
+      // doit pas empêcher d'afficher les seuils.
       const [alertes, portefeuilleCourant] = await Promise.all([
         api.alertes(jeton),
         api.portefeuille(jeton).catch(() => null),
@@ -150,8 +125,7 @@ export default function Seuils() {
   const franchis = useMemo(() => visibles.filter((seuil) => seuil.statut === 'declenchee'), [visibles]);
   const enCours = useMemo(() => visibles.filter((seuil) => seuil.statut === 'active'), [visibles]);
 
-  // Type de l'actif ciblé, pour le jeton de classe : l'alerte ne le porte pas
-  // elle-même, seul le portefeuille le sait.
+  // Le type de l'actif ciblé n'est connu que du portefeuille.
   const typeParActif = useMemo(() => {
     const table = new Map();
     for (const position of portefeuille?.actifs ?? []) {
@@ -162,14 +136,11 @@ export default function Seuils() {
 
   const taux = portefeuille?.taux_affichage?.eur_vers_usd ?? null;
 
-  // Sans taux, afficher() rend déjà la valeur en euros (garde ci-dessous) : le symbole
-  // montré doit retomber sur l'euro lui aussi, pour ne jamais écrire un montant en
-  // euros avec un symbole dollar. Cas étroit (échec du taux avec une préférence déjà
-  // en dollars) mais propre à cet écran, seul à survivre à l'échec du portefeuille.
+  // Sans taux, afficher() rend des euros : le symbole doit rester celui de l'euro. Cet
+  // écran est le seul à s'afficher malgré l'échec du portefeuille.
   const deviseAffichee = taux ? devise : 'EUR';
 
-  // Conversion à l'affichage seulement, comme sur les trois autres écrans : les
-  // montants restent en euros dans les données, seule la présentation change (D43).
+  // Conversion à l'affichage seulement : les données restent en euros.
   const afficher = useCallback(
     (montantEnEuros) => {
       if (montantEnEuros === null || montantEnEuros === undefined) {
@@ -203,10 +174,8 @@ export default function Seuils() {
     charger();
   }
 
-  // Un mouvement change la valeur des positions et du patrimoine, donc l'écart restant
-  // affiché devant chaque seuil : l'écran se recharge, le serveur restant seul à
-  // recalculer. Aucun seuil n'est évalué pour autant — l'évaluation appartient à
-  // l'actualisation du tableau de bord (D50).
+  // Un mouvement change les écarts restants : l'écran se recharge. L'évaluation des
+  // seuils reste réservée à l'actualisation du tableau de bord.
   function apresMouvement({ resume }) {
     mouvement.fermer();
     setConfirmation(resume);
@@ -397,9 +366,7 @@ export default function Seuils() {
       {aRetirer && (
         <Confirmation
           titre="Retirer ce seuil ?"
-          // Le montant du seuil suit la même préférence de masquage que le reste de
-          // l'écran : rien ne justifie qu'un dialogue de confirmation échappe à une
-          // préférence qui s'applique partout ailleurs.
+          // Le masquage s'applique aussi au montant de la confirmation.
           consequence={
             <>
               Le seuil {nomCible(aRetirer)}{' '}

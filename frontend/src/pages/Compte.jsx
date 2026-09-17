@@ -24,9 +24,7 @@ function natureDeLErreur(erreur) {
   return erreur.statut === 401 ? 'session' : 'api';
 }
 
-// Le serveur renvoie les erreurs de formulaire champ par champ, au format
-// [{ champ, message }]. La conversion en objet évite de parcourir le tableau à chaque
-// champ affiché.
+// Erreurs du serveur au format [{ champ, message }], indexées par champ.
 function erreursParChamp(echec) {
   if (!(echec instanceof ErreurApi) || !echec.champs) {
     return {};
@@ -55,9 +53,7 @@ export default function Compte() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
 
-  // Préférences d'affichage : mêmes clés et mêmes accesseurs que les autres écrans, qui
-  // les lisent au montage. Cet écran est celui qui les règle, il n'en détient pas une
-  // seconde copie (D83).
+  // Mêmes clés de préférences que les autres écrans, qui les relisent au montage.
   const [devise, setDevise] = useState(() => lirePreference(CLE_DEVISE, 'EUR'));
   const [masque, setMasque] = useState(() => lirePreference(CLE_MASQUAGE, 'non') === 'oui');
 
@@ -96,8 +92,7 @@ export default function Compte() {
     evenement.preventDefault();
     setConfirmationChangement(null);
 
-    // La concordance des deux saisies est une vérification de formulaire, pas une règle
-    // métier : le serveur n'a pas à connaître le champ de confirmation.
+    // Contrôle de formulaire : le serveur ne reçoit pas la confirmation.
     if (nouveauMotDePasse !== confirmationMotDePasse) {
       setErreursMotDePasse({
         confirmationMotDePasse: 'La confirmation ne correspond pas au nouveau mot de passe.',
@@ -113,9 +108,8 @@ export default function Compte() {
         ancienMotDePasse,
         nouveauMotDePasse,
       });
-      // Le changement révoque les jetons antérieurs, celui de cette session compris. Le
-      // serveur en remet un neuf : le retenir est ce qui permet à la session courante de
-      // survivre, pendant que les autres sessions du compte tombent.
+      // Le changement révoque tous les jetons antérieurs : le nouveau jeton garde la
+      // session courante ouverte, les autres sessions sont fermées.
       remplacerJeton(token);
       setAncienMotDePasse('');
       setNouveauMotDePasse('');
@@ -140,9 +134,8 @@ export default function Compte() {
     try {
       const { blob, nomFichier } = await api.exporterMouvements(jeton);
 
-      // Le fichier arrive par un appel authentifié : il n'existe que dans la page, et
-      // c'est un lien éphémère qui le remet à l'utilisateur. Un lien pointant sur
-      // l'adresse de l'API partirait sans jeton, le jeton ne vivant qu'en mémoire (D57).
+      // Un lien direct vers l'API partirait sans en-tête d'authentification : le fichier
+      // est obtenu par un appel authentifié puis remis par un lien éphémère.
       const adresse = URL.createObjectURL(blob);
       const lien = document.createElement('a');
       lien.href = adresse;
@@ -163,8 +156,7 @@ export default function Compte() {
     setSuppressionEnCours(true);
 
     try {
-      // Le mot de passe part avec la demande : c'est le serveur qui le vérifie, et lui
-      // seul qui décide si la suppression a lieu.
+      // Le mot de passe est vérifié par le serveur, seul à décider de la suppression.
       await api.supprimerCompte(jeton, { motDePasse: motDePasseSuppression });
       deconnecter();
       naviguer('/connexion', {
@@ -334,8 +326,7 @@ export default function Compte() {
             <dt>Version</dt>
             <dd>0.1.0</dd>
           </div>
-          {/* Sources et fréquences réelles : elles reprennent les adaptateurs branchés
-              et les durées de vie du cache définies côté serveur (D21). */}
+          {/* À garder aligné sur les adaptateurs et les durées de cache du serveur. */}
           <div className="compte__ligne">
             <dt>Cryptos</dt>
             <dd>Coinbase, toutes les 2 minutes</dd>
@@ -377,9 +368,8 @@ export default function Compte() {
         </p>
       </Carte>
 
-      {/* Le libellé du bouton de confirmation diffère de celui qui ouvre le dialogue :
-          deux commandes portant le même nom accessible seraient indistinguables à
-          l'oreille, et c'est la destructrice qui prêterait à confusion. */}
+      {/* Libellé de confirmation distinct du bouton d'ouverture, pour les lecteurs
+          d'écran. */}
       {aSupprimer && (
         <Confirmation
           titre="Supprimer définitivement votre compte ?"

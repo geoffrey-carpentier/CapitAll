@@ -4,9 +4,7 @@
   gap: var(--espace-6);
 }
 
-/* L'en-tête se replie plutôt que de comprimer ses commandes. Sans le repli, à 320 px,
-   la bascule euro/dollar était rognée de six pixels : son overflow: hidden masquait le
-   choix « $ » sans barre de défilement, donc sans que rien ne l'annonce. */
+/* L'en-tête passe à la ligne : à 320 px, la bascule de devise serait sinon rognée. */
 .seuils__entete {
   display: flex;
   align-items: center;
@@ -33,8 +31,6 @@
   gap: var(--espace-3);
 }
 
-/* Le groupe des seuils franchis est annoncé par un titre de section, pas seulement par
-   une couleur : la structure porte l'information autant que la teinte. */
 .seuils__titre-groupe {
   margin: 0;
   font-size: var(--taille-corps);
@@ -59,9 +55,7 @@
   gap: var(--espace-3);
 }
 
-/* La progression justifie une frontière visuelle propre (spécification E6) : le
-   contour reprend la couleur d'avertissement, déjà réservée par D70 à un état qui
-   demande un regard. */
+/* Contour d'avertissement, réservé aux états qui demandent un regard. */
 .seuils__carte--franchi {
   border-color: var(--couleur-avertissement);
 }
@@ -99,9 +93,7 @@
   border-radius: var(--rayon-pilule);
 }
 
-/* Croix de retrait, au coin supérieur droit de la carte. Elle remplace une commande
-   pleine largeur qui pesait autant que le seuil qu'elle supprime. La zone reste à 44 px,
-   même si le dessin n'en occupe que la moitié. */
+/* Croix de retrait au coin de la carte ; zone de 44 px pour un dessin de 16 px. */
 .seuils__retrait {
   flex: none;
   display: grid;
@@ -131,11 +123,7 @@
   background: var(--couleur-carte-haute);
 }
 
-/*
-  Un seuil franchi n'appelle plus de décision : il rend compte. Sa carte se resserre donc
-  à un peu plus de la moitié de la hauteur d'une carte en cours — une ligne au lieu de
-  trois — et le groupe passe en tête d'écran, ce que fait déjà l'ordre du document.
-*/
+/* Un seuil franchi n'appelle plus de décision : sa carte tient sur une ligne. */
 .seuils__carte--franchi {
   padding: var(--espace-3) var(--espace-4);
 }
@@ -148,13 +136,7 @@
   margin: 0;
 }
 
-/*
-  Deux seuils par ligne au-dessus du point de rupture. Une carte de seuil tient sur trois
-  lignes de texte au plus : empilées sur toute la largeur d'un écran de bureau, six d'entre
-  elles remplissaient deux hauteurs d'écran pour un contenu qui n'occupait qu'un tiers de
-  la largeur. Les cartes gardent la même hauteur sur une ligne, ce que « stretch » assure
-  sans avoir à figer une valeur.
-*/
+/* Deux seuils par ligne sur grand écran, cartes de même hauteur sur une ligne. */
 @media (min-width: 900px) {
   .seuils__liste {
     display: grid;
