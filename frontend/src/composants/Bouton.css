@@ -33,20 +33,15 @@
   border-color: var(--couleur-accent);
 }
 
-/* Action destructrice. Le rouge est celui des moins-values : c'est la seule couleur du
-   système qui signale déjà une perte, et l'employer ici n'en introduit aucune autre. Le
-   bouton reste en contour plutôt qu'en aplat, pour qu'il n'attire pas l'oeil davantage
-   que l'annulation placée à côté de lui. */
+/* Action destructrice : rouge des moins-values, en contour pour ne pas attirer l'œil
+   plus que l'annulation voisine. */
 .bouton--danger {
   background: transparent;
   color: var(--couleur-negatif);
   border-color: var(--couleur-negatif);
 }
 
-/* Le fond de survol se dérive du jeton plutôt que d'être recopié en rgb. Il portait
-   encore rgba(240, 86, 79) — l'ancien rouge #F0564F, abandonné quand le jeton est passé
-   à #F8645D pour atteindre 4,5:1 sur la carte haute. Une valeur recopiée ne suit pas la
-   correction du jeton dont elle dérive ; color-mix, si. */
+/* Fond dérivé du jeton par color-mix : il suit toute modification du jeton. */
 .bouton--danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--couleur-negatif) 12%, transparent);
 }

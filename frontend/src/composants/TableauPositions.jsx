@@ -8,20 +8,11 @@ import CourbeMiniature from './CourbeMiniature';
 import { LIBELLES_CLASSE } from '../utils/classesActifs';
 import { formaterMontant, symboleDevise } from '../utils/formatage';
 
-// Liste des positions détenues.
+// Liste des positions : liste de liens en mobile, tableau à colonnes en desktop.
 //
-// Deux rendus pour une même donnée, et non deux composants. Sous le point de rupture,
-// une liste de liens à deux niveaux : la lecture se fait au pouce, une ligne à la fois.
-// Au-dessus, un vrai tableau à colonnes, parce que c'est la comparaison entre lignes qui
-// devient l'usage principal dès qu'on a la place de les aligner.
-//
-// Le choix entre les deux se fait en CSS et non par une mesure de la fenêtre en
-// JavaScript : les deux structures sont dans le document, une seule est affichée. Cela
-// coûte quelques nœuds et évite un rendu qui saute au redimensionnement.
-//
-// Aucune des deux n'est annoncée deux fois : la structure écartée l'est par
-// `display: none`, ce qui la retire aussi de l'arbre d'accessibilité. C'est ce qui rend
-// ce doublon acceptable ; il ne le serait pas avec une mise en retrait visuelle.
+// Les deux structures sont dans le document et le CSS n'en affiche qu'une. La structure
+// masquée l'est par `display: none`, ce qui la retire aussi de l'arbre d'accessibilité :
+// rien n'est annoncé deux fois.
 
 const COLONNES = [
   { cle: 'nom', libelle: 'Actif', triable: false },
@@ -30,14 +21,11 @@ const COLONNES = [
   { cle: 'pru', libelle: 'Prix de revient', triable: true, numerique: true },
   { cle: 'valeur', libelle: 'Valorisation', triable: true, numerique: true },
   { cle: 'plus_value_latente', libelle: 'Plus-value', triable: true, numerique: true },
-  // Tendance sur trente jours, alimentée par l'historique de cours par position
-  // (D81). Elle n'a pas d'équivalent dans la liste mobile, qui n'a pas la place
-  // d'une seconde variation à côté de celle depuis l'origine.
+  // Tendance sur trente jours, absente de la liste mobile faute de place.
   { cle: 'tendance', libelle: '30 jours', triable: true, numerique: true },
 ];
 
-// aria-sort ne se pose que sur la colonne effectivement triée : l'annoncer sur toutes
-// laisserait entendre que la liste est triée sur plusieurs critères à la fois.
+// aria-sort n'est actif que sur la colonne triée.
 function etatDuTri(colonne, tri) {
   if (!colonne.triable) {
     return undefined;
@@ -57,8 +45,7 @@ export default function TableauPositions({
 }) {
   return (
     <div className="positions-liste">
-      {/* Rendu mobile : une liste de liens. Chaque lien porte le nom de l'actif et sa
-          valorisation, jamais un « voir » isolé qui n'apprendrait rien hors contexte. */}
+      {/* Rendu mobile : chaque lien annonce l'actif et sa valorisation. */}
       <ul className="positions-liste__cartes">
         {positions.map((position) => (
           <li key={position.id}>
@@ -107,8 +94,7 @@ export default function TableauPositions({
         ))}
       </ul>
 
-      {/* Rendu desktop : tableau sémantique, en-têtes portées par des boutons pour que
-          le tri soit atteignable au clavier comme n'importe quelle commande. */}
+      {/* Rendu desktop : en-têtes en boutons, pour trier au clavier. */}
       <table className="positions-liste__tableau">
         <caption className="lecteur-ecran-seulement">
           Positions détenues, triées par {libelleColonne(tri.cle)}{' '}
@@ -193,9 +179,7 @@ export default function TableauPositions({
                   />
                 )}
               </td>
-              {/* La tendance est une variation relative : elle ne dit rien de ce que
-                  l'utilisateur possède et échappe donc au masquage, comme les
-                  performances du sélecteur de période. */}
+              {/* Variation relative : non masquée, comme les autres pourcentages. */}
               <td className="positions-liste__colonne-nombre">
                 <CourbeMiniature tendance={position.tendance_30j} />
               </td>
@@ -211,9 +195,7 @@ function libelleColonne(cle) {
   return COLONNES.find((colonne) => colonne.cle === cle)?.libelle ?? cle;
 }
 
-// Texte annoncé pour le lien d'une position. Il nomme l'actif, sa classe et sa
-// valorisation : hors contexte, dans une liste de liens parcourue à la voix, c'est ce
-// qui permet de choisir sans avoir à explorer chaque ligne.
+// Nom accessible du lien : actif, classe et valorisation, compréhensible hors contexte.
 function libelleAccessible(position, devise, masque) {
   const classe = LIBELLES_CLASSE[position.type] ?? position.type;
 
@@ -221,8 +203,7 @@ function libelleAccessible(position, devise, masque) {
     return `${position.nom}, ${classe}`;
   }
 
-  // Même mise en forme que la valeur affichée : ce qui est lu à la voix et ce qui est lu
-  // à l'écran doivent être le même nombre, sans quoi les deux se contrediraient.
+  // Même formatage qu'à l'écran.
   const valeur = formaterMontant(position.valeur, { symbole: symboleDevise(devise) });
   return `${position.nom}, ${classe}, valorisée ${valeur}`;
 }

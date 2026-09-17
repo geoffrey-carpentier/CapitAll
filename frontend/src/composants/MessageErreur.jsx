@@ -1,22 +1,13 @@
 import './MessageErreur.css';
 import Bouton from './Bouton';
 
-// Erreur présentée à l'utilisateur : une cause en clair, et l'action qui permet de s'en
-// sortir. Jamais un code technique brut, qui n'apprend rien à celui qui le lit et
-// inquiète sans l'aider.
+// Erreur présentée en clair, avec l'action qui permet d'en sortir.
 //
-// Quatre natures d'erreur, volontairement distinguées. Le serveur qui répond en erreur
-// et le réseau qui ne répond pas ne demandent pas le même geste : dans un cas réessayer
-// a du sens, dans l'autre il faut d'abord retrouver une connexion. Les confondre sous
-// « une erreur est survenue » laisserait l'utilisateur sans prise.
-//
-// La session expirée n'est pas une panne mais une fin de validité : elle se dit
-// autrement et mène à la reconnexion.
-//
-// Le refus est la quatrième, et la seule qui ne soit pas une panne du tout : le serveur
-// a parfaitement répondu, il a refusé l'opération pour une raison métier. Proposer de
-// réessayer y serait un contresens, puisque la même demande sera refusée à l'identique.
-// C'est à l'appelant de ne pas fournir d'action dans ce cas.
+// Quatre natures, qui n'appellent pas le même geste :
+// - api : le serveur a répondu en erreur, réessayer a du sens ;
+// - reseau : aucune réponse, il faut d'abord retrouver une connexion ;
+// - session : fin de validité, qui mène à la reconnexion ;
+// - refus : refus métier, que l'appelant ne doit pas proposer de réessayer.
 
 const MESSAGES = {
   api: {
@@ -55,8 +46,7 @@ export default function MessageErreur({
       </span>
       <div className="message-erreur__texte">
         <p className="message-erreur__titre">{titre}</p>
-        {/* Le message du serveur, quand il est rédigé pour un humain, est plus précis
-            que l'explication générique : il la remplace. */}
+        {/* Le message du serveur, plus précis, remplace l'explication générique. */}
         <p className="message-erreur__explication">{message || explication}</p>
       </div>
       {surAction && (

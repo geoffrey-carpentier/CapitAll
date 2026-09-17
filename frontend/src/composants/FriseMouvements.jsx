@@ -3,22 +3,12 @@ import Montant from './Montant';
 import Variation from './Variation';
 import { comparerDecimales, formaterQuantiteEnNature } from '../utils/formatage';
 
-// Chronologie des mouvements d'une position.
+// Chronologie des mouvements d'une position, en liste ordonnée sémantique.
 //
-// Une frise et non un tableau, et ce n'est pas un choix décoratif : un mouvement n'est
-// pas une ligne de données mais un événement daté qui déplace le prix de revient. La
-// frise donne à lire cette causalité dans l'ordre où elle s'est produite.
-//
-// L'effet sur le prix de revient est le chiffre le plus difficile à défendre à l'oral,
-// et c'est aussi celui que l'interface ne calcule pas : il arrive tel quel du serveur,
-// qui détient le moteur et l'a produit en rejouant toute l'histoire de la position.
-//
-// Liste ordonnée sémantique, conformément à la spécification : la chronologie fait
-// partie de l'information, elle ne doit pas reposer sur la seule disposition visuelle.
+// L'effet de chaque mouvement sur le prix de revient arrive calculé par le serveur, qui
+// rejoue l'historique de la position.
 
-// Une sortie non marchande est un retrait ou un transfert. L'étiquette dit « Sortie » et
-// jamais « Vente » : c'est tout l'objet de D89 que ce mouvement ne se lise pas comme une
-// opération de marché, et la frise est l'endroit où la confusion se verrait.
+// Une sortie non marchande (retrait, transfert) ne doit pas se lire comme une vente.
 const LIBELLES_SENS = { achat: 'Achat', vente: 'Vente', sortie_non_marchande: 'Sortie' };
 
 function formaterDate(horodatage) {
@@ -31,14 +21,7 @@ function formaterDate(horodatage) {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-// Le prix de revient n'est pas déplacé par tous les mouvements : une vente partielle le
-// laisse intact. Le dire en toutes lettres vaut mieux que d'afficher « +0,00 », que
-// l'utilisateur devrait interpréter.
-//
-// La comparaison passe par le comparateur exact du module de formatage, et non par une
-// conversion en nombre. La règle vaut aussi pour un test : « vaut-il zéro » est une
-// question posée sur un montant, et y répondre en flottant rouvrirait la porte que
-// toute la chaîne s'emploie à tenir fermée.
+// Test de nullité par le comparateur exact, sans conversion en nombre.
 function estNul(montant) {
   return montant === null || montant === undefined || comparerDecimales(montant, '0') === 0;
 }
@@ -60,19 +43,15 @@ export default function FriseMouvements({
     );
   }
 
-  // Le serveur rend les mouvements dans l'ordre du calcul, du plus ancien au plus
-  // récent. L'affichage les renverse : ce qui vient de se produire est ce qu'on vient
-  // consulter. L'inversion se fait sur une copie, la liste reçue n'appartenant pas à
-  // ce composant.
+  // Le serveur rend l'ordre chronologique ; l'affichage commence par le plus récent,
+  // sur une copie pour ne pas modifier la liste reçue.
   const duPlusRecent = [...mouvements].reverse();
 
   return (
     <ol className="frise-mouvements">
       {duPlusRecent.map((mouvement) => {
         const date = formaterDate(mouvement.date_transaction);
-        // Un retrait n'a ni prix ni montant : les deux valent zéro en base, et les
-        // afficher donnerait à lire « 0 € » là où la notion ne s'applique pas. C'est
-        // exactement la lecture « vente à zéro euro » que ce lot supprime.
+        // Une sortie a prix et montant à zéro en base : ils ne sont pas affichés.
         const marchand = mouvement.sens !== 'sortie_non_marchande';
 
         return (
@@ -83,8 +62,7 @@ export default function FriseMouvements({
               </span>
               {date && <span className="frise-mouvements__date">{date}</span>}
               <span className="frise-mouvements__quantite">
-                {/* Le signe double une information déjà portée par l'étiquette Achat ou
-                    Vente : il aide le balayage visuel, il n'a rien à annoncer de plus. */}
+                {/* Signe visuel seulement : l'étiquette porte déjà le sens. */}
                 <span aria-hidden="true">{mouvement.sens === 'achat' ? '+' : '−'}</span>
                 {masque ? (
                   <span aria-label="Quantité masquée">•••• {symbole}</span>
@@ -123,8 +101,7 @@ export default function FriseMouvements({
                     ) : (
                       <>
                         <Montant valeur={mouvement.frais} devise={devise} />
-                        {/* Ce qui a réellement été prélevé, quand ce n'était pas des
-                            euros : la contre-valeur seule ferait disparaître le fait. */}
+                        {/* Montant réellement prélevé quand les frais ne sont pas en euros. */}
                         {mouvement.frais_unite && mouvement.frais_unite !== 'EUR' && (
                           <span className="frise-mouvements__frais-origine">
                             {' '}
@@ -136,9 +113,8 @@ export default function FriseMouvements({
                   </dd>
                 </div>
               )}
-              {/* Valeur emportée par une sortie, au prix de revient. Elle occupe la
-                  place de la plus-value réalisée sans en porter le nom : les deux ne
-                  peuvent jamais être renseignées sur un même mouvement. */}
+              {/* Valeur emportée par une sortie, au prix de revient : jamais renseignée
+                  en même temps qu'une plus-value réalisée. */}
               {mouvement.cout_sortie != null && (
                 <div>
                   <dt>Valeur sortie du portefeuille</dt>
@@ -173,10 +149,6 @@ export default function FriseMouvements({
 
             {(surCorrection || surSuppression) && (
               <div className="frise-mouvements__actions">
-                {/* Corriger précède supprimer : c'est le geste réparateur, et celui
-                    qu'une saisie fautive appelle en premier. Avant D51 révisée, seule la
-                    seconde existait, et corriger un prix imposait de détruire le
-                    mouvement puis tous ceux qui en dépendaient. */}
                 {surCorrection && (
                   <button
                     type="button"
@@ -195,9 +167,7 @@ export default function FriseMouvements({
                     className="frise-mouvements__suppression"
                     onClick={() => surSuppression(mouvement)}
                   >
-                    {/* Le libellé nomme le mouvement visé : « Supprimer », lu seul dans
-                        une liste de liens, ne dirait pas lequel des quatre serait
-                        supprimé. */}
+                    {/* Le nom accessible précise le mouvement visé. */}
                     <span aria-hidden="true">Supprimer</span>
                     <span className="lecteur-ecran-seulement">
                       Supprimer {LIBELLES_SENS[mouvement.sens]?.toLowerCase()} du {date}

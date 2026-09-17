@@ -7,36 +7,22 @@ import { LIBELLES_CLASSE } from '../utils/classesActifs';
 
 // Répartition du patrimoine par classe d'actif : un anneau, puis la liste chiffrée.
 //
-// L'anneau avait été retiré en D74, faute d'une quatrième teinte disponible : la version
-// d'alors réemployait les couleurs sémantiques, ce qui faisait passer une classe pour un
-// avertissement et une autre pour une perte, et le repli par niveaux d'opacité ne
-// séparait les segments qu'à 1,46:1. D98 le rétablit sur quatre couleurs dédiées, hors
-// palette sémantique et mesurées ensemble (jetons --couleur-classe-*).
+// L'anneau utilise des couleurs dédiées aux classes, hors palette sémantique, pour
+// qu'une classe ne se lise pas comme une perte ou un avertissement. Il reste décoratif
+// (aria-hidden) : la liste porte libellé, part et montant, et la forme du jeton double
+// la couleur.
 //
-// La règle qui commandait D74 tient toujours et n'est pas contournée : l'information ne
-// repose pas sur la couleur. L'anneau est décoratif au sens strict — il porte
-// aria-hidden, et la liste qui le suit dit tout ce qu'il montre, libellé, part et
-// montant, avec la forme du jeton comme second repère (D76). Un lecteur d'écran, un
-// affichage en niveaux de gris ou une impression noir et blanc ne perdent rien.
-//
-// Chaque entrée est un lien vers l'écran Positions, filtré sur sa classe. La répartition
-// pose la question « qu'est-ce qui pèse le plus », et la réponse suivante est toujours
-// « de quoi cette part est-elle faite » : la faire suivre d'un retour à la navigation
-// puis d'un filtre à poser à la main revient à interrompre la lecture au moment où elle
-// devient intéressante. Le filtre est celui que l'écran Positions lit déjà dans
-// l'adresse, aucun mécanisme nouveau n'est introduit.
+// Chaque entrée renvoie vers l'écran Positions filtré sur sa classe.
 
 const RAYON = 52;
 const EPAISSEUR = 16;
 const CIRCONFERENCE = 2 * Math.PI * RAYON;
 
-// Séparation de 2 px entre deux segments, tracée dans le vide plutôt qu'au pinceau :
-// c'est le fond de la carte qui passe, aucune couleur n'est ajoutée pour cela.
+// Vide de 2 px entre deux segments, laissant voir le fond de la carte.
 const SEPARATION = 2;
 
-// La part arrive du serveur en chaîne décimale. Elle ne sert ici qu'à une longueur en
-// pixels : la convertir en nombre ne coûte aucune précision utile, contrairement aux
-// montants, qui restent des chaînes jusqu'au composant Montant.
+// La part n'est convertie en nombre que pour une longueur en pixels ; les montants
+// restent des chaînes.
 function longueurArc(pourcentage) {
   const part = Number(pourcentage);
   return Number.isFinite(part) && part > 0 ? (part / 100) * CIRCONFERENCE : 0;
@@ -63,8 +49,7 @@ function Anneau({ repartition }) {
             return null;
           }
 
-          // Un segment plus court que sa propre séparation disparaîtrait entièrement :
-          // il garde alors un trait, quitte à ce que le vide soit plus étroit.
+          // Un segment plus court que la séparation garde au moins un trait visible.
           const trace = Math.max(arc - SEPARATION, 1);
 
           return (

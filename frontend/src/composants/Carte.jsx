@@ -1,12 +1,10 @@
 import './Carte.css';
 
-// Conteneur standard de l'interface. Le titre est optionnel : lorsqu'il est fourni,
-// il est rendu comme un véritable en-tête et non comme un simple texte en gras, afin
-// que la structure du document reste navigable.
+// Conteneur standard. Le titre facultatif est un vrai en-tête, pour la navigation par
+// titres.
 export default function Carte({ titre, action, className = '', children, ...proprietes }) {
   return (
-    // La classe reçue s'ajoute à celle du composant : la remplacer ferait perdre le
-    // fond, la bordure et le rayon de la carte au premier appelant qui la positionne.
+    // La classe reçue s'ajoute à celle du composant, sans la remplacer.
     <section className={`carte${className ? ` ${className}` : ''}`} {...proprietes}>
       {(titre || action) && (
         <header className="carte__entete">

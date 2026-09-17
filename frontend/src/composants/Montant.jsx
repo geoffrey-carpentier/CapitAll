@@ -8,13 +8,10 @@ import {
   symboleDevise,
 } from '../utils/formatage';
 
-// Affiche une valeur numérique. C'est le seul point d'entrée de l'interface vers la
-// politique de formatage : aucun écran ne met en forme un nombre par lui-même, ce qui
-// rend la conformité vérifiable par une simple recherche des appels à ce composant.
+// Affichage d'une valeur numérique par le module de formatage.
 //
-// La valeur arrive toujours sous forme de chaîne, telle que l'API la renvoie. Lui faire
-// traverser un nombre, même le temps d'un passage de propriété, suffirait à altérer une
-// quantité à huit décimales.
+// La valeur reste la chaîne renvoyée par l'API : la convertir en nombre, même pour la
+// transmettre, altérerait une quantité à dix-huit décimales.
 
 const FORMATEURS = {
   montant: (valeur, _classe, _symbole, devise) => formaterMontant(valeur, { symbole: devise }),
@@ -38,8 +35,7 @@ export default function Montant({
     ? formateur(valeur, classe, symbole, symboleDevise(devise))
     : null;
 
-  // Une valeur absente ou invalide s'affiche par un tiret cadratin plutôt que par un
-  // zéro : « pas de donnée » et « zéro » ne se confondent pas sur un patrimoine.
+  // Valeur absente ou invalide : un tiret, jamais un zéro.
   if (texte === null) {
     return (
       <span className={`montant montant--${taille} montant--indisponible`} {...proprietes}>
