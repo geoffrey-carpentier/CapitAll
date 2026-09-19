@@ -8,7 +8,7 @@
   <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-336791">
   <img alt="Redis 7" src="https://img.shields.io/badge/Redis-7-d95926">
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed">
-  <img alt="791 tests" src="https://img.shields.io/badge/tests-791-199e70">
+  <img alt="804 tests" src="https://img.shields.io/badge/tests-804-199e70">
   <img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-9AA7B4">
 </p>
 
@@ -118,7 +118,7 @@ Détail des couches et des flux : [architecture](docs/conception/architecture.md
 | Authentification | jsonwebtoken, bcrypt | jeton HS256, validité 2 h |
 | Validation | Zod | schémas déclaratifs, mode strict |
 | Graphiques | Recharts | courbes d'aire et courbes miniatures |
-| Tests | Vitest, Testing Library | 791 tests, un seul lanceur pour les deux moitiés |
+| Tests | Vitest, Testing Library | 804 tests, un seul lanceur pour les deux moitiés |
 | Analyse statique | oxlint | configuration propre à chaque moitié |
 | Conteneurisation | Docker, Docker Compose | pile de développement et pile complète |
 | Service des fichiers | Nginx | 1.27, image de l'interface |
@@ -305,7 +305,7 @@ démonstration sur une base qui contient déjà des données.
 ```bash
 npm test --prefix backend               # 410 tests, sans base ni réseau
 npm run test:integration --prefix backend  # 22 tests contre un vrai PostgreSQL
-npm test --prefix frontend              # 359 tests d'interface
+npm test --prefix frontend              # 372 tests d'interface
 npm run lint --prefix backend
 npm run lint --prefix frontend
 npm run build --prefix frontend
