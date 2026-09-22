@@ -6,12 +6,8 @@ import MotDePasseOublie from '../MotDePasseOublie';
 import Reinitialisation from '../Reinitialisation';
 import { api, ErreurApi } from '../../services/api';
 
-// Récupération d'un mot de passe oublié, côté interface (D23, S-28).
-//
-// L'essentiel de ce qui est vérifié ici tient à ce que l'écran **ne** fait **pas** :
-// il ne distingue jamais une adresse connue d'une inconnue, et il ne reformule pas le
-// refus du serveur. Les deux protections tomberaient sans bruit si quelqu'un croyait
-// bien faire en précisant les messages.
+// Récupération d'un mot de passe oublié, côté interface : l'écran ne distingue jamais
+// une adresse connue d'une inconnue, et ne reformule pas le refus du serveur.
 
 const REPONSE_NEUTRE = {
   message:

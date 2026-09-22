@@ -134,7 +134,7 @@ describe('création', () => {
   });
 
   // Un actif appartenant à un autre compte est indiscernable d'un actif inexistant :
-  // le modèle filtre sur le propriétaire, le service ne voit qu'une absence (D52).
+  // le modèle filtre sur le propriétaire, le service ne voit qu'une absence.
   it("rend 404 quand l'actif ciblé n'appartient pas au demandeur", async () => {
     const alertes = depotAlertes();
     alertes.creerSurActif.mockResolvedValue(null);

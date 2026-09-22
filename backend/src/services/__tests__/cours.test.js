@@ -70,7 +70,7 @@ describe('service de cours', () => {
     expect(cache.ecrireDernierCoursConnu).toHaveBeenCalledTimes(1);
   });
 
-  // TTL différenciés par classe d'actif (D21).
+  // TTL différenciés par classe d'actif.
   it('transmet le TTL correspondant au type demandé', async () => {
     const cas = [
       ['crypto', DUREES_VIE_SECONDES.crypto],
@@ -98,7 +98,7 @@ describe('service de cours', () => {
     }
   });
 
-  it('respecte les valeurs de TTL actées en D21', () => {
+  it('respecte les durées de vie retenues par classe', () => {
     expect(DUREES_VIE_SECONDES.crypto).toBe(120);
     expect(DUREES_VIE_SECONDES.devise).toBe(3600);
     expect(DUREES_VIE_SECONDES.metal).toBe(600);

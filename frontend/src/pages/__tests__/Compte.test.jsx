@@ -97,8 +97,7 @@ describe('composition', () => {
 
     expect(screen.getByText(/Coinbase/)).toBeTruthy();
     expect(screen.getByText(/Frankfurter/)).toBeTruthy();
-    // Le texte affirmait que le fournisseur d'actions n'était pas branché. Il l'est
-    // depuis D85, et l'écran décrit la chaîne réelle, repli compris.
+    // L'écran décrit la chaîne réelle des fournisseurs d'actions, repli compris.
     expect(screen.getByText(/Financial Modeling Prep/)).toBeTruthy();
     expect(screen.getByText(/gold-api/)).toBeTruthy();
     // La fiche dit aussi ce qui arrive quand un cours manque : c'est la question que

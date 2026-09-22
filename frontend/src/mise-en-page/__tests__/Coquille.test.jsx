@@ -5,15 +5,8 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Coquille from '../Coquille';
 import * as contexte from '../../contexte/contexteAuthentification';
 
-// Barre de navigation et bouton flottant de saisie.
-//
-// Le bouton renvoyait toujours au Patrimoine : depuis l'écran des seuils ou la liste des
-// positions, enregistrer un mouvement faisait perdre l'écran qu'on consultait, son filtre
-// et son tri. Il ouvre désormais la saisie sur place.
-//
-// Ce que ces tests protègent aussi, c'est ce qu'il ne fait pas : il porte la même action
-// partout. La tentation était d'en faire « + Seuil » sur l'écran des seuils ; un même
-// bouton, au même endroit, faisant deux choses selon la page se découvre par erreur.
+// Barre de navigation et bouton flottant de saisie : le bouton ouvre la saisie d'un
+// mouvement sur place, et porte la même action sur tous les écrans.
 
 function Temoin() {
   const { pathname, search } = useLocation();

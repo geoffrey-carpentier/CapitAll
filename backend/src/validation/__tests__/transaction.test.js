@@ -15,10 +15,8 @@ describe('schéma de création d\'une transaction', () => {
     expect(creationTransaction.safeParse(transactionValide).success).toBe(true);
   });
 
-  // Les frais n'ont plus de valeur par défaut au schéma : trois formes de saisie
-  // coexistent depuis D89, et en préremplir une empêcherait de distinguer « pas de
-  // frais » de « frais indiqués dans leur unité de prélèvement ». C'est le service qui
-  // ramène l'absence à zéro euro, une fois qu'il sait laquelle a été employée.
+  // Pas de valeur par défaut au schéma pour les frais : trois formes de saisie
+  // coexistent, et c'est le service qui ramène l'absence à zéro euro.
   it('accepte un mouvement sans frais, et n’en invente aucun', () => {
     const resultat = creationTransaction.parse(transactionValide);
     expect(resultat.frais).toBeUndefined();
@@ -56,7 +54,7 @@ describe('schéma de création d\'une transaction', () => {
     ).toBe(true);
   });
 
-  // Dix-huit décimales : la précision native des actifs suivis (D88). Le wei d'Ethereum
+  // Dix-huit décimales : la précision native des actifs suivis. Le wei d'Ethereum
   // en demande dix-huit, le satoshi du bitcoin huit.
   it('accepte une quantité à dix-huit décimales', () => {
     expect(

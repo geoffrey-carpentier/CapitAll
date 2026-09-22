@@ -1,13 +1,8 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { derouler, consolider, valoriser } from '../calculPortefeuille.js';
 
-// Frais dans leur unité d'origine et sorties non marchandes (D89).
-//
-// Ce fichier reprend, au chiffre près, les trois exemples sur lesquels le modèle a été
-// arbitré, puis les règles propres à un mouvement qui n'est pas une vente. Il existe
-// pour une raison précise : la faute que ce lot doit rendre impossible est un double
-// comptage, et un double comptage ne se voit pas à la relecture du code. Il se voit sur
-// un total qui ne tombe pas juste.
+// Frais dans leur unité d'origine et sorties non marchandes. Les exemples sont repris
+// au chiffre près : un double comptage des frais ne se voit que sur un total faux.
 
 let creerServiceTransaction;
 
@@ -43,11 +38,10 @@ function monter({ actif = ETH, historique = [] } = {}) {
 
 const HIER = '2026-09-04T10:00:00.000Z';
 
-describe('frais dans leur unité de prélèvement (D89)', () => {
+describe('frais dans leur unité de prélèvement', () => {
   it('laisse un achat à frais en euros exactement tel qu’avant', async () => {
-    // Le premier acquis du lot est une non-régression : le modèle nouveau doit rendre,
-    // sur le cas courant, le chiffre que rendait le modèle ancien. Achat de 0,5 BTC à
-    // 60 000 euros, 15 euros de frais : coût 30 015, prix de revient 60 030.
+    // Cas courant : achat de 0,5 BTC à 60 000 euros, 15 euros de frais, coût 30 015,
+    // prix de revient 60 030.
     const { service, transactions } = monter();
 
     const enregistre = await service.enregistrer({
@@ -221,7 +215,7 @@ describe('frais dans leur unité de prélèvement (D89)', () => {
   });
 });
 
-describe('sorties non marchandes (D89)', () => {
+describe('sorties non marchandes', () => {
   const ACHAT = {
     id: 1,
     sens: 'achat',
@@ -342,7 +336,7 @@ describe('sorties non marchandes (D89)', () => {
 
   it('refuse des frais prélevés dans l’actif qui sort', async () => {
     // Ils font déjà partie de la quantité retirée : les compter en plus les compterait
-    // deux fois, et c'est précisément le défaut que ce lot doit rendre impossible.
+    // deux fois.
     const { service } = monter({ historique: [ACHAT] });
 
     await expect(

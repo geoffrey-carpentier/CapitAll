@@ -10,7 +10,7 @@ import { CLE_DEVISE } from '../../utils/preferences';
 // L'écran est testé sur ses règles de comportement : les deux groupes, l'écart restant
 // affiché en toutes lettres et non seulement par la barre, le retrait, et l'ouverture de
 // la feuille de création. Les valeurs dérivées (valeur_observee, ecart_pourcentage)
-// sont celles que le serveur rend déjà : l'écran ne les recalcule pas (D69), le jeu
+// sont celles que le serveur rend déjà : l'écran ne les recalcule pas, le jeu
 // d'essai reproduit donc la forme exacte de la réponse.
 
 const SEUILS = [
@@ -218,10 +218,8 @@ describe('préférences d’affichage globales (D83)', () => {
     expect(screen.getByText(/6,1/)).toBeTruthy();
   });
 
-  // Cas signalé en revue : le taux peut manquer (échec du chargement du portefeuille)
-  // alors qu'une préférence en dollars a été mémorisée sur un autre écran. afficher()
-  // rend déjà la valeur en euros dans ce cas ; c'est le symbole qui doit suivre, sous
-  // peine d'écrire un montant en euros avec un signe dollar.
+  // Sans taux (échec du portefeuille) mais avec une préférence en dollars, afficher()
+  // rend des euros : le symbole doit suivre, pas rester en dollars.
   it("retombe sur l'euro quand le taux est indisponible, même préféré en dollars", async () => {
     window.sessionStorage.setItem(CLE_DEVISE, 'USD');
     api.portefeuille.mockRejectedValue(new Error('indisponible'));

@@ -210,7 +210,7 @@ async function exporter(mouvements) {
   return { contenu, nomFichier, entete: lignes[0], lignes: lignes.slice(1) };
 }
 
-describe('export des mouvements (E7, D84)', () => {
+describe('export des mouvements', () => {
   it('rend les dix colonnes attendues, dans l’ordre', async () => {
     const { entete } = await exporter(MOUVEMENTS);
 
@@ -237,7 +237,7 @@ describe('export des mouvements (E7, D84)', () => {
     );
   });
 
-  it('exporte le montant du moteur, frais exclus (D84)', async () => {
+  it('exporte le montant du moteur, frais exclus', async () => {
     const { lignes } = await exporter(MOUVEMENTS);
 
     // 0,5 x 54 000 = 27 000, et les 12,50 de frais restent dans leur propre colonne

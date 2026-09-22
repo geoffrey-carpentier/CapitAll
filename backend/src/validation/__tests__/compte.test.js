@@ -39,7 +39,7 @@ describe('changement de mot de passe (E7)', () => {
     expect(resultat.error.issues[0].path).toEqual(['nouveauMotDePasse']);
   });
 
-  // .strict() ferme la porte à toute clé inconnue, role compris (D23).
+  // .strict() ferme la porte à toute clé inconnue, role compris.
   it('rejette une clé inconnue', () => {
     expect(valider({ ...VALIDE, role: 'admin' }).success).toBe(false);
   });

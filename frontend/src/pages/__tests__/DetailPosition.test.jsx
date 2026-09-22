@@ -183,7 +183,7 @@ describe('composition de la fiche', () => {
   });
 
   // Le serveur répond 404 sur la ressource d'un autre compte comme sur une ressource
-  // inexistante (D52) : l'écran ne cherche pas non plus à les distinguer.
+  // inexistante : l'écran ne cherche pas non plus à les distinguer.
   it('traite une position introuvable sans révéler si elle existe ailleurs', async () => {
     api.actif.mockRejectedValue(new ErreurApi('Actif introuvable.', 404));
     rendre();
@@ -453,7 +453,7 @@ describe('graphe de cours', () => {
     expect(screen.queryByRole('img')).toBeNull();
   });
 
-  // D79 : la description accessible nomme explicitement la ligne de prix de revient.
+  // La description accessible nomme explicitement la ligne de prix de revient.
   // Sans elle, le tracé annoncerait une évolution sans dire par rapport à quoi il se
   // teinte, c'est-à-dire sans dire ce que le graphe existe pour montrer.
   it('nomme la ligne de prix de revient dans sa description', async () => {
@@ -549,9 +549,8 @@ describe('saisie d’un mouvement', () => {
   });
 });
 
-// Spécification E4, section Interactions : « Création d'un seuil pré-réglée sur cet
-// actif. » L'écran de détail ne connaît qu'une position : la feuille s'ouvre restreinte
-// à elle, sans proposer le patrimoine total, dont la valeur n'est pas chargée ici (D83).
+// Création d'un seuil pré-réglée sur cet actif : l'écran de détail ne connaît qu'une
+// position, la feuille ne propose donc pas le patrimoine total.
 describe('saisie d’un seuil depuis l’onglet Seuils', () => {
   async function ouvrirOngletSeuils(utilisateur) {
     rendre();
@@ -581,9 +580,8 @@ describe('saisie d’un seuil depuis l’onglet Seuils', () => {
 
     await utilisateur.click(screen.getByRole('button', { name: '+ Seuil' }));
 
-    // Le nom du dialogue reprend les deux lignes de son en-tête : le titre, court et
-    // stable, puis la cible. Un nom d'actif long tenait auparavant sur la même ligne que
-    // le titre, en gras et en corps de titre, et poussait le bouton de fermeture.
+    // Le nom du dialogue reprend les deux lignes de son en-tête : le titre, puis la cible,
+    // pour qu'un nom long ne pousse pas le bouton de fermeture.
     expect(screen.getByRole('dialog', { name: 'Nouveau seuil Bitcoin (BTC)' })).toBeTruthy();
     expect(screen.getByLabelText('Cible').value).toBe('actif:1');
     const options = within(screen.getByLabelText('Cible')).getAllByRole('option');
@@ -616,9 +614,7 @@ describe('saisie d’un seuil depuis l’onglet Seuils', () => {
   });
 });
 
-// Renommage d'une position (S-26). La route existait depuis la création des actifs, et
-// aucun écran ne l'exposait : le nom d'une position, que l'utilisateur a lui-même saisi,
-// était définitif.
+// Renommage d'une position, dont le nom a été saisi par l'utilisateur.
 describe('renommage de la position', () => {
   it('propose de renommer, et rend le champ prérempli du nom actuel', async () => {
     const utilisateur = userEvent.setup();
@@ -688,7 +684,7 @@ describe('renommage de la position', () => {
   });
 });
 
-// Correction d'un mouvement depuis la frise (D51 révisée). L'écran doit ouvrir la
+// Correction d'un mouvement depuis la frise. L'écran doit ouvrir la
 // feuille sur le bon mouvement, et l'adresse doit le dire.
 describe('correction d’un mouvement depuis la frise', () => {
   it('ouvre la feuille de correction sur le mouvement choisi', async () => {

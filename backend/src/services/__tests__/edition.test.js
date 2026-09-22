@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
-// Correction d'un mouvement enregistré (D51, révisée par D89).
-//
-// Ce que ce fichier établit tient en une phrase : corriger un mouvement obéit aux mêmes
-// règles que le supprimer, et refuse au même endroit. Ce qu'il n'établit pas, et qu'il
-// ne peut pas établir avec des modèles en mémoire, c'est le comportement de deux
-// corrections concurrentes — cela vit dans edition.integration.test.js, contre un vrai
-// PostgreSQL.
+// Correction d'un mouvement enregistré : mêmes règles et même refus que la suppression.
+// La concurrence entre deux corrections est testée contre un vrai PostgreSQL, dans
+// edition.integration.test.js.
 
 let creerServiceTransaction;
 
@@ -18,8 +14,8 @@ beforeAll(async () => {
 
 const ACTIF = { id: 7, utilisateur_id: 2, type: 'crypto', symbole: 'BTC', nom: 'Bitcoin' };
 
-// Un achat, puis une vente qui en dépend. C'est la situation que D51 rendait
-// irréparable : corriger le prix de l'achat imposait de supprimer la vente d'abord.
+// Un achat, puis une vente qui en dépend : corriger l'achat ne doit pas imposer de
+// supprimer la vente.
 const ACHAT = {
   id: 1,
   sens: 'achat',
@@ -79,11 +75,9 @@ function correction(champs) {
   };
 }
 
-describe('correction d’un mouvement (D51 révisée)', () => {
+describe('correction d’un mouvement', () => {
   it('corrige le prix d’un achat sans toucher à la vente qui en dépend', async () => {
-    // C'est le cas qui justifie la révision de D51. Avant, il fallait supprimer la
-    // vente, corriger l'achat, puis ressaisir la vente — en perdant sa date, sa note et
-    // son identité.
+    // La vente garde sa date, sa note et son identité.
     const { service, transactions } = monter();
 
     const modifiee = await service.modifier({
@@ -172,7 +166,7 @@ describe('correction d’un mouvement (D51 révisée)', () => {
 
   it('rend 404 quand l’actif appartient à un autre compte', async () => {
     // Le verrou filtre sur le propriétaire : il ne rend rien, et un actif d'autrui est
-    // indiscernable d'un actif inexistant (D52).
+    // indiscernable d'un actif inexistant.
     const { service, transactions } = monter();
     const { service: refuse } = monter({ actif: null });
 

@@ -1,14 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-// Contrat numérique (D88) : les cas qui échouaient avant le lot L2.
-//
-// Ces tests ont d'abord vécu sous it.fails, décrivant un comportement visé qui n'existait
-// pas encore. Le contrat livré, ils sont devenus des assertions ordinaires et leurs
-// jumeaux « cause actuelle », qui épinglaient les valeurs fausses, ont été retirés : un
-// test ne quitte le registre des cas ouverts que lorsque les deux ont basculé ensemble.
-//
-// Ils restent ici comme régression. Chacun décrit une perte de précision réelle, et
-// chacun retomberait au rouge si une échelle était rabaissée par mégarde.
+// Précision numérique : chaque test décrit une perte de précision réelle, et échouerait
+// si une échelle était rabaissée par mégarde.
 
 let versUnites;
 let versNotationPositionnelle;
@@ -119,9 +112,8 @@ describe('bornes hautes concordantes avec les colonnes', () => {
 });
 
 describe('notation scientifique', () => {
-  // JavaScript écrit spontanément en exposant tout nombre inférieur à 1e-6, et JSON.parse
-  // rend un nombre. Ce chemin est devenu atteignable en descendant l'échelle des prix
-  // sous cette borne ; il levait auparavant une SyntaxError du constructeur BigInt.
+  // JavaScript écrit en exposant tout nombre inférieur à 1e-6, et JSON.parse rend un
+  // nombre : la notation scientifique doit être acceptée.
   it('convertit une valeur exponentielle sans lever', () => {
     expect(() => versUnites('1e-12', 18)).not.toThrow();
     expect(() => versUnites('1.23e-9', 18)).not.toThrow();
@@ -158,10 +150,7 @@ describe('notation scientifique', () => {
 
 describe('échelles explicites', () => {
   it('tient le prix de revient à une échelle supérieure à celle des quantités', () => {
-    // La propriété que le contrat apporte : le PRU est un diviseur de calcul, il peut
-    // désormais porter plus de décimales que les quantités sans fausser les produits.
-    // Les helpers supposaient auparavant une échelle commune, invariant que rien
-    // n'écrivait et que ce changement aurait brisé en silence.
+    // Le PRU peut porter plus de décimales que les quantités sans fausser les produits.
     expect(ECHELLE_PRU).toBeGreaterThan(ECHELLE_QUANTITE);
   });
 

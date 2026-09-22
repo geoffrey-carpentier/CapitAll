@@ -30,7 +30,7 @@ describe('franchissement de seuil', () => {
       expect(estFranchi('au_dessus', '70000.01', '70000.00')).toBe(true);
     });
 
-    // Le cas d'égalité est le point de D56 : l'utilisateur qui fixe 70 000 attend
+    // Le cas d'égalité : l'utilisateur qui fixe 70 000 attend
     // d'être prévenu quand le cours atteint 70 000, pas quand il le dépasse.
     it('franchit sur une valeur égale au seuil', () => {
       expect(estFranchi('au_dessus', '70000.00', '70000.00')).toBe(true);
@@ -100,7 +100,7 @@ describe('évaluation des alertes', () => {
     expect(franchies[0].actif_id).toBeNull();
   });
 
-  // Déclencher sur une valeur inconnue serait le pire comportement possible (D56).
+  // Une valeur inconnue ne déclenche jamais d'alerte.
   it("n'évalue pas une alerte dont le cours est indisponible", () => {
     const franchies = evaluerAlertes([alerteActif('au_dessus', '1.00')], {
       capitalTotal: '58566.64',
@@ -185,10 +185,8 @@ describe('écart restant avant franchissement (E6)', () => {
     expect(ecartRestant('au_dessus', undefined, '65000.00')).toBeNull();
   });
 
-  // Distinct du seuil à zéro testé plus haut : ici c'est la valeur OBSERVÉE qui vaut
-  // zéro. Le calcul divise par cette valeur (le pourcentage restant est rapporté au
-  // cours actuel) : la diviser par zéro serait indéfini, la fonction rend donc null
-  // plutôt qu'un résultat inventé.
+  // Ici c'est la valeur observée qui vaut zéro : le pourcentage restant se divise par
+  // elle, la fonction rend donc null plutôt qu'un résultat inventé.
   it('rend null quand la valeur observée vaut zéro', () => {
     expect(ecartRestant('au_dessus', '0', '65000.00')).toBeNull();
     expect(ecartRestant('en_dessous', '0.00', '10.00')).toBeNull();

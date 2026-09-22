@@ -6,7 +6,7 @@ function reponseFrankfurter(symbole, taux, date = '2026-07-20') {
 }
 
 describe('adaptateur Frankfurter', () => {
-  // Garde-fou principal du lot. Frankfurter cote depuis l'euro : rates.USD = 1.25
+  // Garde-fou principal. Frankfurter cote depuis l'euro : rates.USD = 1.25
   // signifie qu'un euro vaut 1,25 dollar, donc qu'un dollar vaut 0,80 euro.
   // Renvoyer 1.25 au lieu de 0.8 donnerait un portefeuille faux sans rien signaler.
   it('inverse le taux : 1 EUR = 1.25 USD donne 1 USD = 0.8 EUR', async () => {
@@ -19,12 +19,8 @@ describe('adaptateur Frankfurter', () => {
   });
 
   it('inverse correctement un taux réel', () => {
-    // L'inversion se fait en entiers, à l'échelle des taux (D88), et non plus par une
-    // division flottante arrondie à huit décimales. Ce taux est appliqué à tout montant
-    // converti en dollars et sert à ramener en euros les cours des métaux et des
-    // actions : c'est la valeur la plus réutilisée de la chaîne.
-    // 1 / 1,1426 = 0,8751969193068440399... arrondi à dix-huit décimales. L'ancienne
-    // valeur, 0,87519692, en était l'arrondi à huit : le même nombre, moins de chiffres.
+    // Inversion en entiers, à l'échelle des taux : ce taux ramène en euros les cours des
+    // métaux et des actions. 1 / 1,1426 arrondi à dix-huit décimales.
     expect(inverserTaux('1.1426')).toBe('0.87519691930684404');
   });
 

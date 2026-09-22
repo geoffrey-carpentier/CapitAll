@@ -5,12 +5,8 @@ import FeuilleMouvement from '../FeuilleMouvement';
 import * as contexte from '../../contexte/contexteAuthentification';
 import { api } from '../../services/api';
 
-// Couverture des symboles à la saisie (D27, S-16).
-//
-// Le champ symbole était une saisie libre pour les quatre classes, alors qu'une seule
-// d'entre elles est contrôlée par une liste fermée : l'utilisateur tapait un code
-// d'action, validait, et découvrait le refus. Le champ suit désormais ce que le serveur
-// déclare accepter.
+// Couverture des symboles à la saisie : le champ suit ce que le serveur déclare
+// accepter, liste fermée pour les actions, saisie libre ailleurs.
 
 const CATALOGUE = {
   classes: [

@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-// Lecture pure et heure de relevé, contre un vrai PostgreSQL (IDEM-01, DATA-04).
-//
-// Un test à modèles factices vérifie que le service n'appelle pas la fonction qui écrit.
-// Il ne vérifie pas qu'aucune ligne n'apparaît : un autre chemin pourrait écrire, une
-// requête pourrait avoir un effet que le double ne reproduit pas. Ce qui suit compte les
-// lignes réellement présentes avant et après, ce qu'aucun double ne peut établir.
+// Lecture pure et heure de relevé, contre un vrai PostgreSQL : les lignes sont comptées
+// avant et après, ce qu'aucun modèle factice ne peut établir.
 //
 // Environnement : docker-compose.test.yml, base isolée, port 5434. Aucune donnée de
 // travail n'est atteignable depuis ici.

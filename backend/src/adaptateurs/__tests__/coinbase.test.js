@@ -34,7 +34,7 @@ describe('adaptateur Coinbase', () => {
   });
 
   // La valeur ne doit jamais passer par Number : sur des montants financiers, la
-  // conversion en flottant introduirait une imprécision définitive (D4).
+  // conversion en flottant introduirait une imprécision définitive.
   it('conserve la valeur en chaîne, sans conversion', async () => {
     const recupererJson = vi.fn().mockResolvedValue(reponseCoinbase({ EUR: '0.00000001' }));
     const adaptateur = creerAdaptateurCoinbase({ recupererJson });

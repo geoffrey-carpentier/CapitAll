@@ -16,7 +16,7 @@ TRUNCATE TABLE annonce, snapshot_cours, snapshot_valorisation, alerte, transacti
     RESTART IDENTITY CASCADE;
 
 -- Deux comptes distincts. Le second n'existe que pour prouver le cloisonnement : toute
--- lecture croisée doit rendre « introuvable » plutôt que « interdit » (D52).
+-- lecture croisée doit rendre « introuvable » plutôt que « interdit ».
 INSERT INTO utilisateur (email, mot_de_passe_hache, pseudo, role, actif) VALUES
     ('titulaire@walletwatch.test', crypt('Titulaire1234!', gen_salt('bf', 10)), 'Titulaire',      'utilisateur', true),
     ('tiers@walletwatch.test',     crypt('Tiers1234!',     gen_salt('bf', 10)), 'Tiers',          'utilisateur', true),
@@ -53,13 +53,13 @@ WHERE u.email = 'tiers@walletwatch.test';
 --
 -- La séquence BTC est celle dont dépend l'édition : la vente du jour 20 ne tient que
 -- par les deux achats antérieurs. Retirer le premier achat doit être refusé, et
--- corriger son prix doit rester possible — c'est l'objet du lot L3.
+-- corriger son prix doit rester possible.
 --
 -- Les quatre positions à quantité 1 servent la répartition : en leur donnant des cours
--- choisis, un test reproduit exactement le cas de reliquat qui produit aujourd'hui un
--- pourcentage négatif, sans dépendre d'un fournisseur.
+-- choisis, un test reproduit un cas de reliquat délicat pour la répartition, sans
+-- dépendre d'un fournisseur.
 -- Les frais sont donnes dans leur unite de prelevement et dans leur contre-valeur en
--- euros (D89). Les deux coincident quand l'unite est l'euro, ce que la contrainte de
+-- euros. Les deux coincident quand l'unite est l'euro, ce que la contrainte de
 -- coherence impose ; la position ETH porte le cas ou elles different.
 INSERT INTO transaction (actif_id, sens, quantite, prix_unitaire, frais, frais_montant, frais_unite, date_transaction, note)
 SELECT a.id, t.sens, t.quantite, t.prix_unitaire, t.frais, t.frais_montant, t.frais_unite,
@@ -85,10 +85,9 @@ WHERE a.utilisateur_id = (SELECT id FROM utilisateur WHERE email = 'tiers@wallet
 
 -- Alerte de capital à seuil bas, active.
 --
--- Elle porte le scénario du capital partiellement valorisé : si un seul cours manque,
--- le total consolidé tombe sous ce seuil et l'alerte se déclenche aujourd'hui sur une
--- valeur qui n'est pas le capital réel. Le seuil est franchement en dessous du
--- patrimoine complet, de sorte qu'un déclenchement signale forcement le defaut.
+-- Elle porte le scénario du capital partiellement valorisé : si un cours manque, le
+-- total consolidé tombe sous ce seuil, et l'alerte ne doit pas se déclencher sur ce
+-- sous-total. Le seuil est franchement en dessous du patrimoine complet.
 INSERT INTO alerte (utilisateur_id, actif_id, type_cible, sens_seuil, valeur_seuil, statut)
 SELECT id, NULL, 'capital_total', 'en_dessous', 500.00, 'active'
 FROM utilisateur

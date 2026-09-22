@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
-// Concurrence sur la correction d'un mouvement, contre un vrai PostgreSQL.
-//
-// Aucun modèle en mémoire ne peut établir ce qui suit. Un test unitaire vérifie que le
-// service demande un verrou ; il ne vérifie pas que ce verrou bloque, ni qu'une
-// transaction relit bien ce que l'autre a écrit avant de décider. Ces deux propriétés
-// n'existent que dans la base.
+// Concurrence sur la correction d'un mouvement, contre un vrai PostgreSQL : le verrou
+// bloque réellement, et chaque transaction relit ce que l'autre a écrit.
 //
 // Environnement : docker-compose.test.yml, base isolée, port 5434. Aucune donnée de
 // travail n'est atteignable depuis ici.
@@ -327,8 +323,7 @@ describe('atomicité de la correction', () => {
   });
 
   it('conserve l’identité et la note du mouvement corrigé', async () => {
-    // C'était le défaut réel de D51 : la cascade destructive perdait la date, la note et
-    // l'identité des mouvements intermédiaires. Corriger les préserve.
+    // Corriger préserve la date, la note et l'identité des mouvements intermédiaires.
     const { rows } = await pool.query(
       `INSERT INTO transaction (actif_id, sens, quantite, prix_unitaire, frais, frais_montant, frais_unite, date_transaction, note)
        VALUES ($1, 'achat', 0.5, 54000, 0, 0, 'EUR', $2, 'Achat initial')
