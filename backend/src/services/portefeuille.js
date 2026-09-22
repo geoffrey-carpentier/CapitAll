@@ -1,7 +1,6 @@
 // Règles de gestion du portefeuille, écrites en fonctions pures : elles reçoivent un
 // tableau de transactions et rendent un résultat, sans accès à la base ni à HTTP.
-// C'est ce qui les rend testables seules, et ce qui permet de dérouler le calcul
-// devant un jury sans démarrer l'application.
+// C'est ce qui les rend testables seules.
 //
 // L'arithmétique exacte est portée par src/utils/decimal.js, partagé avec le moteur
 // de calcul du PRU et des plus-values.
@@ -12,7 +11,7 @@ const { trierChronologiquement } = require('./calculPortefeuille');
 
 // Quantité restant détenue sur un actif : les achats font entrer, tout le reste fait
 // sortir. Une vente et une sortie non marchande diffèrent par ce qu'elles rapportent,
-// jamais par ce qu'elles retirent de la position (D89).
+// jamais par ce qu'elles retirent de la position.
 // Rendue en chaîne pour rester exacte de bout en bout.
 function quantiteDetenue(transactions) {
   const total = transactions.reduce((cumul, transaction) => {
@@ -44,10 +43,8 @@ function verifierVenteAutorisee(transactions, quantiteVendue) {
 // en défaut, qu'il s'agisse de celui qu'on ajoute ou d'un mouvement ultérieur qu'il
 // rendrait invalide.
 //
-// Ventes et sorties non marchandes sont traitées à égalité : la règle est qu'on ne fait
-// pas sortir plus qu'on ne détient, et elle ne dépend pas de ce que le mouvement
-// rapporte. Nommer ce contrôle d'après les seules ventes laisserait croire qu'un
-// transfert y échappe.
+// Ventes et sorties non marchandes sont traitées à égalité : on ne fait pas sortir plus
+// qu'on ne détient, quoi que le mouvement rapporte.
 function verifierHistoriqueSortiesAutorisees(transactions) {
   let detenu = 0n;
 

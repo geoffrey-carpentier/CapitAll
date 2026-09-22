@@ -22,14 +22,9 @@ const HACHAGE_FACTICE = bcrypt.hashSync('comparaison-a-temps-constant', COUT_HAC
 
 const MESSAGE_ECHEC = 'Email ou mot de passe incorrect.';
 
-// Émission d'un jeton, à un seul endroit.
-//
-// Deux chemins en émettent : la connexion, et le changement de mot de passe, qui pose
-// une borne de révocation invalidant tous les jetons antérieurs — y compris celui avec
-// lequel la demande a été faite. Sans réémission, l'utilisateur serait déconnecté par
-// l'opération qu'il vient de réussir, alors que la spécification veut que sa session
-// survive. Les autres sessions ouvertes, elles, tombent : c'est précisément l'effet
-// attendu de « je change mon mot de passe parce que je le crois compromis ».
+// Émission d'un jeton, à un seul endroit : la connexion, et le changement de mot de
+// passe, qui révoque tous les jetons antérieurs. La session courante reçoit un jeton
+// neuf ; les autres sessions tombent.
 function emettreJeton(utilisateur) {
   return jwt.sign({ sub: utilisateur.id, role: utilisateur.role }, config.jwtSecret, {
     algorithm: 'HS256',
@@ -78,17 +73,9 @@ function creerServiceAuthentification({ utilisateurs = modeleUtilisateur } = {})
       throw new ErreurAuthentification(MESSAGE_ECHEC);
     }
 
-    // Le contrôle du compte désactivé vient volontairement APRÈS la comparaison de mot
-    // de passe. Placé avant, il court-circuiterait bcrypt et rendrait la réponse sur un
-    // compte désactivé plus rapide que sur un compte actif : l'écart de temps
-    // permettrait de découvrir quels comptes existent, soit exactement la fuite que le
-    // hachage factice ci-dessus neutralise.
-    //
-    // À ce stade les identifiants sont reconnus valides : la personne a prouvé qu'elle
-    // possède le compte, et lui dire qu'il est désactivé ne lui apprend rien qu'elle
-    // ignore. Un message distinct est donc préférable ici, un échec générique la
-    // laisserait chercher une faute de saisie inexistante. Le statut 403 traduit la
-    // situation : l'identité est établie, c'est l'accès qui est refusé.
+    // Le compte désactivé est contrôlé après bcrypt : avant, la réponse serait plus
+    // rapide et révélerait quels comptes existent. Les identifiants étant valides, un
+    // message distinct et un 403 ne révèlent rien : l'identité est établie, l'accès refusé.
     if (!utilisateur.actif) {
       throw new ErreurAutorisation('Ce compte a été désactivé.');
     }
@@ -109,7 +96,6 @@ function creerServiceAuthentification({ utilisateurs = modeleUtilisateur } = {})
   return { inscrire, connecter };
 }
 
-// Instance par défaut, utilisée par les contrôleurs : leur code reste inchangé.
 const service = creerServiceAuthentification();
 
 module.exports = {

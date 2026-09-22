@@ -28,9 +28,8 @@ async function listerParActifEtUtilisateur(actifId, utilisateurId, executer = qu
 // classe de l'actif sont joints ici plutôt que rapportés ensuite : la jointure est déjà
 // nécessaire au cloisonnement, et les demander à part multiplierait les requêtes.
 //
-// Ordre chronologique ascendant, à la différence de la lecture par actif ci-dessus qui
-// sert une frise antéchronologique. C'est l'ordre du domaine, celui de la règle 6 de
-// D54 : les mouvements se lisent dans l'ordre où ils ont produit leurs effets.
+// Ordre chronologique ascendant, celui du domaine, à la différence de la lecture par
+// actif ci-dessus qui sert une frise antéchronologique.
 async function listerParUtilisateur(utilisateurId) {
   const { rows } = await query(
     `SELECT ${CHAMPS}, a.symbole, a.type AS classe
@@ -86,16 +85,9 @@ async function creer(
   return rows[0] || null;
 }
 
-// Modification d'un mouvement (D51 révisée par D89).
-//
-// Le filtre est celui de la suppression, à l'identique : la jointure sur actif porte le
-// cloisonnement, et un mouvement appartenant à un autre compte est indiscernable d'un
-// mouvement inexistant. Aucune ligne n'est mise à jour dans ce cas, et la fonction rend
-// null.
-//
-// Tous les champs modifiables sont réécrits ensemble. Une mise à jour partielle
-// laisserait coexister l'ancienne unité de frais avec le nouveau montant, combinaison
-// que la contrainte de cohérence refuserait par une erreur serveur.
+// Modification d'un mouvement, avec le filtre de la suppression : un mouvement d'un
+// autre compte n'est pas mis à jour, et la fonction rend null. Tous les champs sont
+// réécrits ensemble, pour que l'unité et le montant des frais restent cohérents.
 async function mettreAJour(
   {
     id,

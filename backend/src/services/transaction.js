@@ -3,9 +3,7 @@
 // vivent dans portefeuille.js et calculPortefeuille.js, qui restent sans dépendance à
 // la base et donc testables seuls.
 //
-// Les modèles sont injectables, comme pour le service de portefeuille et celui
-// d'authentification : le service s'exécute alors sans base dans les tests, avec le
-// même code qu'en production.
+// Les modèles sont injectables : le service s'exécute sans base dans les tests.
 
 const modeleActif = require('../models/actif');
 const modeleTransaction = require('../models/transaction');
@@ -45,15 +43,13 @@ const MESSAGE_MODIFICATION_IMPOSSIBLE =
   'Cette correction ne peut pas être enregistrée : un mouvement postérieur deviendrait impossible.';
 
 // Un achat fait entrer de la quantité, les deux autres sens en font sortir : ce sont eux
-// qui doivent être confrontés à ce que la position détient réellement (D89).
+// qui doivent être confrontés à ce que la position détient réellement.
 function faitSortirDeLaQuantite(sens) {
   return sens === 'vente' || sens === 'sortie_non_marchande';
 }
 
-// Contre-valeur en euros des frais, quelle que soit l'unité réellement prélevée (D89).
-//
-// C'est le seul endroit du projet où le taux de conversion des frais est choisi, et il
-// n'est jamais deviné. Trois cas, trois provenances explicites :
+// Contre-valeur en euros des frais, quelle que soit l'unité prélevée. C'est le seul
+// endroit où ce taux est choisi, et il n'est jamais deviné :
 //
 //   en euros            le montant est déjà sa propre contre-valeur ;
 //   dans l'actif échangé le prix de l'opération fait le taux, puisque c'est celui
@@ -61,9 +57,8 @@ function faitSortirDeLaQuantite(sens) {
 //   dans un tiers actif  aucun taux ne se lit dans le mouvement, l'utilisateur donne
 //                       la contre-valeur.
 //
-// La conversion se fait en arithmétique entière et l'arrondi ne porte que sur la mise en
-// euros, au centime, qui est la résolution de la monnaie. Le montant réellement prélevé,
-// lui, est conservé tel quel dans son unité : rien n'est perdu.
+// Seule la mise en euros est arrondie, au centime ; le montant prélevé est conservé
+// tel quel dans son unité.
 function convertirLesFrais(donnees, actif) {
   if (donnees.frais_montant === undefined) {
     const montant = donnees.frais ?? '0';
@@ -126,7 +121,7 @@ function creerServiceTransaction({
   dansTransaction = executerDansTransaction,
 } = {}) {
   // Contrôle d'existence et de propriété en une seule requête filtrée. Un actif
-  // appartenant à un autre compte est indiscernable d'un actif inexistant (D52).
+  // appartenant à un autre compte est indiscernable d'un actif inexistant.
   async function exigerActif(actifId, utilisateurId) {
     const actif = await actifs.trouverParIdEtUtilisateur(actifId, utilisateurId);
     if (!actif) {
@@ -186,7 +181,7 @@ function creerServiceTransaction({
     return donnees.sens === 'sortie_non_marchande' ? '0' : donnees.prix_unitaire;
   }
 
-  // Un mouvement d'un autre compte est indiscernable d'un mouvement inexistant (D52) :
+  // Un mouvement d'un autre compte est indiscernable d'un mouvement inexistant :
   // l'historique consulté est déjà filtré sur le propriétaire, il suffit d'y chercher.
   function exigerMouvement(historique, idTransaction) {
     const existe = historique.some(
@@ -242,21 +237,12 @@ function creerServiceTransaction({
   // Effet d'un mouvement qui n'est pas encore enregistré : ce que la position vaut
   // avant, ce qu'elle vaudra après, et ce que l'opération déplace.
   //
-  // C'est le récapitulatif que l'écran de saisie présente avant validation. Il est
-  // calculé ici et non côté interface (D69) : le prix de revient est une moyenne
-  // pondérée sur toute l'histoire de la position, et une seconde implémentation de
-  // cette règle finirait par diverger de celle du moteur. La simulation rejoue donc
-  // exactement le même déroulé que l'enregistrement, à l'écriture près.
+  // Récapitulatif affiché avant validation, calculé ici avec le même déroulé que
+  // l'enregistrement, à l'écriture près. La règle de vente s'applique d'abord.
   //
-  // La règle de vente est appliquée avant tout calcul : une vente impossible se
-  // signale au moment de la saisie, avec le message qu'aurait rendu la validation.
-  //
-  // `idTransaction` fait basculer la simulation en mode édition (D51 révisée) : le
-  // mouvement n'est plus ajouté à la fin de l'histoire, il en remplace un. La position
-  // « avant » reste celle d'aujourd'hui, celle que l'utilisateur a sous les yeux ; c'est
-  // donc l'écart entre les deux qui répond à sa question, « qu'est-ce que ma correction
-  // change ». Un mouvement modifié conserve son identifiant et donc sa place dans
-  // l'ordre chronologique, à la différence d'une création qui se pose en dernier.
+  // Avec `idTransaction`, la simulation remplace ce mouvement au lieu d'en ajouter un :
+  // la position « avant » reste celle d'aujourd'hui, et l'écart dit ce que la correction
+  // change.
   async function simuler({ actifId, idTransaction = null, utilisateurId, donnees }) {
     const actif = await exigerActif(actifId, utilisateurId);
     const frais = convertirLesFrais(donnees, actif);
@@ -318,18 +304,9 @@ function creerServiceTransaction({
     };
   }
 
-  // Correction d'un mouvement déjà enregistré (D51, révisée par D89).
-  //
-  // Le chemin est celui de la suppression, au remplacement près : même verrou sur
-  // l'actif, même relecture de l'historique dans la transaction qui écrira, même
-  // invariant appliqué à ce que l'historique deviendrait. C'était l'argument décisif
-  // pour rouvrir D51 — l'édition ne demandait pas un mécanisme de plus, mais un `map`
-  // là où la suppression pose un `filter`.
-  //
-  // La relecture a lieu **après** la prise du verrou, jamais avant : deux corrections
-  // concurrentes sur la même position se sérialisent, et la seconde travaille sur
-  // l'historique que la première a laissé. Vérifier hors du verrou reviendrait à valider
-  // une correction contre un état déjà périmé.
+  // Correction d'un mouvement : le chemin de la suppression, avec un `map` au lieu d'un
+  // `filter`. L'historique est relu après la prise du verrou : deux corrections
+  // concurrentes se sérialisent, et la seconde voit ce que la première a écrit.
   async function modifier({ actifId, idTransaction, utilisateurId, donnees }) {
     return dansTransaction(async (executer) => {
       const actif = await actifs.verrouillerParIdEtUtilisateur(actifId, utilisateurId, executer);

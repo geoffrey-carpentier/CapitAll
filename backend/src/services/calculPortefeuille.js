@@ -1,11 +1,10 @@
 // Moteur de calcul du portefeuille : prix de revient unitaire moyen pondéré (PRU),
 // plus-value réalisée, plus-value latente et consolidation.
 //
-// Toutes les fonctions de ce module sont pures : elles reçoivent des transactions et
-// un cours, elles rendent un résultat. Aucune base, aucun appel réseau, aucun cache.
-// C'est ce qui permet de les tester seules et de dérouler un calcul au tableau.
+// Toutes les fonctions de ce module sont pures : ni base, ni réseau, ni cache. Elles
+// se testent donc seules.
 //
-// Les six règles appliquées sont celles actées en D54 :
+// Règles appliquées :
 //   1. le PRU intègre les frais d'achat, il représente le coût de revient réel ;
 //   2. un achat recalcule le PRU en moyenne pondérée ;
 //   3. une vente ne modifie pas le PRU, seulement la quantité détenue ;
@@ -13,12 +12,9 @@
 //      quantité × (prix de vente − PRU) − frais de vente, cumulée sur l'actif ;
 //   5. une vente totale suivie d'un rachat repart d'un PRU neuf ;
 //   6. les transactions sont traitées par ordre chronologique, l'identifiant
-//      départageant les transactions de même date.
-//
-// D89 y ajoute une septième règle, qui ne touche à aucune des six : une sortie non
-// marchande retire de la quantité sans produit en euros. Le prix de revient unitaire
-// n'en est pas modifié, et la valeur qui quitte la position est portée par un résultat
-// distinct de la plus-value réalisée.
+//      départageant les transactions de même date ;
+//   7. une sortie non marchande retire de la quantité sans produit en euros ; le PRU
+//      ne bouge pas, et la valeur sortie est distincte de la plus-value réalisée.
 //
 // Les valeurs entrent et sortent en chaînes de caractères ; à l'intérieur, tout est
 // entier (src/utils/decimal.js).
@@ -53,14 +49,9 @@ function trierChronologiquement(transactions) {
 
 // Déroulé complet d'une position : l'état après chaque mouvement, et l'état final.
 //
-// Une seule traversée produit les deux, et c'est délibéré. Le prix de revient après un
-// achat donné ne se retrouve pas en rejouant un calcul séparé : il faut avoir rejoué
-// toute l'histoire de la position dans le même ordre, avec les mêmes arrondis. Deux
-// implémentations parallèles finiraient par diverger sur un cas de bord, et c'est
-// précisément ce chiffre qu'il faut pouvoir défendre au tableau.
-//
-// L'effet de chaque mouvement sur le prix de revient est donc un fait calculé ici, du
-// côté qui détient le moteur, et non une reconstitution faite par l'interface (D69).
+// Une seule traversée produit les deux : le prix de revient après un mouvement suppose
+// de rejouer toute l'histoire dans le même ordre, avec les mêmes arrondis. L'interface
+// reçoit cet effet calculé, elle ne le reconstitue pas.
 function derouler(transactions) {
   // Quantité et PRU sont tenus à leur échelle : 18 décimales pour la quantité, 24 pour le PRU.
   let quantite = 0n;
@@ -73,10 +64,8 @@ function derouler(transactions) {
 
   const mouvements = trierChronologiquement(transactions).map((transaction) => {
     const quantiteTransaction = versUnites(transaction.quantite, ECHELLE_QUANTITE);
-    // Le prix garde son échelle propre : le ramener à celle des montants, comme le
-    // faisait la version précédente, effaçait tout ce qui se joue sous le centime.
-    // Une sortie non marchande n'en porte pas : la colonne vaut zéro, la contrainte de
-    // schéma l'impose, et le mouvement rend donc un montant nul.
+    // Le prix garde son échelle propre, pour ne rien perdre sous le centime. Une sortie
+    // non marchande a un prix nul, et rend donc un montant nul.
     const prixUnitaire = versUnites(transaction.prix_unitaire ?? '0', ECHELLE_PRIX);
     // Les frais sont un montant en euros, réglé au centime. Ils sont portés à l'échelle
     // du prix de revient parce qu'ils s'ajoutent à un coût qui s'y tient ; la conversion
@@ -118,13 +107,8 @@ function derouler(transactions) {
             );
       quantite = nouvelleQuantite;
     } else if (transaction.sens === 'sortie_non_marchande') {
-      // Règle 7. La quantité sort, le prix de revient unitaire ne bouge pas.
-      //
-      // Le coût restant de la position vaut PRU × quantité : décrémenter la quantité
-      // le réduit donc exactement au prorata, sans qu'aucune écriture ne s'y ajoute.
-      // C'est le point à ne pas manquer — réduire un coût conservé à part sans toucher
-      // à la quantité, ou l'inverse, ferait mécaniquement dériver le PRU unitaire d'un
-      // mouvement qui, par définition, ne l'affecte pas.
+      // Règle 7. La quantité sort, le PRU ne bouge pas : le coût restant (PRU × quantité)
+      // baisse ainsi exactement au prorata.
       coutDeLaSortie =
         multiplier(pru, ECHELLE_PRU, quantiteTransaction, ECHELLE_QUANTITE, ECHELLE_PRU) + frais;
       coutSorties += coutDeLaSortie;
@@ -241,7 +225,6 @@ function valoriser(position, coursEur) {
   };
 }
 
-// Consolidation de l'ensemble des positions valorisées.
 function consolider(positionsValorisees) {
   let valeurTotale = 0n;
   let coutTotal = 0n;
@@ -286,15 +269,9 @@ function consolider(positionsValorisees) {
   };
 }
 
-// Variation relative d'un ensemble, en pourcentage.
-//
-// Un coût nul ne rend pas un pourcentage infini : il rend l'absence de pourcentage.
-// Le cas se produit sur un portefeuille vide, et sur un portefeuille dont aucune
-// position n'a de coût, deux situations où « + ∞ % » n'aurait aucun sens.
-// L'échelle des deux opérandes est un paramètre : la même mécanique sert des montants
-// au centime, venus de la consolidation, et des valeurs au prix de revient, venues de la
-// valorisation d'une position. Multiplier par cent ne change pas l'échelle, seul le
-// quotient la porte.
+// Variation relative d'un ensemble, en pourcentage. Un coût nul rend null plutôt qu'un
+// pourcentage infini. L'échelle des opérandes est un paramètre : la fonction sert des
+// montants au centime comme des valeurs au prix de revient.
 function pourcentageVariation(plusValue, cout, echelle = ECHELLE_MONTANT) {
   if (cout === 0n) {
     return null;
@@ -309,26 +286,9 @@ function pourcentageVariation(plusValue, cout, echelle = ECHELLE_MONTANT) {
 
 // Répartition en pourcentages dont la somme fait exactement 100.
 //
-// Arrondir chaque part indépendamment produirait un total à 99,98 % ou 100,01 %,
-// impossible à défendre sur un graphique de répartition. Il faut donc répartir un
-// reliquat, et la façon de le faire n'est pas neutre.
-//
-// La version précédente donnait tout le reliquat à la dernière part. Sur quatre valeurs
-// positives de 16 668, 16 668, 16 663 et 1 euro, les trois premières arrondissent chacune
-// vers le haut et la quatrième reçoit ce qu'il reste : −0,01 %. Une catégorie qui vaut un
-// euro ne peut pas peser une part négative, et le commentaire annonçait par ailleurs la
-// méthode du plus grand reste, qui n'était pas celle appliquée.
-//
-// Méthode réellement employée ici. Chaque part reçoit d'abord sa valeur exacte tronquée,
-// jamais arrondie : la somme des troncatures est donc inférieure ou égale à 100, et le
-// déficit vaut au plus le nombre de catégories moins une. Ce déficit est ensuite
-// distribué, un centième de point à la fois, aux catégories dont le reste de division est
-// le plus grand. Aucune part ne peut ainsi devenir négative, et la somme vaut exactement
-// 100.
-//
-// Les égalités sont départagées par le nom de la catégorie. C'est arbitraire, mais c'est
-// stable : deux portefeuilles identiques rendent la même répartition, ce que l'ancien
-// comparateur ne garantissait pas.
+// Méthode du plus grand reste : chaque part est d'abord tronquée, puis le déficit est
+// distribué un centième à la fois aux plus grands restes. Aucune part ne devient
+// négative, et les égalités sont départagées par le nom, pour un résultat stable.
 function repartir(valeurParType, valeurTotale) {
   if (valeurTotale === 0n) {
     return [];
@@ -379,18 +339,10 @@ function repartir(valeurParType, valeurTotale) {
 
 // Performance du portefeuille sur chacune des plages du sélecteur de période.
 //
-// Les plages sont calculées en une fois : l'interface les affiche toutes sans clic,
-// et cinq requêtes pour cinq chiffres serait absurde.
-//
-// La borne haute est la date du dernier instantané, jamais l'horloge du serveur. Deux
-// raisons : la fonction reste pure et testable sans figer le temps, et la performance
-// d'une plage se lit entre deux mesures réelles, pas entre une mesure et une date à
-// laquelle rien n'a été relevé.
-//
-// Le nom de la colonne mesurée est un paramètre : la même mécanique sert la valeur
-// totale du portefeuille et le cours d'une position, deux séries de même forme dont
-// seule l'étiquette diffère. En écrire une seconde copie garantirait qu'un jour les
-// deux sélecteurs de période ne comptent plus les jours de la même façon.
+// Toutes les plages sont calculées en une fois, l'interface les affichant ensemble. La
+// borne haute est la date du dernier instantané, pas l'horloge du serveur : la fonction
+// reste pure, et une plage se lit entre deux mesures réelles. La colonne mesurée est un
+// paramètre : la même mécanique sert le portefeuille et le cours d'une position.
 const PLAGES_EN_JOURS = { jour: 1, semaine: 7, mois: 30, annee: 365 };
 
 function calculerPerformances(instantanes, champ = 'valeur_totale_eur') {

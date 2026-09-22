@@ -1,11 +1,9 @@
 // Orchestration du portefeuille consolidé : charge les données de l'utilisateur,
 // demande les cours, applique le moteur de calcul et consolide.
 //
-// Deux entrées pour un même calcul. `obtenirPortefeuille` lit et ne fait que lire.
-// `actualiserPortefeuille` y ajoute les deux effets attachés à la consultation du
-// tableau de bord — l'écriture du point du jour (D49) et l'évaluation des seuils (D50).
-// La séparation est le fond de la correction : une lecture ne doit rien changer, et
-// tout, du préchargeur au bouton de rechargement, rejoue les lectures.
+// Deux entrées pour un même calcul : `obtenirPortefeuille` ne fait que lire, et
+// `actualiserPortefeuille` ajoute l'écriture du point du jour et l'évaluation des seuils.
+// Une lecture peut être rejouée par n'importe quoi : elle ne doit rien changer.
 //
 // Le moteur (calculPortefeuille.js) reste pur : c'est ici, et seulement ici, que la
 // base et le service de cours sont sollicités.
@@ -49,7 +47,6 @@ function creerServicePortefeuille({
   transactions: depotTransactions = modeleTransaction,
   alertes: depotAlertes = modeleAlerte,
 } = {}) {
-  // Charge les positions d'un utilisateur, valorisées au cours courant.
   async function construirePositions(utilisateurId) {
     const actifs = await depotActifs.listerParUtilisateur(utilisateurId);
 
@@ -65,10 +62,7 @@ function creerServicePortefeuille({
     const coursParSymbole = new Map(cours.map((c) => [c.symbole, c]));
 
     // Une seule requête pour tous les mouvements du compte, regroupés ensuite en
-    // mémoire. La lecture par actif en déclenchait une par ligne du tableau : sur un
-    // portefeuille de vingt positions, vingt allers-retours là où un seul suffit. Le
-    // moteur retrie de toute façon chaque série chronologiquement (règle 6 de D54),
-    // l'ordre de la requête n'a donc pas à être conservé.
+    // mémoire, plutôt qu'une par position. Le moteur retrie chaque série.
     const mouvements = await depotTransactions.listerParUtilisateur(utilisateurId);
     const mouvementsParActif = new Map();
     for (const mouvement of mouvements) {
@@ -120,12 +114,8 @@ function creerServicePortefeuille({
     );
   }
 
-  // Taux de change exposé pour la bascule d'affichage euro/dollar (D43).
-  //
-  // Borne de D43 : aucune conversion n'est faite côté serveur. Tous les montants
-  // renvoyés restent en euros, devise de référence des calculs et du stockage (D11).
-  // Le front applique ce taux à l'affichage seulement, sans que rien ne soit recalculé
-  // ni stocké dans une seconde devise.
+  // Taux de change exposé pour la bascule d'affichage euro/dollar. Les montants restent
+  // en euros ; le front n'applique ce taux qu'à l'affichage.
   async function obtenirTauxAffichage() {
     try {
       const cours = await serviceCours.getCours('USD', 'devise');
@@ -160,24 +150,13 @@ function creerServicePortefeuille({
   }
 
   // Lecture du portefeuille, sans aucune écriture.
-  //
-  // C'est la forme qu'aurait toujours dû avoir cette fonction. Elle historisait et
-  // marquait les alertes à chaque appel : trois écrans l'appelaient, dont celui des
-  // seuils, que le commentaire d'`obtenirValeursObservees` prétendait pourtant tenir à
-  // l'écart de ces effets. Un préchargeur de navigateur, un antivirus qui rejoue une
-  // requête ou un simple rafraîchissement suffisaient à déclencher les mêmes écritures.
   async function obtenirPortefeuille(utilisateurId) {
     return composerPortefeuille(utilisateurId, { avecEffets: false });
   }
 
-  // Actualisation : la même lecture, augmentée des deux effets que D49 et D50 attachent
-  // à la consultation du tableau de bord — l'écriture paresseuse du point du jour et
-  // l'évaluation des seuils.
-  //
-  // Les deux décisions sont conservées telles quelles : aucune tâche planifiée n'est
-  // introduite, c'est toujours la consultation qui déclenche. Seul le déclencheur change
-  // de nature — une commande explicite, que rien ne rejoue à l'insu de l'utilisateur, au
-  // lieu d'une lecture que tout peut rejouer.
+  // Actualisation : la même lecture, plus l'écriture paresseuse du point du jour et
+  // l'évaluation des seuils. Aucune tâche planifiée : c'est une commande explicite du
+  // tableau de bord qui déclenche.
   async function actualiserPortefeuille(utilisateurId) {
     return composerPortefeuille(utilisateurId, { avecEffets: true });
   }
@@ -223,22 +202,12 @@ function creerServicePortefeuille({
     };
   }
 
-  // Évaluation des alertes au chargement du tableau de bord (D50).
+  // Évaluation des alertes à l'actualisation. C'est un effet de bord : un échec est
+  // journalisé et la réponse part quand même.
   //
-  // Comme l'historisation, c'est un effet de bord : un échec est journalisé et la
-  // réponse part quand même. Priver l'utilisateur de son portefeuille parce qu'une
-  // alerte n'a pas pu être évaluée serait disproportionné.
-  //
-  // capitalTotal vaut null lorsque la couverture est incomplète. D56 prévoit qu'une
-  // alerte dont la valeur observée est indisponible n'est pas évaluée du tout, et
-  // evaluerAlertes applique cette règle ; encore faut-il lui dire que la valeur est
-  // indisponible. Un sous-total transmis comme s'il était le capital rendait la garde
-  // inatteignable pour la cible capital_total : un seuil bas se déclenchait dès qu'un
-  // fournisseur tombait, sur un patrimoine amputé de la position manquante.
-  //
-  // Les alertes portant sur un actif restent évaluées normalement : leur valeur
-  // observée est le cours de cet actif, pas le capital, et elle est disponible ou non
-  // indépendamment des autres positions.
+  // capitalTotal vaut null si la couverture est incomplète : une alerte sur le capital
+  // n'est alors pas évaluée, plutôt que de se déclencher sur un sous-total. Les alertes
+  // sur un actif se comparent à son cours et restent évaluées.
   async function traiterAlertes(utilisateurId, capitalTotal, positions) {
     try {
       const actives = await depotAlertes.listerActivesParUtilisateur(utilisateurId);
@@ -267,25 +236,12 @@ function creerServicePortefeuille({
     }
   }
 
-  // Écriture paresseuse du snapshot du jour (D49) : déclenchée par l'actualisation du
-  // tableau de bord, sans tâche planifiée à maintenir.
-  //
-  // Le point porte désormais son heure de relevé. Elle ne corrige pas l'irrégularité du
-  // pas — seul un relevé à heure fixe le ferait, et il demanderait le processus de fond
-  // que D49 écarte — mais elle la rend lisible : l'interface annonce un relevé à l'heure
-  // de la consultation au lieu de laisser croire à une clôture quotidienne.
+  // Écriture paresseuse du snapshot du jour, déclenchée par l'actualisation, sans tâche
+  // planifiée. Le point porte son heure de relevé, que l'interface annonce.
   async function historiser(utilisateurId, valeurTotale, positions, capitalComplet) {
-    // Le total du jour n'est enregistré que s'il est le capital, et non une part de
-    // celui-ci. Le garde-fou précédent ne refusait que le cas où *tous* les cours
-    // manquaient : une seule position non valorisée suffisait à faire entrer dans la
-    // série un point inférieur à la réalité, indiscernable d'une baisse.
-    //
-    // L'unicité (utilisateur_id, date_snapshot) aggravait la conséquence. Le point du
-    // jour s'écrit à la première consultation, et ON CONFLICT DO NOTHING laisse les
-    // suivantes sans effet : un sous-total écrit le matin, alors qu'un fournisseur était
-    // en panne, restait figé pour la journée entière même une fois le cours revenu.
-    //
-    // Un trou dans la courbe reste préférable à un point faux.
+    // Le total du jour n'est enregistré que s'il est le capital complet : un sous-total
+    // se lirait comme une baisse, et l'unicité par date le figerait pour la journée. Un
+    // trou dans la courbe reste préférable à un point faux.
     if (capitalComplet) {
       try {
         await snapshots.enregistrerSiAbsent(utilisateurId, valeurTotale);
@@ -301,16 +257,9 @@ function creerServicePortefeuille({
       );
     }
 
-    // Historique par position (D81), alimenté par le même déclencheur et au même
-    // endroit : les positions valorisées sont déjà là, aucune tâche planifiée n'est
-    // introduite. Les positions sans cours sont écartées par le modèle plutôt que
-    // enregistrées à zéro, pour la même raison qu'au-dessus : un trou dans la courbe
-    // est préférable à un point faux.
-    //
-    // Cette écriture ne dépend pas de la complétude du total, et c'est délibéré. Le
-    // cours d'une position obtenu aujourd'hui ne se retrouvera plus demain ; renoncer à
-    // le conserver parce qu'une *autre* position manque à l'appel perdrait une donnée
-    // exacte pour une raison qui ne la concerne pas. Chaque série est indépendante.
+    // Historique par position, au même endroit. Les positions sans cours sont écartées
+    // plutôt qu'enregistrées à zéro. Cette écriture ne dépend pas de la complétude du
+    // total : chaque série est indépendante, et un cours du jour ne se retrouve pas demain.
     try {
       await snapshotsCours.enregistrerSiAbsent(utilisateurId, positions);
     } catch (erreur) {
@@ -320,9 +269,8 @@ function creerServicePortefeuille({
 
   // Tendance récente de chaque position, indexée par identifiant d'actif.
   //
-  // La variation est calculée ici et non côté interface : c'est une valeur dérivée de
-  // deux cours, donc du ressort du serveur (D69). Les points, eux, ne servent qu'au
-  // tracé de la courbe miniature, où seule compte la forme.
+  // La variation est calculée ici, comme toute valeur dérivée de cours ; les points ne
+  // servent qu'au tracé de la courbe miniature.
   async function obtenirTendances(utilisateurId) {
     try {
       const releves = await snapshotsCours.listerRecentsParUtilisateur(
@@ -354,7 +302,6 @@ function creerServicePortefeuille({
     }
   }
 
-  // Détail d'un actif : position, valorisation et historique de ses transactions.
   async function obtenirDetailActif(actifId, utilisateurId) {
     const actif = await depotActifs.trouverParIdEtUtilisateur(actifId, utilisateurId);
     if (!actif) {
@@ -382,10 +329,8 @@ function creerServicePortefeuille({
       ...valoriser(position, coursActif?.cours_eur ?? null),
       transactions: mouvements,
       historique: await obtenirHistoriqueCours(actifId, utilisateurId),
-      // Même taux que celui du portefeuille, et pour la même raison (D43, D69) : la
-      // bascule euro/dollar ne doit déclencher aucune requête. Sans lui, l'écran de
-      // détail afficherait des euros alors que les deux écrans qui y mènent affichent
-      // des dollars, ce qui se lirait comme une erreur de chiffres.
+      // Même taux que celui du portefeuille : la bascule euro/dollar ne déclenche aucune
+      // requête sur l'écran de détail non plus.
       taux_affichage: await obtenirTauxAffichage(),
     };
   }
@@ -424,11 +369,8 @@ function creerServicePortefeuille({
     return { points, performances: calculerPerformances(complet) };
   }
 
-  // Valeurs actuelles observables, pour l'écran Seuils (E6) : le cours de chaque
-  // position et la valeur totale du patrimoine, sans les effets de bord de
-  // `obtenirPortefeuille` (pas d'historisation, pas d'évaluation ni de marquage des
-  // alertes, déjà faits au chargement du tableau de bord, D50). Un seuil ne fait que
-  // lire ces valeurs pour afficher son écart restant, il ne les fait pas exister.
+  // Valeurs actuelles observables pour l'écran Seuils : le cours de chaque position et
+  // la valeur totale, sans aucun effet de bord.
   async function obtenirValeursObservees(utilisateurId) {
     const { positions, coursIndisponibles, capitalComplet } =
       await construirePositions(utilisateurId);
@@ -438,10 +380,8 @@ function creerServicePortefeuille({
       positions.filter((position) => position.cours_eur !== null).map((p) => [p.id, p.cours_eur])
     );
 
-    // La complétude accompagne le total partout où il circule, pas seulement au tableau
-    // de bord. L'écran Seuils lit ces valeurs pour afficher l'écart restant avant
-    // franchissement : sans ce drapeau, il présentait un sous-total comme le patrimoine,
-    // et l'écart annoncé portait sur une valeur qui n'était pas celle du seuil.
+    // La complétude accompagne le total partout : l'écran Seuils ne doit pas calculer
+    // un écart sur un sous-total.
     return {
       capitalTotal: totaux.valeur_totale,
       capitalComplet,

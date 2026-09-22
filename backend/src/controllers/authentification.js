@@ -51,7 +51,6 @@ async function reinitialiser(req, res, next) {
   }
 }
 
-// Profil du porteur du jeton.
 async function profil(req, res, next) {
   try {
     const utilisateur = await modeleUtilisateur.trouverParId(req.utilisateur.id);
