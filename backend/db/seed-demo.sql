@@ -22,8 +22,8 @@
 
 BEGIN;
 
--- Le hachage bcrypt est réellement calculé en base, avec l'algorithme et le coût que le
--- serveur emploie ($2a$, coût 10 - voir COUT_HACHAGE dans services/authentification.js).
+-- Le hachage bcrypt est réellement calculé en base, avec le coût que le serveur emploie
+-- (10, voir COUT_HACHAGE dans services/authentification.js).
 -- Aucune empreinte n'est recopiée d'ailleurs : elle serait invérifiable et se
 -- désaccorderait le jour où le coût change.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

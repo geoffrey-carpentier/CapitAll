@@ -24,13 +24,11 @@ INSERT INTO utilisateur (email, mot_de_passe_hache, pseudo, role, actif) VALUES
 
 -- Actifs du titulaire.
 --
--- SHIB porte le cas de précision : son prix réel est très inférieur au centime, seuil
--- au-delà duquel la colonne NUMERIC(18,2) actuelle ne peut plus rien conserver. Le
--- laisser dans le jeu de test rend la perte observable sur une vraie base, là où les
--- sondes ne pouvaient l'établir que par lecture du code.
+-- SHIB porte le cas de précision : son prix est très inférieur au centime, et les
+-- colonnes NUMERIC doivent le conserver sans l'arrondir.
 --
--- XAU porte le cas d'unité : la quantité est exprimée en onces troy, ce que la note
--- consigne explicitement, alors que l'interface l'affiche aujourd'hui en grammes.
+-- XAU porte le cas d'unité : la quantité est exprimée en onces troy, comme la note le
+-- rappelle.
 INSERT INTO actif (utilisateur_id, type, symbole, nom)
 SELECT u.id, v.type, v.symbole, v.nom
 FROM utilisateur u

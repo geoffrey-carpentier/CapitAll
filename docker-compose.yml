@@ -1,7 +1,6 @@
 # Environnement de développement : base de données et cache uniquement.
 # Le front et l'API tournent sur le poste (npm run dev) et se connectent à ces deux
-# services. La mise en conteneurs des images applicatives relève du déploiement et
-# sera traitée avec les Dockerfile. La pile complète vit dans
+# services. La pile complète, avec les images de l'API et de l'interface, vit dans
 # docker-compose.production.yml, sous un autre nom de projet : les deux cohabitent sans
 # partager ni conteneurs ni volume.
 #
