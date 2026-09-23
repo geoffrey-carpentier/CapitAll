@@ -13,11 +13,13 @@
 //      ou pas du tout, et un échec au milieu du lot laisse les précédentes acquises.
 //   3. L'empreinte du fichier est conservée. Modifier une migration déjà appliquée est
 //      détecté et refusé : deux bases prétendraient sinon porter le même schéma en
-//      ayant exécuté des instructions différentes.
+//      ayant exécuté des instructions différentes. Le registre n'est jamais recalé en
+//      base pour faire passer le contrôle : la divergence est une erreur de méthode, et
+//      se corrige par une migration en avant.
 //
 // Pas de retour arrière automatique : une migration qui rétrécit une échelle ou supprime
-// une colonne détruit des données. La reprise se fait par restauration d'une sauvegarde,
-// ou par une migration corrective en avant.
+// une colonne détruit des données qu'un « down » ne reconstituerait pas. La reprise se
+// fait par restauration d'une sauvegarde, ou par une migration corrective en avant.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -42,7 +44,8 @@ function empreinte(contenu) {
   return crypto.createHash('sha256').update(contenu).digest('hex');
 }
 
-// fichiers préfixés par AAAA-MM-JJ.
+// Les fichiers sont préfixés par AAAA-MM-JJ : l'ordre lexicographique est l'ordre
+// chronologique.
 function lireMigrations() {
   return fs
     .readdirSync(DOSSIER_MIGRATIONS)

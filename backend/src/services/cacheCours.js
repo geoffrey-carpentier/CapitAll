@@ -9,6 +9,12 @@
 // instruments de classes différentes, et le cache est commun à tous les comptes.
 // Aucune fonction ne lève d'exception : une panne de cache dégrade vers un appel direct
 // au fournisseur.
+//
+// Le préfixe porte une version. Les clés de l'ancien format ne sont plus lues : celles
+// qui ont un TTL expirent d'elles-mêmes, celles du dernier cours connu n'en ont pas et
+// restent jusqu'à un inventaire explicitement autorisé. En exploitation, ne pas purger
+// « cours:*dernier-connu:* » au motif d'un nettoyage : c'est le filet de sécurité des
+// cours, et il emporterait les clés courantes avec les anciennes.
 
 const cache = require('../cache/client');
 

@@ -1,9 +1,12 @@
 // Limitation de débit sur les chemins d'authentification.
 //
 // Le quota est compté par adresse électronique et non par IP : derrière Nginx, req.ip
-// vaut la même valeur pour tous les clients. `trust proxy` n'est pas posé, pour qu'un
-// X-Forwarded-For forgé ne choisisse pas son compteur. Limite assumée : un tiers peut
-// épuiser les tentatives d'un compte jusqu'à la fin de la fenêtre.
+// vaut la même valeur pour tous les clients, et un quota par IP les bloquerait tous à la
+// fois. `trust proxy` n'est pas posé : les réglages usuels couvrent la passerelle Docker
+// et laisseraient un X-Forwarded-For forgé choisir son compteur. À réexaminer, avec une
+// valeur bornée au proxy réellement maîtrisé, si le relais transmet un jour l'adresse
+// cliente. Limite assumée en attendant : un tiers peut épuiser les tentatives d'un
+// compte jusqu'à la fin de la fenêtre.
 
 const rateLimit = require('express-rate-limit');
 

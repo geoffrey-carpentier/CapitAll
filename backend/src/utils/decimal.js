@@ -8,11 +8,16 @@
 //   quantités, frais en nature, prix, cours, taux : 18 décimales (le wei d'Ethereum,
 //       et assez de chiffres significatifs pour un cours très faible) ;
 //   prix de revient : 24 décimales, car c'est un diviseur réinjecté dans les calculs ;
+//       les six décimales de marge au-dessus des prix évitent qu'un arrondi du PRU ne
+//       remonte dans les montants qui en dépendent ;
 //   montants en euros : 2 décimales.
 //
-// Arrondi unique : au plus proche, les demis s'éloignant de zéro, à la lecture comme
-// au calcul. multiplier et diviser reçoivent explicitement l'échelle de chaque opérande
-// et celle du résultat.
+// Arrondi unique : au plus proche, les demis s'éloignant de zéro, à la lecture comme au
+// calcul. Une valeur trop précise pour l'échelle visée est donc arrondie, jamais
+// tronquée ; les saisies hors échelle, elles, sont refusées en 400 par la validation,
+// plutôt que laissées au calcul. multiplier et diviser reçoivent explicitement l'échelle
+// de chaque opérande et celle du résultat : elles supposaient autrefois une échelle
+// commune, et mélanger quantités à 18 et PRU à 24 fausserait chaque produit sans signal.
 
 const ECHELLE_QUANTITE = 18;
 const ECHELLE_PRIX = 18;
