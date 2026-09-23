@@ -1,9 +1,6 @@
 // Application des migrations SQL versionnées.
 //
-// Le dépôt contenait des migrations écrites et rejouables, mais rien ne disait
-// lesquelles avaient déjà été passées sur une base donnée : la réponse vivait dans la
-// mémoire de celui qui les avait lancées. Ce script tient ce registre en base, à côté
-// des données qu'il décrit.
+// Ce script tient ce registre en base, à côté des données qu'il décrit.
 //
 //   node backend/db/migrer.js            applique ce qui manque
 //   node backend/db/migrer.js --etat     affiche l'état sans rien écrire
@@ -18,10 +15,9 @@
 //      détecté et refusé : deux bases prétendraient sinon porter le même schéma en
 //      ayant exécuté des instructions différentes.
 //
-// Il n'y a délibérément pas de retour arrière automatique. Une migration qui rétrécit
-// une échelle ou supprime une colonne détruit des données que le « down » ne
-// reconstitue pas ; le présenter comme réversible serait mensonger. La reprise se fait
-// par restauration d'une sauvegarde, ou par une migration corrective en avant.
+// Pas de retour arrière automatique : une migration qui rétrécit une échelle ou supprime
+// une colonne détruit des données. La reprise se fait par restauration d'une sauvegarde,
+// ou par une migration corrective en avant.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -46,8 +42,7 @@ function empreinte(contenu) {
   return crypto.createHash('sha256').update(contenu).digest('hex');
 }
 
-// L'ordre lexicographique des noms est l'ordre chronologique : les fichiers sont
-// préfixés par leur date au format AAAA-MM-JJ.
+// fichiers préfixés par AAAA-MM-JJ.
 function lireMigrations() {
   return fs
     .readdirSync(DOSSIER_MIGRATIONS)
@@ -66,9 +61,6 @@ async function etatDuRegistre(executer) {
   return new Map(rows.map((ligne) => [ligne.nom, ligne]));
 }
 
-// Une migration déjà appliquée dont le fichier a changé depuis est une erreur de
-// méthode, pas un cas à rattraper automatiquement : la corriger en base reviendrait à
-// prétendre qu'elle a toujours été telle qu'on la lit aujourd'hui.
 function verifierEmpreintes(migrations, dejaAppliquees) {
   const divergentes = migrations.filter((migration) => {
     const trace = dejaAppliquees.get(migration.nom);
