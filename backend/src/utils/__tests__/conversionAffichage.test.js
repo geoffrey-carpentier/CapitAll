@@ -9,15 +9,8 @@ import {
   formater,
 } from '../decimal.js';
 
-// Jeu d'essai partagé avec l'interface (D69).
-//
-// La conversion d'affichage euro/dollar est la seule opération arithmétique que
-// l'interface réalise sur un montant, et elle est donc la seule à exister des deux côtés
-// du dossier. Ce fichier vérifie que le serveur, avec son arithmétique en entiers,
-// produit exactement les mêmes chaînes que l'interface sur les mêmes entrées. Si l'une
-// des deux règles d'arrondi dérive un jour, la divergence apparaît ici avant d'apparaître
-// à l'écran sous la forme d'un centime inexplicable.
-//
+// Jeu d'essai partagé avec l'interface : la conversion euro/dollar existe des deux
+// côtés, et le serveur doit produire exactement les mêmes chaînes sur les mêmes entrées.
 // La suite jumelle est `frontend/src/utils/__tests__/conversion.test.js`.
 const JEU_ESSAI = JSON.parse(
   readFileSync(resolve(process.cwd(), '../fixtures/conversion-affichage.json'), 'utf8')
@@ -27,10 +20,7 @@ const JEU_ESSAI = JSON.parse(
 // proche, les demis s'écartant de zéro.
 //
 // Le résultat porte autant de décimales que le montant reçu, avec un plancher au
-// centime. La règle vient de ce que la même fonction sert deux natures de valeurs : les
-// montants du patrimoine, réglés au centime, et les cours, qui descendent bien plus bas.
-// Forcer deux décimales faisait disparaître un cours de 0,005 euro à la bascule de
-// devise, alors qu'il s'affichait correctement en euros.
+// centime : la fonction sert aussi aux cours, qui descendent sous le centime.
 function decimalesDe(valeur) {
   const [, decimale = ''] = valeur.split('.');
   return decimale.length;

@@ -3,16 +3,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { convertir } from '../conversion';
 
-// Jeu d'essai partagé avec le serveur (D69). Les deux implémentations de la conversion
-// d'affichage doivent rendre exactement les mêmes chaînes : la multiplication existe des
-// deux côtés, et deux règles d'arrondi divergentes produiraient des écarts d'un centime
-// que personne ne saurait expliquer.
-//
-// Le fichier est lu plutôt qu'importé : il vit à la racine du dépôt, hors de l'espace
-// que le résolveur de modules de l'interface couvre. Le copier ici aurait ruiné son
-// intérêt, qui est d'être un fichier unique.
-// Le chemin part du dossier d'exécution de la suite, `frontend/`, et non de ce fichier :
-// sous Vitest, l'URL du module n'est pas une adresse de fichier utilisable telle quelle.
+// Jeu d'essai partagé avec le serveur : les deux conversions d'affichage doivent rendre
+// exactement les mêmes chaînes. Le fichier, à la racine du dépôt, est lu plutôt
+// qu'importé ; son chemin part du dossier d'exécution de la suite, `frontend/`.
 const JEU_ESSAI = JSON.parse(
   readFileSync(resolve(process.cwd(), '../fixtures/conversion-affichage.json'), 'utf8')
 );

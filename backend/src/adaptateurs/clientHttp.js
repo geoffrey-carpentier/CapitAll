@@ -5,15 +5,10 @@ const { ErreurFournisseur } = require('../erreurs');
 // Au-delà, le fournisseur est considéré indisponible (repli sur le dernier cours connu).
 const DELAI_REQUETE_MS = 5000;
 
-// Lecture d'une réponse JSON en préservant les chiffres reçus.
-//
-// JSON.parse convertit les nombres en flottants et perd leur précision
-// (« 0.000000000123456789012345 » devient « 1.23456789012345e-10 »), et un reviver
-// reçoit une valeur déjà convertie. Chaque littéral numérique est donc mis entre
-// guillemets avant l'analyse, pour être lu en chaîne.
-//
-// Parcours manuel plutôt qu'expression régulière : les nombres situés dans une chaîne
-// ne doivent pas être touchés.
+// Lecture d'une réponse JSON en préservant les chiffres reçus. JSON.parse convertit les
+// nombres en flottants, et un reviver reçoit une valeur déjà convertie : chaque littéral
+// numérique est donc mis entre guillemets avant l'analyse. Le parcours est manuel pour
+// ne pas toucher aux nombres situés dans une chaîne.
 function analyserEnPreservantLesChiffres(texte) {
   const MOTIF_NOMBRE = /^-?\d+(\.\d+)?([eE][+-]?\d+)?/;
 

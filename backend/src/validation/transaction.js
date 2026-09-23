@@ -1,20 +1,16 @@
-// Schémas de validation des transactions (D41).
-//
-// Les montants et les quantités ne sont jamais convertis en nombre à virgule flottante :
-// ils sont normalisés en chaîne de caractères et transmis tels quels aux colonnes NUMERIC
-// de PostgreSQL (D4). Convertir en Number ferait perdre de la précision sur des quantités
-// à 18 décimales, ce qui est exactement ce que le choix de NUMERIC vise à éviter.
+// Schémas de validation des transactions. Montants et quantités ne passent jamais par
+// un flottant : ils sont normalisés en chaîne et transmis tels quels aux colonnes NUMERIC.
 
 const { z } = require('zod');
 const { versNotationPositionnelle } = require('../utils/decimal');
 
-// Trois natures de mouvement (D89). La sortie non marchande couvre le retrait et le
+// Trois natures de mouvement. La sortie non marchande couvre le retrait et le
 // transfert : la quantité quitte la position sans contrepartie en euros.
 const SENS_TRANSACTION = ['achat', 'vente', 'sortie_non_marchande'];
 
 const UNITE_EURO = 'EUR';
 
-// Décimales admises, alignées sur les échelles de calcul (D88).
+// Décimales admises, alignées sur les échelles de calcul.
 const DECIMALES_QUANTITE = 18;
 const DECIMALES_PRIX = 18;
 const DECIMALES_FRAIS = 2;
@@ -24,12 +20,8 @@ const DECIMALES_FRAIS_MONTANT = 18;
 
 // Bornes hautes, exprimées en nombre de chiffres avant la virgule.
 //
-// Elles ne servent pas à brider l'utilisateur — mille milliards d'unités d'un jeton à
-// 0,00001 euro valent dix millions d'euros, et aucun titre coté n'approche le milliard
-// — mais à garantir que le produit quantité × prix tienne dans la colonne qui le
-// recevra. Sans elles, le schéma acceptait une valeur que PostgreSQL refusait ensuite
-// par « numeric field overflow », et l'utilisateur recevait une erreur serveur là où il
-// aurait dû recevoir un refus de saisie.
+// Elles garantissent que le produit quantité × prix tienne dans sa colonne : une valeur
+// trop grande est refusée à la saisie plutôt que par PostgreSQL en erreur serveur.
 const CHIFFRES_QUANTITE = 12;
 const CHIFFRES_PRIX = 9;
 const CHIFFRES_FRAIS = 9;
@@ -99,8 +91,7 @@ const creationTransaction = z
       chiffresEntiersMax: CHIFFRES_PRIX,
       strictementPositif: false,
     }).optional(),
-    // Frais réglés en euros : la forme courte, et celle que portaient les mouvements
-    // enregistrés avant D89. Elle reste exacte et n'a pas à être réécrite.
+    // Frais réglés en euros : la forme courte.
     frais: nombreDecimal({
       decimalesMax: DECIMALES_FRAIS,
       chiffresEntiersMax: CHIFFRES_FRAIS,

@@ -314,11 +314,8 @@ describe('performance par plage du sélecteur de période', () => {
   });
 });
 
-// Déroulé des mouvements : l'effet de chacun sur le prix de revient.
-//
-// C'est la colonne la plus difficile à défendre à l'oral, et celle que l'interface ne
-// doit surtout pas reconstituer de son côté. Les cas ci-dessous sont les mêmes que ceux
-// du calcul de position, relus mouvement par mouvement.
+// Déroulé des mouvements : l'effet de chacun sur le prix de revient, que l'interface ne
+// reconstitue jamais. Mêmes cas que le calcul de position, relus mouvement par mouvement.
 describe('déroulé des mouvements', () => {
   it('rend une liste vide sans transaction', () => {
     expect(derouler([]).mouvements).toEqual([]);

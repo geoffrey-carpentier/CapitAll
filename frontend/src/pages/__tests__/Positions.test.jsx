@@ -376,7 +376,7 @@ describe('accessibilité et affichage', () => {
   });
 });
 
-// Colonne de tendance sur trente jours (D81). La courbe miniature ne porte jamais
+// Colonne de tendance sur trente jours. La courbe miniature ne porte jamais
 // l'information seule : c'est la variation chiffrée qui l'accompagne qui est lue.
 describe('tendance sur trente jours', () => {
   const AVEC_TENDANCES = {

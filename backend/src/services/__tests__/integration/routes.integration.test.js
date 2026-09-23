@@ -1,15 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 
-// Contrats de route, contre l'application réellement montée (QA-01, S-19).
-//
-// Ce que les tests de service ne peuvent pas établir : qu'une route existe à l'adresse
-// annoncée, qu'elle est bien derrière l'authentification, et que le verbe compte. Une
-// fonction peut être juste et n'être branchée nulle part — c'est exactement le défaut
-// que l'audit relevait sur `PATCH /api/actifs/:id`.
-//
-// L'application est montée en mémoire, sans écouter de port : supertest ouvre un socket
-// éphémère par requête. Rien n'est publié, rien n'est laissé ouvert.
+// Contrats de route, sur l'application réellement montée : chaque route existe à
+// l'adresse annoncée, derrière l'authentification, avec le bon verbe. Supertest ouvre
+// un socket éphémère par requête, aucun port n'est publié.
 //
 // Environnement : docker-compose.test.yml, base isolée, port 5434.
 //
@@ -134,7 +128,7 @@ describe('routes du portefeuille', () => {
 
 describe('cloisonnement des comptes', () => {
   it('rend 404, et non 403, sur la position d’un autre compte', async () => {
-    // D52 : l'appelant ne doit pas pouvoir distinguer l'inexistant de ce qui ne lui
+    // L'appelant ne doit pas pouvoir distinguer l'inexistant de ce qui ne lui
     // appartient pas, sans quoi un balayage d'identifiants énumérerait les ressources
     // des autres comptes.
     const reponse = await request(app)

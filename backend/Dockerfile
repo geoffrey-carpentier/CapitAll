@@ -1,11 +1,6 @@
-# Image de l'API CapitAll.
-#
-# Deux étapes. La première installe les dépendances de production, la seconde n'en
-# reprend que le résultat : ni cache npm, ni trace d'installation dans l'image finale.
-#
-# Aucune chaîne de compilation n'est nécessaire, bien que bcrypt soit un module natif :
-# le paquet embarque ses propres binaires précompilés, dont celui de la bibliothèque C
-# d'Alpine, et node-gyp-build choisit le bon au chargement.
+# Image de l'API, en deux étapes : la seconde ne reprend que les dépendances de
+# production installées par la première. bcrypt embarque ses binaires précompilés pour
+# Alpine : aucune chaîne de compilation n'est nécessaire.
 
 FROM node:22-alpine AS dependances
 

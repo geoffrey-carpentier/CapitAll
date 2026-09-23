@@ -1,4 +1,4 @@
-// Adaptateur des actions américaines (D26) : FMP en source principale, Finnhub
+// Adaptateur des actions américaines : FMP en source principale, Finnhub
 // puis Alpha Vantage en replis. Les trois fournisseurs cotent en dollars ; la
 // conversion vers la devise de référence passe donc par le taux USD -> EUR mis en
 // cache par le service de cours, comme pour les métaux.
@@ -18,8 +18,7 @@ const BASE_FINNHUB = 'https://finnhub.io/api/v1';
 const BASE_ALPHA_VANTAGE = 'https://www.alphavantage.co/query';
 
 // Un horodatage n'est pas un montant : le convertir en nombre ne coûte aucune précision
-// utile. La conversion est explicite parce que le client HTTP rend désormais tous les
-// littéraux numériques sous forme de chaînes.
+// utile. La conversion est explicite car le client HTTP rend les nombres en chaînes.
 function horodatageUnix(secondes) {
   const valeur = Number(secondes);
   return Number.isFinite(valeur) && valeur > 0
@@ -123,16 +122,9 @@ function creerAdaptateurActions({
       );
     }
 
-    // Seconde étape, et une seule fois : le taux de change.
-    //
-    // Il était auparavant demandé à l'intérieur de la boucle, après chaque cotation
-    // réussie. Un change indisponible faisait donc échouer le premier fournisseur, puis
-    // le deuxième, puis le troisième, pour une cause qui n'appartenait à aucun des
-    // trois : trois appels de quota consommés, et un message accusant les cotateurs
-    // d'une panne qui n'était pas la leur.
-    //
-    // Son échec est requalifié plutôt que propagé tel quel : remonté brut, il ne dit pas
-    // de quelle étape il provient, ce que le défaut d'origine rendait indéchiffrable.
+    // Seconde étape, une seule fois : le taux de change, hors de la boucle, pour qu'une
+    // panne de change ne soit pas imputée aux fournisseurs de cotation. Son échec est
+    // requalifié pour dire de quelle étape il provient.
     let tauxUsdEur;
     try {
       tauxUsdEur = chaineDecimalePositive(await obtenirTauxUsdEur());

@@ -1,58 +1,23 @@
 // Arithmétique décimale exacte, en entiers.
 //
-// Aucun montant du projet n'est calculé en virgule flottante (D4). Un nombre est
-// représenté par un entier BigInt exprimé dans une unité fixe : à l'échelle 8, la
-// valeur 1,5 est portée par l'entier 150000000. Les additions et soustractions sont
-// alors exactes, et 0,1 + 0,2 rend exactement 0,3 là où le flottant donnerait
-// 0,30000000000000004.
+// Aucun montant n'est calculé en virgule flottante. Un nombre est un entier BigInt
+// exprimé dans une unité fixe : à l'échelle 8, 1,5 est porté par 150000000, et
+// 0,1 + 0,2 rend exactement 0,3.
 //
-// ---------------------------------------------------------------------------
-// Échelles (D88)
-// ---------------------------------------------------------------------------
+// Échelles :
+//   quantités, frais en nature, prix, cours, taux : 18 décimales (le wei d'Ethereum,
+//       et assez de chiffres significatifs pour un cours très faible) ;
+//   prix de revient : 24 décimales, car c'est un diviseur réinjecté dans les calculs ;
+//       les six décimales de marge au-dessus des prix évitent qu'un arrondi du PRU ne
+//       remonte dans les montants qui en dépendent ;
+//   montants en euros : 2 décimales.
 //
-// Chaque grandeur a son échelle propre, choisie sur son usage et non par symétrie.
-//
-//   quantités, frais en nature : 18 décimales, la précision native des actifs suivis.
-//       C'est le wei d'Ethereum ; le satoshi du bitcoin en demande huit, les jetons
-//       usuels au plus dix-huit.
-//
-//   prix et cours : 18 décimales également. Le motif n'est pas l'alignement mais les
-//       chiffres significatifs : à douze décimales, un cours de 1e-12 n'en porterait
-//       qu'un seul, ce qui ne permet ni de le distinguer d'un autre, ni de calculer une
-//       variation. À dix-huit, il en reste sept.
-//
-//   prix de revient : 24 décimales. Il n'est ni affiché ni stocké : c'est un diviseur
-//       de calcul, réinjecté dans chaque valorisation et chaque plus-value. Six
-//       décimales de marge au-dessus du prix évitent qu'un arrondi du PRU ne remonte
-//       dans les montants qui en dépendent.
-//
-//   taux de change : 18 décimales, alignées sur les cours dont ils dérivent.
-//
-//   montants en euros : 2 décimales. L'euro se règle au centime.
-//
-// ---------------------------------------------------------------------------
-// Règles d'arrondi
-// ---------------------------------------------------------------------------
-//
-// Une seule règle dans tout le module : arrondi au plus proche, les demis s'éloignant
-// de zéro. C'est la convention comptable, et elle traite symétriquement les gains et
-// les pertes.
-//
-// Elle vaut aussi à la lecture. Une valeur portant plus de décimales que l'échelle
-// visée est arrondie, jamais tronquée : tronquer aurait fait disparaître en silence une
-// précision que l'appelant croyait conserver. Les entrées des utilisateurs, elles, sont
-// bornées en amont par les schémas de validation, qui refusent en 400 ce qui ne tient
-// pas dans l'échelle plutôt que de laisser le calcul en décider.
-//
-// ---------------------------------------------------------------------------
-// Échelles explicites
-// ---------------------------------------------------------------------------
-//
-// multiplier et diviser reçoivent l'échelle de chacun de leurs opérandes et celle du
-// résultat attendu. Elles supposaient auparavant une échelle commune, invariant que
-// rien n'écrivait ni ne vérifiait : le moteur n'était juste que parce que quantités et
-// PRU partageaient la même valeur. Porter le PRU à 24 en laissant les quantités à 18
-// aurait faussé chaque produit d'un facteur 10^6, sans erreur ni signal.
+// Arrondi unique : au plus proche, les demis s'éloignant de zéro, à la lecture comme au
+// calcul. Une valeur trop précise pour l'échelle visée est donc arrondie, jamais
+// tronquée ; les saisies hors échelle, elles, sont refusées en 400 par la validation,
+// plutôt que laissées au calcul. multiplier et diviser reçoivent explicitement l'échelle
+// de chaque opérande et celle du résultat : elles supposaient autrefois une échelle
+// commune, et mélanger quantités à 18 et PRU à 24 fausserait chaque produit sans signal.
 
 const ECHELLE_QUANTITE = 18;
 const ECHELLE_PRIX = 18;
@@ -67,11 +32,8 @@ function facteur(echelle) {
 
 // Notation scientifique vers notation positionnelle.
 //
-// JavaScript écrit spontanément en exposant tout nombre inférieur à 1e-6 : String(1e-7)
-// rend « 1e-7 ». Les cours des fournisseurs passent par cette conversion, et l'échelle
-// des prix descend désormais bien en dessous de ce seuil. Sans ce traitement, la chaîne
-// arrivait telle quelle au constructeur BigInt, qui levait une SyntaxError au milieu
-// d'un calcul de portefeuille.
+// JavaScript écrit en exposant tout nombre inférieur à 1e-6 (String(1e-7) rend « 1e-7 »),
+// ce que le constructeur BigInt refuse.
 function versNotationPositionnelle(texte) {
   const correspondance = /^([+-]?)(\d*)(?:\.(\d*))?[eE]([+-]?\d+)$/.exec(texte);
 

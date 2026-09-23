@@ -13,7 +13,7 @@ beforeAll(async () => {
 // Le service est monté avec des modèles en mémoire : aucune base n'est nécessaire pour
 // vérifier l'enregistrement d'un mouvement ni la simulation de son effet.
 //
-// Les chiffres attendus sont ceux du moteur de calcul, repris de ses six règles (D54) :
+// Les chiffres attendus sont ceux du moteur de calcul, repris de ses règles :
 // un achat recalcule le prix de revient en moyenne pondérée, frais compris ; une vente
 // le laisse intact et dégage une plus-value.
 
@@ -126,7 +126,7 @@ describe('enregistrement', () => {
   });
 
   // Un actif appartenant à un autre compte est indiscernable d'un actif inexistant :
-  // le modèle filtre sur le propriétaire, le service ne voit qu'une absence (D52).
+  // le modèle filtre sur le propriétaire, le service ne voit qu'une absence.
   it('rend 404 sur un actif qui n\'appartient pas au demandeur', async () => {
     const { service, transactions } = monter({ actif: null });
 

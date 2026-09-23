@@ -1,16 +1,9 @@
 # Environnement de test isolé : base et cache dédiés aux tests d'intégration.
 #
-# Rigoureusement séparé de l'environnement de développement (docker-compose.yml,
-# projet « capitall », volume « donnees-postgres ») : nom de projet, conteneurs, volume
-# et ports sont tous distincts. Aucune commande lancée sur cet environnement ne peut
-# atteindre les données de travail, y compris un « down -v ».
-#
-# Le nom retenu est celui du projet renommé. L'environnement de développement conserve
-# provisoirement l'ancien nom : y toucher orphelinerait son volume et donc sa base.
-#
-# Les identifiants ci-dessous sont des valeurs de test écrites en clair, sans équivalent
-# réel nulle part. Ils ne sont volontairement pas lus depuis .env, pour qu'aucune
-# configuration de poste ne puisse rediriger les tests vers une base de travail.
+# Séparé de l'environnement de développement : nom de projet, conteneurs, volume et
+# ports distincts, si bien qu'aucune commande ici, « down -v » compris, n'atteint les
+# données de travail. Les identifiants sont des valeurs de test en clair, volontairement
+# non lues depuis .env.
 #
 #   docker compose -f docker-compose.test.yml up -d
 #   docker compose -f docker-compose.test.yml down -v     (ne touche que le volume de test)

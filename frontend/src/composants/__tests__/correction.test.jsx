@@ -7,13 +7,8 @@ import FriseMouvements from '../FriseMouvements';
 import * as contexte from '../../contexte/contexteAuthentification';
 import { api } from '../../services/api';
 
-// Correction d'un mouvement enregistré, côté interface (D51 révisée).
-//
-// Ce que ces tests protègent : que la feuille parte des valeurs du mouvement au lieu
-// d'un formulaire vide, qu'elle appelle la route de correction et non celle de création,
-// et qu'elle interdise de déplacer un mouvement vers une autre position. Le troisième
-// point est le moins visible et le plus coûteux à rattraper : une correction qui
-// changerait d'actif détacherait le mouvement de l'histoire qui l'explique.
+// Correction d'un mouvement, côté interface : la feuille part des valeurs du mouvement,
+// appelle la route de correction, et interdit de changer d'actif.
 
 const POSITION = {
   id: 1,

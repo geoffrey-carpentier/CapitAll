@@ -1,29 +1,20 @@
-// Cache Redis des cours récupérés auprès des fournisseurs externes (D14).
-// Ce module ne gère que les clés et leur durée de vie ; la connexion et sa résilience
-// sont l'affaire de src/cache/client.js.
+// Cache Redis des cours : les clés et leur durée de vie. La connexion relève de
+// src/cache/client.js.
 //
-// Deux familles de clés, aux rôles distincts :
 //   cours:v2:{TYPE}:{SYMBOLE}                avec TTL, le cours frais servi en priorité
-//   cours:v2:dernier-connu:{TYPE}:{SYMBOLE}  sans TTL, filet de sécurité quand un
-//                                            fournisseur est indisponible
-//                                            (cas-utilisation.md : « le dernier cours
-//                                            connu est affiché avec sa date »)
+//   cours:v2:dernier-connu:{TYPE}:{SYMBOLE}  sans TTL, repli quand un fournisseur
+//                                            est indisponible
 //
-// L'identité d'un cours est le couple (type, symbole), jamais le symbole seul. Un même
-// sigle désigne des instruments différents selon la classe : ETH est une cryptomonnaie,
-// et rien n'empêche de suivre une devise portant le même code. Avec le symbole pour
-// seule clé, le cours de l'une était servi pour l'autre, y compris sur le repli, et
-// l'unicité (utilisateur_id, symbole) de la base n'y changeait rien : le cache est
-// commun à tous les comptes.
+// Un cours s'identifie par (type, symbole) : un même sigle peut désigner des
+// instruments de classes différentes, et le cache est commun à tous les comptes.
+// Aucune fonction ne lève d'exception : une panne de cache dégrade vers un appel direct
+// au fournisseur.
 //
-// Le préfixe porte une version. Les clés de l'ancien format ne sont plus lues et
-// expireront d'elles-mêmes pour les cours frais ; celles du dernier cours connu, qui
-// n'ont pas de durée de vie, resteront jusqu'à un inventaire et une suppression
-// explicitement autorisés. Purger « cours:dernier-connu:* » aurait emporté les
-// nouvelles clés en même temps que les anciennes.
-//
-// Aucune fonction ne lève d'exception : une panne de cache dégrade vers un appel
-// direct au fournisseur, elle ne fait jamais échouer la requête de l'utilisateur.
+// Le préfixe porte une version. Les clés de l'ancien format ne sont plus lues : celles
+// qui ont un TTL expirent d'elles-mêmes, celles du dernier cours connu n'en ont pas et
+// restent jusqu'à un inventaire explicitement autorisé. En exploitation, ne pas purger
+// « cours:*dernier-connu:* » au motif d'un nettoyage : c'est le filet de sécurité des
+// cours, et il emporterait les clés courantes avec les anciennes.
 
 const cache = require('../cache/client');
 
@@ -55,7 +46,7 @@ async function lireCoursCache(type, symbole) {
   return analyser(valeur);
 }
 
-// La durée de vie est reçue en paramètre : elle dépend de la classe d'actif (D21), le
+// La durée de vie est reçue en paramètre : elle dépend de la classe d'actif, le
 // service de cours étant seul à connaître le type du symbole demandé.
 async function ecrireCoursCache(type, symbole, cours, dureeVieSecondes) {
   await cache.executer((client) =>

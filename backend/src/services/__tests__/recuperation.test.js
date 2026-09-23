@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import crypto from 'node:crypto';
 
-// Récupération d'un mot de passe oublié (D23, S-28).
+// Récupération d'un mot de passe oublié.
 //
 // Deux exigences gouvernent ce parcours, et elles tirent en sens contraire : il doit
 // fonctionner sans que l'utilisateur soit connecté, et il ne doit rien apprendre à qui

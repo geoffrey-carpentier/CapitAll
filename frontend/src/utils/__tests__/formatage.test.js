@@ -91,9 +91,7 @@ describe('catégorie 2 — quantités', () => {
     expect(formaterQuantite('0.60000010', 'crypto', 'BTC')).toBe(`0,6000001${NBSP}BTC`);
   });
 
-  // L'once troy est l'unité de cotation du fournisseur et celle dans laquelle les
-  // quantités sont saisies (D88). Le gramme affiché auparavant ne correspondait à
-  // aucune conversion : le libellé mentait d'un facteur 31,1034768.
+  // L'once troy est l'unité de cotation du fournisseur et celle de la saisie.
   it('affiche un métal en onces troy, à quatre décimales', () => {
     expect(formaterQuantite('18', 'metal')).toBe(`18${NBSP}oz`);
     expect(formaterQuantite('620.500', 'metal')).toBe(`620,5${NBSP}oz`);
@@ -326,8 +324,8 @@ describe('comparaison de valeurs décimales', () => {
   });
 });
 
-// Quantité dont on connaît l'unité mais pas la classe : les frais prélevés en nature
-// (D89). La classe n'est pas devinée, et le nombre de décimales ne dépend donc que de
+// Quantité dont on connaît l'unité mais pas la classe : les frais prélevés en nature.
+// La classe n'est pas devinée, et le nombre de décimales ne dépend donc que de
 // ce que la base peut porter.
 describe('catégorie 2 bis — quantité en nature', () => {
   it('accole l’unité prélevée à la quantité', () => {

@@ -6,7 +6,6 @@ const { schemaChangementMotDePasse, schemaSuppressionCompte } = require('../vali
 
 const routeur = express.Router();
 
-// Authentification posée pour tout le routeur.
 routeur.use(authentifier);
 
 routeur.patch('/mot-de-passe', valider(schemaChangementMotDePasse), controleur.changerMotDePasse);

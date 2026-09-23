@@ -33,8 +33,8 @@ const COMPTE = { id: 42, role: 'admin', actif: true, jetons_invalides_avant: nul
 
 let next;
 
-// Le compte est relu à chaque requête depuis D60 complétée : le middleware reçoit donc
-// son modèle, comme les services, et s'exécute sans base.
+// Le compte est relu à chaque requête : le middleware reçoit donc son modèle, comme
+// les services, et s'exécute sans base.
 function monter(compte = COMPTE) {
   const utilisateurs = { trouverPourAutorisation: vi.fn().mockResolvedValue(compte) };
   return { authentifier: creerAuthentifier({ utilisateurs }), utilisateurs };
@@ -112,9 +112,8 @@ describe("middleware d'authentification", () => {
   });
 });
 
-// D60 créait la désactivation d'un compte et la connexion la respectait ; un jeton déjà
-// émis continuait pourtant de servir jusqu'à son expiration, soit deux heures. La
-// désactivation était annoncée sans être appliquée.
+// Un jeton déjà émis ne doit plus servir une fois le compte désactivé, sans attendre
+// son expiration.
 describe('révocation, à chaque requête', () => {
   it('refuse le jeton d’un compte désactivé', async () => {
     const { authentifier } = monter({ ...COMPTE, actif: false });

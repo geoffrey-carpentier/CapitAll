@@ -18,9 +18,8 @@ function depotActifs(liste, actifUnique) {
   };
 }
 
-// Deux lectures, deux usages. Le tableau de bord charge désormais tous les mouvements
-// du compte en une requête et les regroupe en mémoire, au lieu d'en émettre une par
-// position ; l'écran de détail, lui, continue de lire une seule position.
+// Deux lectures, deux usages : le tableau de bord charge tous les mouvements du compte
+// en une requête, l'écran de détail lit une seule position.
 function depotTransactions(liste, actifId = ACTIF_BTC.id) {
   return {
     listerParActifEtUtilisateur: vi.fn().mockResolvedValue(liste),
@@ -62,7 +61,7 @@ function snapshotsFactices() {
   };
 }
 
-// Historique de cours par position (D81). Vide par defaut : la plupart des cas ne
+// Historique de cours par position. Vide par defaut : la plupart des cas ne
 // portent pas sur la tendance, et une serie vide est l'etat reel d'un compte neuf.
 function snapshotsCoursFactices(series = []) {
   return {
@@ -313,13 +312,8 @@ describe('évaluation des alertes au chargement', () => {
   });
 });
 
-// Lecture pure (IDEM-01).
-//
-// Ces tests protègent une propriété, pas une fonctionnalité : lire un portefeuille ne
-// change rien. Trois écrans l'appelaient et écrivaient donc en base à chaque affichage,
-// dont celui des seuils, que le code prétendait pourtant tenir à l'écart de ces effets.
-// Si quelqu'un remet un jour l'historisation dans la lecture « parce qu'elle y était
-// avant », c'est ici que cela se verra.
+// Lecture pure : lire un portefeuille n'écrit rien en base, ni historisation ni
+// marquage des alertes.
 describe('lecture pure du portefeuille', () => {
   // Un seuil déjà franchi : l'actualisation le marquerait. C'est précisément ce que la
   // lecture ne doit pas faire.
@@ -508,10 +502,8 @@ describe('historique du portefeuille', () => {
   });
 });
 
-// Historique de cours par position (D81).
-//
-// L'alimentation reutilise l'ecriture paresseuse de D49 : aucune tache planifiee, le
-// meme point d'appel, les memes garanties d'effet de bord.
+// Historique de cours par position, alimenté par l'écriture paresseuse de
+// l'actualisation : aucune tâche planifiée, mêmes garanties d'effet de bord.
 describe('historique de cours par position', () => {
   const SERIE_BTC = [
     { actif_id: 1, date_snapshot: '2026-07-01', cours_eur: '100.00' },

@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-// Filet de régression des défauts corrigés par le lot L1.
-//
-// Chaque test reproduit un défaut constaté sur ce dépôt et vérifié dans les sources. Ils
-// ont d'abord échoué, décrivant le comportement attendu ; les corrections livrées, ils
-// passent, et retomberaient au rouge si l'un de ces défauts revenait. Les cas qui
-// relèvent du contrat numérique vivent dans regression-precision.test.js.
+// Tests de non-régression sur des défauts corrigés. Les cas de précision numérique
+// sont dans regression-precision.test.js.
 
 let creerServicePortefeuille;
 let creerServiceCours;
@@ -21,15 +17,8 @@ beforeAll(async () => {
   ({ creerAdaptateurActions } = await import('../../adaptateurs/actions.js'));
 });
 
-// ---------------------------------------------------------------------------
-// S-01 — un capital partiellement valorisé ne vaut pas un capital
-// ---------------------------------------------------------------------------
-//
-// D56 pose qu'une alerte dont la valeur observée est indisponible n'est pas évaluée.
-// evaluationAlertes applique correctement la règle, mais le service lui transmet
-// toujours un capital non nul, fût-il incomplet : la garde ne peut jamais jouer pour la
-// cible capital_total. Le snapshot du jour subit le même sort, et l'unicité
-// (utilisateur_id, date_snapshot) le fige alors pour la journée entière.
+// Un capital partiellement valorisé ne vaut pas un capital : ni l'alerte sur le
+// capital total ni le snapshot du jour ne doivent partir d'un sous-total.
 
 function environnementPartiel({ positionSoldee = false } = {}) {
   const ecritures = [];
@@ -117,7 +106,7 @@ function environnementPartiel({ positionSoldee = false } = {}) {
   return { service, ecritures };
 }
 
-describe('S-01 qualité du capital consolidé', () => {
+describe('qualité du capital consolidé', () => {
   it("ne déclenche pas une alerte de capital quand une position détenue n'a pas de cours", async () => {
     const { service } = environnementPartiel();
 
@@ -203,9 +192,7 @@ describe('S-01 qualité du capital consolidé', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// S-02 — l'identité d'un cours est (type, symbole), jamais le symbole seul
-// ---------------------------------------------------------------------------
+// L'identité d'un cours est (type, symbole), jamais le symbole seul.
 
 function cacheEnMemoire() {
   const frais = new Map();
@@ -221,7 +208,7 @@ function cacheEnMemoire() {
   };
 }
 
-describe('S-02 identité des cours en cache', () => {
+describe('identité des cours en cache', () => {
   it('ne sert pas le cours crypto à une demande de devise portant le même symbole', async () => {
     const cache = cacheEnMemoire();
     const appels = [];
@@ -285,9 +272,7 @@ describe('S-02 identité des cours en cache', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// S-03 — une catégorie positive n'a jamais une part négative
-// ---------------------------------------------------------------------------
+// Une catégorie positive n'a jamais une part négative.
 
 function positionsValorisees(valeurs) {
   return valeurs.map(([type, valeur]) => ({
@@ -299,7 +284,7 @@ function positionsValorisees(valeurs) {
   }));
 }
 
-describe('S-03 répartition en pourcentages', () => {
+describe('répartition en pourcentages', () => {
   it('ne rend aucune part négative sur des valeurs toutes positives', () => {
     // Total 50 000. Les trois premières parts arrondissent chacune vers le haut, et le
     // reliquat laissé à la dernière devient négatif.
@@ -349,11 +334,9 @@ describe('S-03 répartition en pourcentages', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// S-04 — une panne de change n'est pas une panne de cotation
-// ---------------------------------------------------------------------------
+// Une panne de change n'est pas une panne de cotation.
 
-describe('S-04 imputation des pannes de l\'adaptateur actions', () => {
+describe('imputation des pannes de l\'adaptateur actions', () => {
   it('ne consulte pas les trois fournisseurs quand seul le change est indisponible', async () => {
     const appels = [];
 

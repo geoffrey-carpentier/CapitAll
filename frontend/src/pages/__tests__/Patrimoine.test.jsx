@@ -195,8 +195,8 @@ describe('règles de comportement', () => {
     expect(screen.getByText(/BTC/)).toBeTruthy();
     // La valorisation reste affichée : c'est la règle.
     expect(screen.getByText(/12.480,65/)).toBeTruthy();
-    // Donnée dégradée, pas panne ni simple information : c'est l'avertissement que D70
-    // réserve à cet état.
+    // Donnée dégradée, ni panne ni simple information : l'avertissement est réservé à
+    // cet état.
     expect(bandeau.closest('.message').className).toContain('message--avertissement');
   });
 
@@ -207,7 +207,7 @@ describe('règles de comportement', () => {
     expect(await screen.findByText(/XAU/)).toBeTruthy();
     const bandeau = screen.getByText(/n'entrent pas dans le total/);
     // Un cours absent est une donnée incomplète, pas une perte financière : le rouge
-    // ferait lire une baisse là où il n'y a qu'un trou (D70).
+    // ferait lire une baisse là où il n'y a qu'un trou.
     expect(bandeau.closest('.message').className).toContain('message--avertissement');
   });
 
@@ -324,7 +324,7 @@ describe('règles de comportement', () => {
     expect(courbe.getAttribute('aria-label')).toMatch(/2025-10-01/);
   });
 
-  // DATA-04 : le pas de la courbe n'est pas régulier, et le taire reviendrait à laisser
+  // Le pas de la courbe n'est pas régulier, et le taire reviendrait à laisser
   // croire à un relevé de clôture quotidien.
   it('annonce que le relevé est pris à l\'heure de la consultation', async () => {
     api.historique.mockResolvedValue({
@@ -371,7 +371,7 @@ describe('règles de comportement', () => {
     );
   });
 
-  // L'actualisation est désormais demandée, jamais déduite de l'affichage.
+  // L'actualisation est demandée, jamais déduite de l'affichage.
   it('relève les cours à la demande, et une seule fois par affichage', async () => {
     const utilisateur = userEvent.setup();
     rendre();
@@ -483,8 +483,8 @@ describe('accessibilité', () => {
   it('restitue la répartition en liste, avec libellé, part et montant', async () => {
     rendre();
 
-    // La répartition n'est plus un graphique mais une liste (D74) : elle n'a donc pas
-    // de description à fournir, elle se lit directement, entrée par entrée.
+    // La répartition se lit comme une liste, entrée par entrée : pas de description à
+    // fournir.
     await screen.findByText(/12.480,65/);
     const entrees = screen.getAllByRole('listitem');
     const crypto = entrees.find((entree) => entree.textContent.includes('Cryptos'));

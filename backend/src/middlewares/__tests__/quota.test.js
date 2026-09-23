@@ -2,15 +2,9 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Limitation de débit sur les chemins d'authentification (S-15).
-//
-// Ces tests montent une application Express réelle et lui envoient de vraies requêtes :
-// un compteur de quota vit dans un intergiciel, il n'a pas d'existence observable
-// ailleurs. Supertest écoute sur un port éphémère, aucune base n'est touchée.
-//
-// Ce qui est vérifié tient en trois points, tous conséquences directes de la mesure
-// d'adresse cliente du 05/09 : le compteur suit l'adresse électronique et non l'IP,
-// deux comptes ne se gênent pas, et une connexion réussie ne consomme rien.
+// Limitation de débit sur les chemins d'authentification, sur une application Express
+// réelle (supertest, port éphémère, sans base). Le compteur suit l'adresse électronique
+// et non l'IP, deux comptes ne se gênent pas, une connexion réussie ne consomme rien.
 
 let quota;
 

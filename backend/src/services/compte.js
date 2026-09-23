@@ -145,7 +145,6 @@ function creerServiceCompte({
   return { changerMotDePasse, supprimer, exporterMouvements };
 }
 
-// Instance par défaut, utilisée par les contrôleurs.
 const service = creerServiceCompte();
 
 module.exports = {

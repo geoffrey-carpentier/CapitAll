@@ -6,13 +6,8 @@ import { useAuthentification } from '../contexteAuthentification';
 import { api } from '../../services/api';
 import { CLE_SESSION } from '../../utils/preferences';
 
-// Session durable (révision de D57).
-//
-// D57 gardait le jeton dans le seul état React : recharger déconnectait. Ce que ces
-// tests protègent, c'est la révision **et sa limite** : la session survit au
-// rechargement, elle ne survit pas à la fermeture de l'onglet. Le jour où quelqu'un
-// remplacera sessionStorage par localStorage pour « faire mieux », c'est ici que la
-// différence se verra.
+// Session durable : elle survit au rechargement, pas à la fermeture de l'onglet
+// (sessionStorage, et non localStorage).
 
 const SESSION = {
   token: 'jeton-de-test',

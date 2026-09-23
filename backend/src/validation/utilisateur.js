@@ -41,7 +41,6 @@ const schemaConnexion = z
   })
   .strict();
 
-// Demande de récupération : l'adresse seule.
 const schemaDemandeRecuperation = z.object({ email }).strict();
 
 // Jeton de 32 octets en hexadécimal : toute autre forme est refusée avant la base.
@@ -55,7 +54,6 @@ const schemaReinitialisation = z
       .toLowerCase()
       .length(LONGUEUR_JETON_HEXADECIMAL, 'Cette demande de réinitialisation est invalide.')
       .regex(/^[0-9a-f]+$/, 'Cette demande de réinitialisation est invalide.'),
-    // Même règle qu'à l'inscription.
     nouveauMotDePasse: motDePasse,
   })
   .strict();

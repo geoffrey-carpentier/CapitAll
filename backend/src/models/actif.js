@@ -1,6 +1,6 @@
 // Accès aux données de la table actif. Toutes les requêtes sont paramétrées et portent
 // leur propre filtre sur le propriétaire : le cloisonnement est garanti par le SQL
-// lui-même (D7), jamais par une comparaison faite après coup en JavaScript. Une requête
+// lui-même, jamais par une comparaison faite après coup en JavaScript. Une requête
 // qui ne trouve rien parce que l'actif appartient à quelqu'un d'autre est indiscernable,
 // pour l'appelant, d'une requête sur un actif inexistant.
 

@@ -40,7 +40,7 @@ describe("schéma d'inscription", () => {
     );
   });
 
-  // Test de la règle D23 : un rôle ne s'obtient jamais par une entrée utilisateur.
+  // Un rôle ne s'obtient jamais par une entrée utilisateur.
   it('rejette un champ role injecté dans le corps de la requête', () => {
     const resultat = schemaInscription.safeParse({ ...inscriptionValide, role: 'admin' });
     expect(resultat.success).toBe(false);

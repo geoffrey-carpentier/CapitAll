@@ -12,7 +12,8 @@
 --   suspendu@capitall.fr / Suspendu1234! (compte désactivé : la connexion est refusée)
 
 -- pgcrypto fournit crypt() et gen_salt() : le hachage bcrypt est réellement calculé
--- en base, avec le même algorithme ($2a$, coût 10) que celui utilisé côté serveur.
+-- en base, en bcrypt de coût 10 comme côté serveur ($2a$ ici, $2b$ pour la
+-- bibliothèque Node : les deux préfixes sont compatibles).
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Remise à zéro. RESTART IDENTITY réinitialise les séquences, CASCADE couvre les

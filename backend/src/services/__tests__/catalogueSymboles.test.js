@@ -2,12 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { obtenirCatalogue, COUVERTURE_FERMEE, COUVERTURE_OUVERTE } from '../catalogueSymboles.js';
 import { SYMBOLES_ACTION_AUTORISES } from '../../validation/actif.js';
 
-// Couverture des symboles (D27, précisée en L3).
-//
-// L'enjeu de ces tests n'est pas le contenu des listes mais leur accord avec ce que
-// l'application fait réellement. Un catalogue qui annoncerait une action absente de la
-// validation, ou l'inverse, serait pire que pas de catalogue du tout : il promettrait un
-// symbole que la saisie refuse.
+// Couverture des symboles : ces tests vérifient l'accord entre le catalogue et la
+// validation, pour qu'aucun symbole annoncé ne soit refusé à la saisie.
 
 function classe(type) {
   return obtenirCatalogue().classes.find((entree) => entree.type === type);
@@ -65,11 +61,10 @@ describe('catalogue des symboles', () => {
   });
 
   it('rappelle l’unité de cotation des métaux', () => {
-    // Le libellé « g » a fait mentir l'affichage d'un facteur 31 (D88) : l'unité voyage
-    // désormais avec la classe, elle n'est plus une constante d'interface.
+    // L'unité voyage avec la classe : elle n'est pas une constante d'interface.
     expect(classe('metal').unite).toBe('once troy');
-    // Platine et palladium ajoutés en D99, après relevé effectif de leur cours chez le
-    // même fournisseur et dans la même unité que l'or et l'argent.
+    // Platine et palladium : cours relevés chez le même fournisseur et dans la même
+    // unité que l'or et l'argent.
     expect(classe('metal').symboles.map((entree) => entree.symbole)).toEqual([
       'XAU',
       'XAG',

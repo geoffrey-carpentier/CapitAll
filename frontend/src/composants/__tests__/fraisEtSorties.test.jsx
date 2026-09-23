@@ -19,12 +19,9 @@ function texteNormalise(attendu) {
     );
 }
 
-// Frais dans leur unité de prélèvement et sorties non marchandes, côté interface (D89).
-//
-// Deux choses se vérifient ici, et une seule est visible à l'œil. La première est que la
-// saisie envoie au serveur la forme de frais que l'utilisateur a choisie, et elle seule.
-// La seconde est qu'un transfert ne se lit nulle part comme une vente : ni dans son
-// étiquette, ni dans un montant à zéro euro, ni dans une ligne de plus-value.
+// Frais dans leur unité de prélèvement et sorties non marchandes, côté interface : la
+// saisie envoie la seule forme de frais choisie, et un transfert ne se lit jamais comme
+// une vente.
 
 const POSITIONS = [
   {
