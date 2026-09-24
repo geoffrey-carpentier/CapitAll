@@ -27,7 +27,7 @@ services:
       POSTGRES_DB: walletwatch_test
     # Lié à la boucle locale : le service n'est joignable que depuis ce poste.
     #
-    # 5434 et non 5433 : la base de développement publie déjà 5433 sur l'hôte. Un test
+    # 5434 et non le port de développement, qui publie déjà 5432 par défaut. Un test
     # pointé sur 5433 aurait écrit dans les données de travail en croyant être isolé,
     # exactement l'accident que cet environnement doit rendre impossible.
     ports:

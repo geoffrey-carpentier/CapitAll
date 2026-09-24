@@ -8,7 +8,9 @@ Architecture front / back séparée. Le client React ne parle qu'à l'API Expres
 [ Navigateur ]
   React + Vite (SPA mobile-first)
         |
-        |  HTTPS - JSON - JWT dans l'en-tête Authorization
+        |  HTTP - JSON - JWT dans l'en-tête Authorization
+        |  (TLS assuré par le point d'entrée du déploiement ; la pile
+        |   de démonstration n'en pose pas, voir docs/deploiement.md)
         v
 [ Serveur Node.js / Express ]
   routes -> middlewares (auth, validation) -> controllers -> services -> models
@@ -16,18 +18,19 @@ Architecture front / back séparée. Le client React ne parle qu'à l'API Expres
         |                                          v
         |                              [ Service de cours ]
         |                        adaptateurs interchangeables :
-        |                        - CoinbaseAdapter    (crypto)
-        |                        - FrankfurterAdapter (devises)
-        |                        - GoldApiAdapter     (métaux)
-        |                        - ActionsAdapter     (FMP -> Finnhub -> Alpha Vantage)
+        |                        - coinbase.js    (crypto)
+        |                        - frankfurter.js (devises)
+        |                        - metal.js       (métaux)
+        |                        - actions.js     (FMP -> Finnhub -> Alpha Vantage)
         |                                          |
         |                                          v
         |                              [ Redis - cache cours ]
-        |                              cours:{symbole} + dernier connu, TTL par classe
+        |                              cours:v2:{type}:{symbole} + dernier connu,
+        |                              TTL par classe
         v
 [ PostgreSQL ]
   utilisateur / actif / transaction / alerte / snapshot_valorisation /
-  snapshot_cours / annonce
+  snapshot_cours / reinitialisation_mot_de_passe / annonce
 ```
 
 ## Justification des choix

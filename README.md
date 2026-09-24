@@ -372,6 +372,11 @@ connu est rendu, explicitement signalé comme tel avec sa date.
 
 | Document | Contenu |
 |---|---|
+| [État du produit](docs/produit/etat.md) | ce que l'application fait, ce qu'elle ne fait pas, limites connues |
+| [Feuille de route](docs/produit/roadmap.md) | phases à venir et hypothèses à trancher |
+| [Contribuer](docs/contribuer.md) | cycle d'une contribution, critères de départ et de fin |
+| [Exigences de qualité](docs/qualite.md) | exactitude, sécurité, accessibilité, tests, preuves attendues |
+| [Décisions d'architecture](docs/adr/README.md) | choix structurants en vigueur, un par fiche |
 | [Note de cadrage](docs/note-de-cadrage.md) | contexte, objectifs, périmètre initial |
 | [Cahier des charges](docs/cahier-des-charges.md) | acteurs, exigences, règles de gestion, critères de recette |
 | [Architecture](docs/conception/architecture.md) | couches, flux, adaptateurs |
@@ -382,7 +387,10 @@ connu est rendu, explicitement signalé comme tel avec sa date.
 | [Déploiement](docs/deploiement.md) | mise en service, redéploiement, migrations, sauvegarde |
 | [API](docs/api/README.md) | routes montées, contrats, collection d'appels |
 | [Manuel utilisateur](docs/manuel-utilisateur.md) | parcours des sept écrans |
-| [Convention de commits](docs/convention-commits.md) | format des messages et flux de contribution |
+| [Spécification fonctionnelle](docs/conception/specification-fonctionnelle.md) | écrans, règles et contrats détaillés |
+| [Formatage des nombres](docs/conception/formatage-nombres.md) | règles d'affichage des montants et des quantités |
+| [Convention de commits](docs/convention-commits.md) | format des messages, nommage des branches |
+| [Compétences DWWM](docs/reac/matrice.md) | correspondance entre le référentiel et les réalisations |
 
 ## Nom du projet
 
